@@ -1,0 +1,153 @@
+"""Persistance des projets sur disque — JSONL pour les logs, JSON pour l'état."""
+from __future__ import annotations
+
+import json
+import uuid
+from datetime import datetime
+from pathlib import Path
+
+from agent.schemas import LogEntry, Project, ProjectStatus, Step, StepStatus
+
+WORKSPACE_DIR = Path("workspace/projects")
+
+
+class ProjectStore:
+
+    def __init__(self) -> None:
+        WORKSPACE_DIR.mkdir(parents=True, exist_ok=True)
+
+    def create_project(
+        self, mission: str, title: str, timeout_minutes: int = 30
+    ) -> Project:
+        project_id = f"proj_{uuid.uuid4().hex[:6]}"
+        workspace = WORKSPACE_DIR / project_id
+        (workspace / ".jarvis").mkdir(parents=True, exist_ok=True)
+
+        project = Project(
+            id=project_id,
+            title=title,
+            mission=mission,
+            workspace_path=str(workspace.resolve()),
+            timeout_minutes=timeout_minutes,
+        )
+        self.save_project(project)
+        return project
+
+    def save_project(self, project: Project) -> None:
+        state_file = Path(project.workspace_path) / ".jarvis" / "state.json"
+        state_file.write_text(
+            json.dumps(self._to_dict(project), indent=2, default=str),
+            encoding="utf-8",
+        )
+
+    def load_project(self, project_id: str) -> Project | None:
+        state_file = WORKSPACE_DIR / project_id / ".jarvis" / "state.json"
+        if not state_file.exists():
+            return None
+        try:
+            data = json.loads(state_file.read_text(encoding="utf-8"))
+            return self._from_dict(data)
+        except Exception:
+            return None
+
+    def list_projects(self) -> list[Project]:
+        projects: list[Project] = []
+        for state_file in WORKSPACE_DIR.glob("*/.jarvis/state.json"):
+            project = self.load_project(state_file.parent.parent.name)
+            if project:
+                projects.append(project)
+        return sorted(projects, key=lambda p: p.created_at, reverse=True)
+
+    def append_log(self, project: Project, entry: LogEntry) -> None:
+        log_file = Path(project.workspace_path) / ".jarvis" / "logs.jsonl"
+        with log_file.open("a", encoding="utf-8") as f:
+            f.write(json.dumps({
+                "ts":      entry.timestamp.isoformat(),
+                "level":   entry.level,
+                "msg":     entry.message,
+                "step_id": entry.step_id,
+                "data":    entry.data,
+            }) + "\n")
+
+    def get_logs(self, project: Project, last_n: int = 200) -> list[LogEntry]:
+        log_file = Path(project.workspace_path) / ".jarvis" / "logs.jsonl"
+        if not log_file.exists():
+            return []
+        lines = log_file.read_text(encoding="utf-8").strip().splitlines()
+        entries: list[LogEntry] = []
+        for line in lines[-last_n:]:
+            try:
+                d = json.loads(line)
+                entries.append(LogEntry(
+                    timestamp=datetime.fromisoformat(d["ts"]),
+                    level=d["level"],
+                    message=d["msg"],
+                    step_id=d.get("step_id"),
+                    data=d.get("data"),
+                ))
+            except Exception:
+                pass
+        return entries
+
+    # ── Sérialisation ─────────────────────────────────────────────────────────
+
+    def _to_dict(self, project: Project) -> dict:
+        return {
+            "id":              project.id,
+            "title":           project.title,
+            "mission":         project.mission,
+            "status":          project.status,
+            "workspace_path":  project.workspace_path,
+            "timeout_minutes": project.timeout_minutes,
+            "created_at":      project.created_at.isoformat(),
+            "started_at":      project.started_at.isoformat() if project.started_at else None,
+            "completed_at":    project.completed_at.isoformat() if project.completed_at else None,
+            "llm_calls":       project.llm_calls,
+            "files_created":   project.files_created,
+            "requires_network": project.requires_network,
+            "steps": [
+                {
+                    "id":               s.id,
+                    "title":            s.title,
+                    "description":      s.description,
+                    "status":           s.status,
+                    "requires_approval": s.requires_approval,
+                    "output":           s.output,
+                    "error":            s.error,
+                    "started_at":       s.started_at.isoformat() if s.started_at else None,
+                    "completed_at":     s.completed_at.isoformat() if s.completed_at else None,
+                }
+                for s in project.steps
+            ],
+        }
+
+    def _from_dict(self, d: dict) -> Project:
+        steps = [
+            Step(
+                id=s["id"],
+                title=s["title"],
+                description=s["description"],
+                status=StepStatus(s["status"]),
+                requires_approval=s.get("requires_approval", False),
+                output=s.get("output"),
+                error=s.get("error"),
+                started_at=datetime.fromisoformat(s["started_at"]) if s.get("started_at") else None,
+                completed_at=datetime.fromisoformat(s["completed_at"]) if s.get("completed_at") else None,
+            )
+            for s in d.get("steps", [])
+        ]
+        return Project(
+            id=d["id"],
+            title=d["title"],
+            mission=d["mission"],
+            status=ProjectStatus(d["status"]),
+            steps=steps,
+            workspace_path=d["workspace_path"],
+            timeout_minutes=d.get("timeout_minutes", 30),
+            created_at=datetime.fromisoformat(d["created_at"]),
+            started_at=datetime.fromisoformat(d["started_at"]) if d.get("started_at") else None,
+            completed_at=datetime.fromisoformat(d["completed_at"]) if d.get("completed_at") else None,
+            llm_calls=d.get("llm_calls", 0),
+            files_created=d.get("files_created", []),
+            requires_network=d.get("requires_network", False),
+        )

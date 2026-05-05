@@ -1,0 +1,122 @@
+from __future__ import annotations
+
+import asyncio
+from pathlib import Path
+
+from loguru import logger
+
+from llm.base import LLMProvider
+
+_DEFAULT_PREFS = "# Préférences Barth\n\nAucune préférence enregistrée.\n"
+
+_MICRO_SYSTEM = (
+    "Tu es un agent de mémorisation pour Jarvis. "
+    "Analyse l'échange et mets à jour les préférences de Barth uniquement si tu détectes "
+    "une nouvelle préférence explicite (note que, retiens que, j'aime, je préfère…) ou "
+    "un signal implicite fort. Retourne uniquement le markdown mis à jour, sans explication. "
+    "Si rien à changer, retourne le fichier identique."
+)
+
+_DEEP_SYSTEM = (
+    "Tu es un agent de mémorisation pour Jarvis. "
+    "Analyse les sessions fournies et synthétise les apprentissages durables sur Barth "
+    "(préférences, habitudes, contexte). "
+    "Retourne uniquement le markdown mis à jour des préférences."
+)
+
+
+class AutoDream:
+    """Micro-update fire-and-forget après chaque échange + analyse profonde nocturne à 3h."""
+
+    def __init__(
+        self,
+        llm: LLMProvider,
+        prefs_path: Path,
+        sessions_dir: Path,
+    ) -> None:
+        self._llm = llm
+        self._prefs_path = prefs_path
+        self._sessions_dir = sessions_dir
+        self._ensure_prefs()
+
+    def _ensure_prefs(self) -> None:
+        if not self._prefs_path.exists():
+            self._prefs_path.parent.mkdir(parents=True, exist_ok=True)
+            self._prefs_path.write_text(_DEFAULT_PREFS, encoding="utf-8")
+
+    def _read_prefs(self) -> str:
+        return self._prefs_path.read_text(encoding="utf-8")
+
+    def _write_prefs(self, content: str) -> None:
+        self._prefs_path.write_text(content, encoding="utf-8")
+
+    # ── Micro (fire-and-forget, après chaque échange) ─────────
+
+    def fire_micro(self, user_message: str, assistant_message: str) -> None:
+        asyncio.create_task(
+            self._run_micro_safe(user_message, assistant_message),
+            name="autodream-micro",
+        )
+
+    async def _run_micro_safe(self, user_message: str, assistant_message: str) -> None:
+        try:
+            await self._run_micro(user_message, assistant_message)
+        except Exception as e:
+            logger.error("AutoDream micro error", error=str(e))
+
+    async def _run_micro(self, user_message: str, assistant_message: str) -> None:
+        prefs = self._read_prefs()
+        prompt = (
+            f"Préférences actuelles :\n{prefs}\n\n"
+            f"Échange :\nBarth : {user_message}\nJarvis : {assistant_message}"
+        )
+        result = await self._llm.complete(
+            messages=[{"role": "user", "content": prompt}],
+            system=_MICRO_SYSTEM,
+            stream=False,
+        )
+        updated = str(result).strip()
+        if updated and updated != prefs.strip():
+            self._write_prefs(updated)
+            logger.info("AutoDream micro: préférences mises à jour")
+
+    # ── Deep (nocturne, appelé par le scheduler à 3h) ─────────
+
+    async def deep_analyze(self) -> None:
+        try:
+            await self._run_deep()
+        except Exception as e:
+            logger.error("AutoDream deep error", error=str(e))
+
+    async def _run_deep(self) -> None:
+        sessions_text = self._load_recent_sessions()
+        if not sessions_text:
+            logger.debug("AutoDream deep: aucune session à analyser")
+            return
+
+        prefs = self._read_prefs()
+        prompt = (
+            f"Préférences actuelles :\n{prefs}\n\n"
+            f"Sessions récentes :\n{sessions_text}"
+        )
+        result = await self._llm.complete(
+            messages=[{"role": "user", "content": prompt}],
+            system=_DEEP_SYSTEM,
+            stream=False,
+        )
+        updated = str(result).strip()
+        if updated:
+            self._write_prefs(updated)
+            logger.info("AutoDream deep: préférences mises à jour")
+
+    def _load_recent_sessions(self) -> str:
+        if not self._sessions_dir.exists():
+            return ""
+        files = sorted(self._sessions_dir.glob("*.jsonl"))[-5:]
+        parts: list[str] = []
+        for f in files:
+            try:
+                parts.append(f.read_text(encoding="utf-8"))
+            except Exception:
+                pass
+        return "\n".join(parts)[:8000]

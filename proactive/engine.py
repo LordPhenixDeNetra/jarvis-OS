@@ -1,0 +1,155 @@
+"""
+ProactiveEngine — orchestrateur principal.
+Tourne en background toutes les 30 minutes.
+Dispatche les initiatives selon leur mode d'exécution.
+"""
+from __future__ import annotations
+
+import asyncio
+from collections.abc import Callable
+from datetime import datetime
+
+from loguru import logger
+
+from proactive.context_builder import ContextBuilder
+from proactive.initiative_generator import InitiativeGenerator
+from proactive.schemas import ExecutionMode, Initiative, Priority
+from proactive.store import InitiativeStore
+
+
+class ProactiveEngine:
+
+    def __init__(
+        self,
+        notification_queue,   # NotificationQueue — add(str) sync
+        broadcast_event: Callable,  # ProactiveQueue.broadcast_event(dict) sync
+        interval_minutes: int = 30,
+    ) -> None:
+        self._notifications = notification_queue
+        self._broadcast_event = broadcast_event
+        self._interval = interval_minutes * 60
+        self._builder = ContextBuilder()
+        self._generator = InitiativeGenerator()
+        self._store = InitiativeStore()
+        self._running = False
+        self._last_run: datetime | None = None
+        self._last_user_activity: datetime | None = None
+        self._cycle_lock = asyncio.Lock()  # un seul cycle à la fois
+
+    def signal_user_activity(self) -> None:
+        """Appelé par le WebSocket à chaque message entrant."""
+        self._last_user_activity = datetime.now()
+
+    def _user_idle_seconds(self) -> float:
+        """Secondes écoulées depuis le dernier message utilisateur."""
+        if self._last_user_activity is None:
+            return float("inf")
+        return (datetime.now() - self._last_user_activity).total_seconds()
+
+    async def start(self) -> None:
+        """Lance la boucle de proactivité en background."""
+        self._running = True
+        logger.info(f"ProactiveEngine started (interval: {self._interval // 60}min)")
+
+        # Premier run dans 2 minutes — pas immédiatement au boot
+        await asyncio.sleep(120)
+
+        while self._running:
+            await self._run_cycle()
+            await asyncio.sleep(self._interval)
+
+    def stop(self) -> None:
+        self._running = False
+
+    async def run_now(self) -> list[Initiative]:
+        """Force un cycle immédiatement (debug ou bouton manuel)."""
+        return await self._run_cycle()
+
+    async def _run_cycle(self) -> list[Initiative]:
+        """Un cycle complet : collecte → build → generate → dispatch."""
+        if self._cycle_lock.locked():
+            logger.info("ProactiveEngine: cycle already running, skipping")
+            return []
+
+        async with self._cycle_lock:
+            return await self.__run_cycle_locked()
+
+    async def __run_cycle_locked(self) -> list[Initiative]:
+        logger.info("ProactiveEngine: starting cycle")
+        self._last_run = datetime.now()
+
+        try:
+            state = await self._builder.build()
+
+            # Même pattern que le websocket existant (sleep(2) avant background LLM) :
+            # attendre que l'utilisateur soit inactif avant de faire l'appel LLM lourd.
+            _COOLDOWN_S = 120  # 2 minutes d'inactivité requises
+            idle = self._user_idle_seconds()
+            if idle < _COOLDOWN_S:
+                wait = _COOLDOWN_S - idle
+                logger.info(
+                    f"ProactiveEngine: user active {idle:.0f}s ago, "
+                    f"waiting {wait:.0f}s before LLM call"
+                )
+                await asyncio.sleep(wait)
+
+            initiatives = await self._generator.generate(state)
+
+            if not initiatives:
+                logger.info("ProactiveEngine: no initiatives generated")
+                return []
+
+            for initiative in initiatives:
+                self._store.save(initiative)
+
+            for initiative in initiatives:
+                self._dispatch(initiative)
+
+            high_count = sum(1 for i in initiatives if i.priority == Priority.HIGH)
+            logger.info(
+                f"ProactiveEngine: cycle complete — "
+                f"{len(initiatives)} initiatives, {high_count} HIGH"
+            )
+
+            self._broadcast_event({
+                "type": "proactive_update",
+                "count": len(initiatives),
+                "high_priority": high_count,
+            })
+
+            return initiatives
+
+        except Exception as e:
+            logger.error(f"ProactiveEngine cycle error: {e}")
+            return []
+
+    def _dispatch(self, initiative: Initiative) -> None:
+        """Dispatche une initiative selon son mode d'exécution."""
+
+        if initiative.execution_mode == ExecutionMode.AUTO:
+            # Auto-exécution réservée à la Phase 2
+            logger.info(f"ProactiveEngine AUTO (logged): {initiative.title}")
+
+        elif initiative.execution_mode == ExecutionMode.NOTIFY:
+            # Injecter comme notification texte dans la prochaine conversation
+            msg = f"[Jarvis proactif] {initiative.title} — {initiative.action}"
+            self._notifications.add(msg)
+            logger.info(f"ProactiveEngine NOTIFY: {initiative.title}")
+
+        elif initiative.execution_mode == ExecutionMode.VALIDATE:
+            # Envoyer au Command Center pour validation
+            self._broadcast_event({
+                "type": "initiative_pending",
+                "initiative": {
+                    "id": initiative.id,
+                    "type": initiative.type,
+                    "title": initiative.title,
+                    "context": initiative.context,
+                    "reasoning": initiative.reasoning,
+                    "action": initiative.action,
+                    "priority": initiative.priority,
+                    "draft_content": initiative.draft_content,
+                    "created_at": initiative.created_at.isoformat(),
+                },
+            })
+            logger.info(f"ProactiveEngine VALIDATE: {initiative.title}")

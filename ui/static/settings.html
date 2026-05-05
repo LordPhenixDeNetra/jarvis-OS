@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>JARVIS — Système</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&family=DM+Mono:ital,wght@0,400&family=DM+Sans:wght@400;500&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/settings.css">
+</head>
+<body>
+
+  <!-- ══ TOPBAR ══════════════════════════════════════════════════ -->
+  <header class="topbar">
+    <button class="topbar-back" onclick="goBack()">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+        <polyline points="15 18 9 12 15 6"/>
+      </svg>
+      retour
+    </button>
+
+    <span class="topbar-title">JARVIS SYSTÈME</span>
+
+    <div class="topbar-status">
+      <span class="topbar-version">v3.0</span>
+      <span class="topbar-dot"></span>
+      <span class="topbar-online">EN LIGNE</span>
+    </div>
+  </header>
+
+  <!-- ══ LAYOUT ═════════════════════════════════════════════════ -->
+  <div class="layout">
+
+    <!-- ── SIDEBAR ─────────────────────────────────────────────── -->
+    <nav class="sidebar">
+      <div class="sidebar-label">NAVIGATION</div>
+      <div class="sidebar-nav">
+
+        <button class="sidebar-item active" data-tab="sessions" onclick="switchTab('sessions')">
+          <span class="sidebar-icon">💬</span>
+          <span>Sessions</span>
+        </button>
+
+        <button class="sidebar-item" data-tab="memoire" onclick="switchTab('memoire')">
+          <span class="sidebar-icon">🧠</span>
+          <span>Mémoire</span>
+        </button>
+
+        <button class="sidebar-item" data-tab="outils" onclick="switchTab('outils')">
+          <span class="sidebar-icon">🔧</span>
+          <span>Outils</span>
+        </button>
+
+        <div class="sidebar-sep"></div>
+
+        <button class="sidebar-item" data-tab="conso" onclick="switchTab('conso')">
+          <span class="sidebar-icon">📊</span>
+          <span>Conso</span>
+        </button>
+
+        <button class="sidebar-item" data-tab="params" onclick="switchTab('params')">
+          <span class="sidebar-icon">⚙</span>
+          <span>Paramètres</span>
+        </button>
+
+        <div class="sidebar-sep"></div>
+
+        <button class="sidebar-item" data-tab="systeme" onclick="switchTab('systeme')">
+          <span class="sidebar-icon">🖥</span>
+          <span>Système</span>
+        </button>
+
+      </div>
+
+      <div class="unsaved-indicator" id="unsaved-indicator"></div>
+    </nav>
+
+    <!-- ── MAIN CONTENT ─────────────────────────────────────────── -->
+    <main class="main-content">
+      <div id="tab-content"></div>
+    </main>
+
+  </div>
+
+  <!-- ══ MODAL — Visionneuse fichier ════════════════════════════ -->
+  <div id="file-modal" class="modal" style="display:none">
+    <div class="modal-inner">
+      <div class="modal-hd">
+        <span class="modal-name" id="file-modal-name"></span>
+        <button class="modal-close" onclick="closeFileModal()">✕</button>
+      </div>
+      <div class="modal-body" id="file-modal-body"></div>
+      <div class="modal-ft">
+        <button class="btn" id="file-modal-raw">⊞ RAW</button>
+        <button class="btn" onclick="closeFileModal()">Fermer</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══ MODAL — ClawHub ════════════════════════════════════════ -->
+  <div id="clawhub-modal" class="modal" style="display:none">
+    <div class="modal-inner">
+      <div class="modal-hd">
+        <span class="modal-name">✦ CLAWHUB MARKETPLACE</span>
+        <button class="modal-close" onclick="closeClawHub()">✕</button>
+      </div>
+      <div class="modal-search-wrap">
+        <input id="clawhub-search" class="modal-search" placeholder="Rechercher un skill…">
+      </div>
+      <div id="clawhub-results" style="overflow-y:auto;max-height:340px"></div>
+    </div>
+  </div>
+
+  <!-- ══ TOASTS ═════════════════════════════════════════════════ -->
+  <div id="toast-container"></div>
+
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
+  <script src="/settings.js"></script>
+</body>
+</html>

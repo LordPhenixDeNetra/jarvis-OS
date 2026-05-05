@@ -1,0 +1,15 @@
+# Scripts CLI whitelistés pour Jarvis
+# Format : alias: {command: [...], description: "..."}
+# Décommente et adapte selon tes scripts.
+#
+# alfred_ping:
+#   command: ["python", "scripts/alfred_ping.py"]
+#   description: "Ping le bras robotisé Alfred"
+#
+# backup:
+#   command: ["bash", "scripts/backup.sh"]
+#   description: "Lance la sauvegarde des projets"
+#
+# impulsion_stats:
+#   command: ["python", "scripts/impulsion_stats.py"]
+#   description: "Stats Instagram Impulsion du jour"
