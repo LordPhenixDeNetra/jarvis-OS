@@ -104,28 +104,26 @@
     _map?.stop();
   }
 
-  // ── Airplane icon (SDF pour icon-color data-driven) ─────────────
-  function _createPlaneImage() {
-    const sz = 32;
+  // ── Airplane icons (silhouette propre, nose up) ──────────────────
+  function _createPlaneImage(color, sz = 64) {
     const canvas = document.createElement('canvas');
     canvas.width = sz; canvas.height = sz;
     const ctx = canvas.getContext('2d');
-    const s = sz / 32;
+    ctx.imageSmoothingEnabled = true;
+    ctx.imageSmoothingQuality = 'high';
     ctx.translate(sz / 2, sz / 2);
-    ctx.fillStyle = 'white';
-    ctx.beginPath();
-    ctx.moveTo(0,        -13 * s); // nez
-    ctx.lineTo(2  * s,   -4 * s); // épaule droite
-    ctx.lineTo(13 * s,    2 * s); // bout aile droite
-    ctx.lineTo(2.5 * s,   4 * s); // racine aile droite
-    ctx.lineTo(2.5 * s,   9 * s); // empennage droit
-    ctx.lineTo(0,         7 * s); // queue centre
-    ctx.lineTo(-2.5 * s,  9 * s); // empennage gauche
-    ctx.lineTo(-2.5 * s,  4 * s); // racine aile gauche
-    ctx.lineTo(-13 * s,   2 * s); // bout aile gauche
-    ctx.lineTo(-2  * s,  -4 * s); // épaule gauche
-    ctx.closePath();
-    ctx.fill();
+    ctx.scale(sz / 32, sz / 32);
+    const path = new Path2D(
+      'M 0,-15 '
+    + 'C 1.2,-13 1.8,-8 1.8,-3 '
+    + 'L 12,4 L 12,5.5 L 1.8,2 '
+    + 'L 1.8,9 L 4.5,11.5 L 4.5,13 L 0,11.5 '
+    + 'L -4.5,13 L -4.5,11.5 L -1.8,9 '
+    + 'L -1.8,2 L -12,5.5 L -12,4 L -1.8,-3 '
+    + 'C -1.8,-8 -1.2,-13 0,-15 Z'
+    );
+    ctx.fillStyle = color;
+    ctx.fill(path);
     return ctx.getImageData(0, 0, sz, sz);
   }
 
@@ -133,7 +131,8 @@
   function _addLayers() {
     const emptyFC = { type: 'FeatureCollection', features: [] };
 
-    _map.addImage('plane-icon', _createPlaneImage(), { sdf: true });
+    _map.addImage('plane-white', _createPlaneImage('#FFFFFF'));
+    _map.addImage('plane-gold',  _createPlaneImage('#FFD700'));
 
     _map.addSource('flights', { type: 'geojson', data: emptyFC });
     _map.addLayer({
@@ -141,19 +140,38 @@
       slot: 'top',
       layout: {
         visibility: 'none',
-        'icon-image': 'plane-icon',
+        'icon-image': 'plane-white',
         'icon-rotate': ['get', 'heading'],
         'icon-rotation-alignment': 'map',
         'icon-allow-overlap': true,
         'icon-ignore-placement': true,
-        'icon-size': ['interpolate', ['linear'], ['zoom'], 1, 0.45, 4, 0.65, 10, 1.1],
+        'icon-size': ['interpolate', ['linear'], ['zoom'], 1, 0.3, 4, 0.5, 10, 0.8],
+        'symbol-z-elevate': true,
+        'symbol-elevation-reference': 'sea',
       },
       paint: {
-        'icon-color': ['case',
-          ['==', ['slice', ['get', 'callsign'], 0, 3], 'AFR'], '#FFD700',
-          '#FFFFFF',
-        ],
         'icon-opacity': 0.9,
+        'symbol-z-offset': ['*', ['get', 'alt'], 20],
+      },
+    });
+
+    _map.addSource('selected-flight', { type: 'geojson', data: emptyFC });
+    _map.addLayer({
+      id: 'selected-flight-layer', type: 'symbol', source: 'selected-flight',
+      slot: 'top',
+      layout: {
+        'icon-image': 'plane-gold',
+        'icon-rotate': ['get', 'heading'],
+        'icon-rotation-alignment': 'map',
+        'icon-allow-overlap': true,
+        'icon-ignore-placement': true,
+        'icon-size': ['interpolate', ['linear'], ['zoom'], 1, 0.4, 4, 0.65, 10, 1.0],
+        'symbol-z-elevate': true,
+        'symbol-elevation-reference': 'sea',
+      },
+      paint: {
+        'icon-opacity': 1,
+        'symbol-z-offset': ['*', ['get', 'alt'], 20],
       },
     });
 
@@ -366,11 +384,24 @@
   // ── Flight search ────────────────────────────────────────────────
   function searchFlight(q) {
     _searchQuery = (q || '').trim().toUpperCase();
-    if (!_layersAdded || !_searchQuery) return;
+    const emptyFC = { type: 'FeatureCollection', features: [] };
+    if (!_layersAdded) return;
+    if (!_searchQuery) {
+      _map.getSource('selected-flight')?.setData(emptyFC);
+      return;
+    }
     const match = _flightsCache.find(f => (f.callsign || '').toUpperCase().includes(_searchQuery));
     if (match) {
       _map.flyTo({ center: [match.lon, match.lat], zoom: 5, duration: 2000 });
       _showToast(match.callsign);
+      _map.getSource('selected-flight')?.setData({
+        type: 'FeatureCollection',
+        features: [{
+          type: 'Feature',
+          geometry: { type: 'Point', coordinates: [match.lon, match.lat] },
+          properties: { callsign: match.callsign, heading: match.heading || 0 },
+        }],
+      });
     }
   }
 
