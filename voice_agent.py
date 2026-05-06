@@ -165,6 +165,21 @@ async def entrypoint(ctx: object) -> None:
 
     gateway_llm = JarvisGatewayLLM(session_id=session_id)
 
+    # Re-lire .env à chaque session pour que QUEBEC_MODE soit pris en compte sans restart
+    from dotenv import dotenv_values
+    _env = dotenv_values(".env")
+    _quebec_mode = _env.get("QUEBEC_MODE", "false").strip().lower() in ("true", "1", "yes")
+    _voice_id = (
+        _env.get("QUEBEC_VOICE_ID", "RBhYSNMNu6b2CGZ9Fn1M")
+        if _quebec_mode
+        else _env.get("ELEVENLABS_VOICE_ID", "")
+    )
+    _tts_model = (
+        "eleven_multilingual_v2"
+        if _quebec_mode
+        else _env.get("ELEVENLABS_MODEL", "eleven_flash_v2_5")
+    )
+
     session = AgentSession(
         vad=silero.VAD.load(
             min_speech_duration=0.1,
@@ -179,9 +194,9 @@ async def entrypoint(ctx: object) -> None:
         ),
         llm=gateway_llm,
         tts=elevenlabs.TTS(
-            model="eleven_multilingual_v2",
-            voice_id=os.getenv("ELEVENLABS_VOICE_ID", ""),
-            api_key=os.getenv("ELEVENLABS_API_KEY", ""),
+            model=_tts_model,
+            voice_id=_voice_id,
+            api_key=_env.get("ELEVENLABS_API_KEY", os.getenv("ELEVENLABS_API_KEY", "")),
             voice_settings=VoiceSettings(
                 stability=0.4,
                 similarity_boost=0.8,

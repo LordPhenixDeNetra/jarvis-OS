@@ -28,7 +28,8 @@ class TTSEngine:
 
     async def _synthesize_elevenlabs(self, text: str) -> bytes:
         """ElevenLabs streaming TTS — modèle turbo, latence ~300ms."""
-        url = f"https://api.elevenlabs.io/v1/text-to-speech/{settings.elevenlabs_voice_id}/stream"
+        voice_id = settings.quebec_voice_id if settings.quebec_mode else settings.elevenlabs_voice_id
+        url = f"https://api.elevenlabs.io/v1/text-to-speech/{voice_id}/stream"
         headers = {
             "xi-api-key": settings.elevenlabs_api_key,
             "Content-Type": "application/json",

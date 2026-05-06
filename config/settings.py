@@ -240,6 +240,28 @@ class Settings(BaseSettings):
         description="Seuil d'amplitude pour détecter un clap (0.0-1.0).",
     )
 
+    # ── Identité utilisateur ──────────────────────────────────
+    user_firstname: str = Field(
+        default="",
+        description="Prénom de l'utilisateur, affiché lors du scan biométrique.",
+    )
+
+    # ── Wake Up sequence ─────────────────────────────────────
+    wakeup_enabled: bool = Field(
+        default=False,
+        description="Active la séquence wake up (veille + clap + scan facial). Désactiver en dev.",
+    )
+
+    # ── Mode Québécois ────────────────────────────────────────
+    quebec_mode: bool = Field(
+        default=False,
+        description="Active le mode Québécois : voix québécoise + dialecte québécois dans le prompt.",
+    )
+    quebec_voice_id: str = Field(
+        default="RBhYSNMNu6b2CGZ9Fn1M",
+        description="ID de la voix ElevenLabs québécoise.",
+    )
+
     # ── Logging ───────────────────────────────────────────────
     log_level: Literal["DEBUG", "INFO", "WARNING", "ERROR"] = Field(default="DEBUG")
 

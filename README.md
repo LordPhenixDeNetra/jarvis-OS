@@ -83,10 +83,11 @@ Le wizard interactif :
 1. Vérifie Python 3.11+ et installe `uv` si absent
 2. Installe toutes les dépendances Python (`pyproject.toml`)
 3. Demande ta clé API Anthropic (seule clé obligatoire)
-4. Configure ta localisation pour le moteur proactif
-5. Propose les modules optionnels (ElevenLabs, LiveKit, AISstream)
-6. Télécharge les modèles ML (YOLOv8n, Piper TTS)
-7. Génère le `.env` et installe la commande `jarvis` globalement
+4. Demande ton prénom (affiché lors du scan biométrique)
+5. Configure ta localisation pour le moteur proactif
+6. Propose les modules optionnels (ElevenLabs, LiveKit, AISstream)
+7. Télécharge les modèles ML (YOLOv8n, Piper TTS)
+8. Génère le `.env` et installe la commande `jarvis` globalement
 
 > La première fois, utilise `./jarvis eclosion`. Le wizard installe ensuite la commande globalement — tu peux utiliser `jarvis` depuis n'importe où.
 
@@ -108,6 +109,14 @@ Les deux peuvent tourner simultanément — le voice agent délègue au gateway 
 Tout est configuré pendant l'éclosion. Pour modifier une clé après coup, édite `.env` à la racine du projet.
 
 **Intégrations Google (Gmail / Calendar) :** place ton `credentials.json` issu de Google Cloud Console dans `config/google_credentials.json`, puis démarre Jarvis — il ouvrira le flux d'authentification OAuth et sauvegardera les tokens en local (ils sont gitignorés).
+
+**Reconnaissance faciale (séquence Wake Up) :** pour que le scan biométrique te reconnaisse, place une photo de toi (format JPG, visage bien visible, bonne luminosité) dans :
+
+```
+vision/faces/référence.jpg
+```
+
+Sans cette photo, la séquence de scan s'exécute mais retourne toujours "identité non reconnue". Le dossier `vision/faces/` est gitignorés — ta photo ne sera jamais commitée.
 
 ---
 

@@ -44,6 +44,80 @@ async def health() -> HealthResponse:
     return HealthResponse(status="ok", version="0.1.0")
 
 
+@router.get("/api/wakeup/status")
+async def wakeup_status() -> dict:
+    """Retourne si la séquence wake up est activée (contrôlé via WAKEUP_ENABLED dans .env)."""
+    from config.settings import settings
+    return {"enabled": settings.wakeup_enabled, "user_firstname": settings.user_firstname}
+
+
+@router.post("/api/vision/verify-face")
+async def verify_face() -> dict:
+    """
+    Retourne le résultat de la reconnaissance faciale.
+    Utilise le FaceRecognizer du daemon vision si actif,
+    sinon tente une capture directe (fallback).
+    """
+    import asyncio
+
+    from vision.daemon import get_face_recognizer
+    recognizer = get_face_recognizer()
+
+    if recognizer is not None and recognizer._available:
+        # Daemon actif — utiliser le dernier résultat (2fps en continu)
+        result = recognizer._last_result
+        if result is None:
+            await asyncio.sleep(0.6)          # attendre un frame daemon
+            result = recognizer._last_result
+        if result is not None:
+            return {
+                "recognized": result.recognized,
+                "name": result.name,
+                "confidence": round(result.confidence, 2),
+            }
+
+    # Fallback : capture OpenCV indépendante
+    loop = asyncio.get_event_loop()
+
+    def _capture_direct() -> dict:
+        try:
+            import cv2
+        except ImportError:
+            return {"recognized": False, "name": "error", "confidence": 0.0}
+        cap = cv2.VideoCapture(0)
+        for _ in range(5):
+            cap.read()
+        ret, frame = cap.read()
+        cap.release()
+        if not ret:
+            return {"recognized": False, "name": "error", "confidence": 0.0}
+        from vision.face_recognizer import FaceRecognizer
+        res = FaceRecognizer().process(frame)
+        return {"recognized": res.recognized, "name": res.name, "confidence": round(res.confidence, 2)}
+
+    return await loop.run_in_executor(None, _capture_direct)
+
+
+@router.post("/api/voice/speak")
+async def voice_speak(body: dict) -> dict:
+    """
+    Synthétise un texte en audio via TTS et retourne les bytes en base64.
+    Le frontend joue l'audio directement avec Web Audio API.
+    """
+    import base64
+
+    text = body.get("text", "").strip()
+    if not text:
+        return {"status": "error", "audio_b64": None}
+
+    from audio.tts import tts_engine
+    audio_bytes = await tts_engine.synthesize(text)
+    return {
+        "status": "ok",
+        "audio_b64": base64.b64encode(audio_bytes).decode() if audio_bytes else None,
+    }
+
+
 # ── Skills API ────────────────────────────────────────────────────────────────
 
 class SkillItem(BaseModel):
@@ -774,6 +848,7 @@ _SETTINGS_FIELD_MAP: dict[str, str] = {
     "LOG_LEVEL":                  "log_level",
     "BRIEFING_HOUR":              "briefing_hour",
     "CALENDAR_REMINDER_MINUTES":  "calendar_reminder_minutes",
+    "QUEBEC_MODE":                "quebec_mode",
 }
 
 
@@ -866,6 +941,7 @@ async def get_settings_endpoint() -> dict:
         "jarvis": {
             "log_level":   _s.log_level,
             "environment": _s.environment,
+            "quebec_mode": _s.quebec_mode,
         },
         "approvals": __import__('dataclasses').asdict(__import__('config.approvals', fromlist=['approval_config']).approval_config),
     }

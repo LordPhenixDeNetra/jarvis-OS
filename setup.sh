@@ -30,7 +30,7 @@ TC_WHITE='\033[38;2;220;230;255m'
 
 # ── Compteur de steps ─────────────────────────────────────────────
 STEP_CURRENT=0
-STEP_TOTAL=7
+STEP_TOTAL=8
 
 # ── Utilitaires visuels ──────────────────────────────────────────
 nl()  { echo ""; }
@@ -218,7 +218,36 @@ badge_ok "Clé Anthropic enregistrée"
 
 ANTHROPIC_MODEL="claude-sonnet-4-6"
 
-# ── STEP 4 — Localisation (météo proactive) ──────────────────────
+# ── STEP 4 — Identité utilisateur ───────────────────────────────
+step "Ton identité"
+
+nl
+echo -e "  ${TC_GRAY}Utilisée pour personnaliser la séquence de démarrage et le scan biométrique.${RESET}"
+nl
+
+USER_FIRSTNAME=""
+while [[ -z "$USER_FIRSTNAME" ]]; do
+  ask "Ton prénom" USER_FIRSTNAME ""
+  if [[ -z "$USER_FIRSTNAME" ]]; then
+    badge_warn "Le prénom est requis pour personnaliser JARVIS."
+  fi
+done
+
+badge_ok "Bonjour, ${USER_FIRSTNAME} !"
+
+nl
+echo -e "  ${TC_CYAN}${BOLD}Photo de référence (reconnaissance faciale)${RESET}"
+echo -e "  ${TC_GRAY}Si tu veux activer la séquence de scan biométrique, place une photo de toi${RESET}"
+echo -e "  ${TC_GRAY}(format JPG, visage bien visible) dans :${RESET}"
+nl
+echo -e "  ${TC_WHITE}    vision/faces/référence.jpg${RESET}"
+nl
+echo -e "  ${TC_GRAY}Sans cette photo, le scan s'exécutera mais ne pourra pas t'identifier.${RESET}"
+badge_info "Tu peux ajouter la photo après l'installation."
+
+nl
+
+# ── STEP 5 — Localisation (météo proactive) ─────────────────────
 step "Localisation (moteur proactif)"
 
 nl
@@ -231,7 +260,7 @@ ask "Longitude" PROACTIVE_LON "2.35"
 
 badge_ok "Localisation : $PROACTIVE_CITY ($PROACTIVE_LAT, $PROACTIVE_LON)"
 
-# ── STEP 5 — Modules optionnels ──────────────────────────────────
+# ── STEP 6 — Modules optionnels ──────────────────────────────────
 step "Modules optionnels"
 
 nl
@@ -291,7 +320,7 @@ else
   badge_skip "AISstream ignoré"
 fi
 
-# ── STEP 6 — Modèles ML ──────────────────────────────────────────
+# ── STEP 7 — Modèles ML ──────────────────────────────────────────
 step "Téléchargement des modèles ML"
 
 # YOLOv8
@@ -313,11 +342,12 @@ else
   badge_ok "Modèle Piper déjà présent"
 fi
 
-# ── STEP 7 — Génération .env + dossiers ──────────────────────────
+# ── STEP 8 — Génération .env + dossiers ──────────────────────────
 step "Génération de l'environnement"
 
 mkdir -p memory_data/sessions memory_data/topics memory_data/conso memory_data/initiatives
 mkdir -p workspace/projects
+mkdir -p vision/faces
 badge_ok "Dossiers runtime créés"
 
 # Écriture du .env
@@ -331,6 +361,9 @@ cat > "$ENV_FILE" <<EOF
 # ================================================================
 # JARVIS V3 — Configuration  (généré par setup.sh)
 # ================================================================
+
+# ── Identité ─────────────────────────────────────────────────────
+USER_FIRSTNAME=${USER_FIRSTNAME}
 
 # ── LLM ──────────────────────────────────────────────────────────
 LLM_PROVIDER=api

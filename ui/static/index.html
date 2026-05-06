@@ -11,6 +11,7 @@
     rel="stylesheet">
   <link rel="stylesheet" href="/globe.css">
   <link rel="stylesheet" href="/dashboard.css">
+  <link rel="stylesheet" href="/wakeup.css">
   <script src="https://cdn.jsdelivr.net/npm/mermaid/dist/mermaid.min.js"></script>
   <style>
     @font-face {
@@ -2044,8 +2045,8 @@
         _prevState = S;
       }
 
-      // Slow Y rotation
-      sphereGroup.rotation.y += C.rotY;
+      // Slow Y rotation (facteur 0.05 en veille, 1.0 normal)
+      sphereGroup.rotation.y += C.rotY * (window._sphereRotationMultiplier ?? 1.0);
 
       // Transform world mouse → sphere local space (undo Y rotation)
       const ry    = -sphereGroup.rotation.y;
@@ -2069,6 +2070,173 @@
       renderer.render(scene, camera);
     }
     animateSphere();
+
+    // ── Sleep mode — contrôle depuis wakeup.js ────────────────────────────
+    window._sphereRotationMultiplier = 1.0;
+
+    window.sphereSetSleepMode = function(sleeping) {
+      window._sphereRotationMultiplier = sleeping ? 0.05 : 1.0;
+      if (sleeping) {
+        if (typeof gsap !== 'undefined') {
+          gsap.to(matSM,     { opacity: 0.08, duration: 2.0 });
+          gsap.to(matBG,     { opacity: 0.05, duration: 2.0 });
+          gsap.to(bgGlowMat, { opacity: 0.12, duration: 2.0 });
+        } else {
+          matSM.opacity = 0.08; matBG.opacity = 0.05;
+        }
+      } else {
+        if (typeof gsap !== 'undefined') {
+          gsap.to(matSM,     { opacity: 0.95, duration: 1.0 });
+          gsap.to(matBG,     { opacity: 0.75, duration: 1.0 });
+          gsap.to(bgGlowMat, { opacity: 0.68, duration: 1.0 });
+        } else {
+          matSM.opacity = 0.95; matBG.opacity = 0.75;
+        }
+      }
+    };
+
+    // ── Snapshot of initial sphere positions (before any animation) ──────────
+    const _origSM = baseSM.slice();
+    const _origBG = baseBG.slice();
+
+    // ── Formation animation — Bézier storm ───────────────────────────────────
+    // Each particle flies on a curved Bézier arc from a far random position to
+    // its sphere target. Spring is neutralised (baseSM = curSM each frame).
+    // Staggered delays create a streaming "nebula condensing" visual.
+    window.spherePlayFormationAnim = function(onComplete) {
+      const DURATION   = 4.8; // seconds — long enough to enjoy the animation
+      const STAGGER    = 1.6; // max random delay before a particle starts moving
+      const TRAVEL     = 2.2; // seconds for one particle to reach its target
+
+      const N_SM = curSM.length / 3;
+      const N_BG = curBG.length / 3;
+
+      // Per particle: [sx,sy,sz, ctrlX,ctrlY,ctrlZ, delay]  (7 floats)
+      const bezSM = new Float32Array(N_SM * 7);
+      const bezBG = new Float32Array(N_BG * 7);
+
+      function fillBez(N, orig, bez) {
+        for (let i = 0; i < N; i++) {
+          // Start on distant random shell — correct Y-up spherical coords
+          const theta = Math.random() * Math.PI * 2;
+          const phi   = Math.acos(2 * Math.random() - 1);
+          const r     = 5.5 + Math.random() * 3.5;
+          const sx = r * Math.sin(phi) * Math.cos(theta);
+          const sy = r * Math.cos(phi);                      // Y is up
+          const sz = r * Math.sin(phi) * Math.sin(theta);
+          const ex = orig[i*3], ey = orig[i*3+1], ez = orig[i*3+2];
+
+          // Control point = midpoint + perpendicular offset (cross-product method)
+          const dx = ex-sx, dy = ey-sy, dz = ez-sz;
+          const ax = Math.random()-0.5, ay = Math.random()-0.5, az = Math.random()-0.5;
+          let cpx = dy*az - dz*ay, cpy = dz*ax - dx*az, cpz = dx*ay - dy*ax;
+          const cpl = Math.sqrt(cpx*cpx + cpy*cpy + cpz*cpz) + 0.001;
+          const curve = 1.8 + Math.random() * 3.0;
+          const mx = (sx+ex)*0.5, my = (sy+ey)*0.5, mz = (sz+ez)*0.5;
+
+          bez[i*7]   = sx;  bez[i*7+1] = sy;  bez[i*7+2] = sz;
+          bez[i*7+3] = mx + (cpx/cpl)*curve;
+          bez[i*7+4] = my + (cpy/cpl)*curve;
+          bez[i*7+5] = mz + (cpz/cpl)*curve;
+          bez[i*7+6] = Math.random() * STAGGER; // random stagger delay
+        }
+      }
+      fillBez(N_SM, _origSM, bezSM);
+      fillBez(N_BG, _origBG, bezBG);
+
+      // Place particles at start positions, zero spring velocities
+      for (let i = 0; i < N_SM; i++) {
+        const i3 = i*3;
+        curSM[i3] = bezSM[i*7]; curSM[i3+1] = bezSM[i*7+1]; curSM[i3+2] = bezSM[i*7+2];
+        baseSM[i3] = curSM[i3]; baseSM[i3+1] = curSM[i3+1]; baseSM[i3+2] = curSM[i3+2];
+      }
+      for (let i = 0; i < N_BG; i++) {
+        const i3 = i*3;
+        curBG[i3] = bezBG[i*7]; curBG[i3+1] = bezBG[i*7+1]; curBG[i3+2] = bezBG[i*7+2];
+        baseBG[i3] = curBG[i3]; baseBG[i3+1] = curBG[i3+1]; baseBG[i3+2] = curBG[i3+2];
+      }
+      velSM.fill(0); velBG.fill(0);
+      attrPosSM.needsUpdate = true; attrPosBG.needsUpdate = true;
+
+      // Fade in gradually so particles appear to materialise
+      matSM.opacity = 0; matBG.opacity = 0; bgGlowMat.opacity = 0;
+      if (typeof gsap !== 'undefined') {
+        gsap.to(matSM,     { opacity: 0.95, duration: 1.0, delay: 0.25, ease: 'power1.in' });
+        gsap.to(matBG,     { opacity: 0.75, duration: 1.0, delay: 0.25, ease: 'power1.in' });
+        gsap.to(bgGlowMat, { opacity: 0.68, duration: 1.3, delay: 0.5 });
+      }
+
+      const t0 = performance.now();
+
+      function tick() {
+        // Zero velocities so spring physics doesn't interfere
+        velSM.fill(0); velBG.fill(0);
+
+        const sec = (performance.now() - t0) * 0.001;
+
+        for (let i = 0; i < N_SM; i++) {
+          const i3 = i*3;
+          const lt = (sec - bezSM[i*7+6]) / TRAVEL;
+          let px, py, pz;
+          if (lt <= 0) {
+            px = bezSM[i*7]; py = bezSM[i*7+1]; pz = bezSM[i*7+2];
+          } else {
+            const t  = lt >= 1 ? 1 : 1 - Math.pow(1 - lt, 3); // ease-out cubic
+            const t1 = 1 - t;
+            px = t1*t1*bezSM[i*7]   + 2*t1*t*bezSM[i*7+3] + t*t*_origSM[i3];
+            py = t1*t1*bezSM[i*7+1] + 2*t1*t*bezSM[i*7+4] + t*t*_origSM[i3+1];
+            pz = t1*t1*bezSM[i*7+2] + 2*t1*t*bezSM[i*7+5] + t*t*_origSM[i3+2];
+          }
+          curSM[i3] = px; curSM[i3+1] = py; curSM[i3+2] = pz;
+          baseSM[i3] = px; baseSM[i3+1] = py; baseSM[i3+2] = pz;
+        }
+
+        for (let i = 0; i < N_BG; i++) {
+          const i3 = i*3;
+          const lt = (sec - bezBG[i*7+6]) / TRAVEL;
+          let px, py, pz;
+          if (lt <= 0) {
+            px = bezBG[i*7]; py = bezBG[i*7+1]; pz = bezBG[i*7+2];
+          } else {
+            const t  = lt >= 1 ? 1 : 1 - Math.pow(1 - lt, 3);
+            const t1 = 1 - t;
+            px = t1*t1*bezBG[i*7]   + 2*t1*t*bezBG[i*7+3] + t*t*_origBG[i3];
+            py = t1*t1*bezBG[i*7+1] + 2*t1*t*bezBG[i*7+4] + t*t*_origBG[i3+1];
+            pz = t1*t1*bezBG[i*7+2] + 2*t1*t*bezBG[i*7+5] + t*t*_origBG[i3+2];
+          }
+          curBG[i3] = px; curBG[i3+1] = py; curBG[i3+2] = pz;
+          baseBG[i3] = px; baseBG[i3+1] = py; baseBG[i3+2] = pz;
+        }
+
+        attrPosSM.needsUpdate = true; attrPosBG.needsUpdate = true;
+
+        if (sec < DURATION) {
+          requestAnimationFrame(tick);
+        } else {
+          // Restore real base positions — spring handles final micro-settling
+          for (let i = 0; i < baseSM.length; i++) baseSM[i] = _origSM[i];
+          for (let i = 0; i < baseBG.length; i++) baseBG[i] = _origBG[i];
+          velSM.fill(0); velBG.fill(0);
+          if (onComplete) onComplete();
+        }
+      }
+      requestAnimationFrame(tick);
+    };
+
+    // ── Shockwave — onde de choc depuis la sphère au démarrage ───────────
+    window.sphereTriggerShockwave = function() {
+      const flash = document.createElement('div');
+      flash.style.cssText = 'position:fixed;inset:0;z-index:5;pointer-events:none;'
+        + 'background:radial-gradient(circle at center,rgba(74,158,255,0.22) 0%,transparent 52%);';
+      document.body.appendChild(flash);
+      if (typeof gsap !== 'undefined') {
+        gsap.to(flash, { opacity: 0, duration: 1.4, ease: 'power2.out', onComplete: () => flash.remove() });
+        bgGlowMat.opacity = 1.4;
+        gsap.to(bgGlowMat, { opacity: 0.68, duration: 1.0, ease: 'power2.out' });
+      } else {
+        flash.remove();
+      }
+    };
 
     window.addEventListener('resize', () => {
       camera.aspect = window.innerWidth / window.innerHeight;
@@ -2265,6 +2433,7 @@
           if (currentMsgEl) { checkForMindmapRaw(currentMsgEl, currentMsgRaw); currentMsgEl.classList.remove('streaming'); }
           currentMsgEl = null; currentMsgRaw = ''; sphereState = 'IDLE'; msgInput.disabled = false; msgInput.focus();
           _loadSessionList();
+          if (typeof resetInactivityTimer === 'function') resetInactivityTimer();
         } else if (msg.type === 'notification') {
           addMsg('jarvis', msg.content, false, true);
         } else if (msg.type === 'project_created') {
@@ -2291,6 +2460,8 @@
           if (window.Globe) window.Globe.transitionToGlobe();
         } else if (msg.type === 'toggle_panels') {
           document.getElementById('panels-toggle')?.click();
+        } else if (msg.type === 'wake_up') {
+          if (window._jarvisSleeping && typeof triggerWakeUp === 'function') triggerWakeUp();
         }
       };
     }
@@ -2943,6 +3114,47 @@
     </div>
   </div>
 
+  <!-- Scan overlay — Wake Up Phase 3 -->
+  <div id="scan-overlay" style="display:none;">
+    <div id="scan-bg"></div>
+    <video id="scan-webcam-feed" autoplay muted playsinline></video>
+    <canvas id="scan-landmarks-canvas"></canvas>
+    <div id="scan-hud">
+      <div id="scan-header">
+        <span id="scan-status-text">INITIALISATION SCAN...</span>
+        <span id="scan-system-text">JARVIS SECURITY v3.0</span>
+      </div>
+      <div class="scan-corner scan-corner-tl"></div>
+      <div class="scan-corner scan-corner-tr"></div>
+      <div class="scan-corner scan-corner-bl"></div>
+      <div class="scan-corner scan-corner-br"></div>
+      <div id="scan-line"></div>
+      <div class="scan-datapoint" style="top:32%;right:calc(50% - min(340px,27vw))">ID_VERIFY</div>
+      <div class="scan-datapoint" style="top:48%;right:calc(50% - min(340px,27vw))">FACIAL_MAP</div>
+      <div class="scan-datapoint" style="top:64%;right:calc(50% - min(340px,27vw))">AUTH_CHECK</div>
+      <div class="scan-datapoint" style="top:36%;left:calc(50% - min(340px,27vw))">SECURE</div>
+      <div class="scan-datapoint" style="top:60%;left:calc(50% - min(340px,27vw))">ENCRYPT</div>
+      <div id="scan-progress-container">
+        <div id="scan-progress-bar"></div>
+      </div>
+      <div id="scan-footer">
+        <span id="scan-percentage">0%</span>
+        <span id="scan-label">ANALYSE BIOMÉTRIQUE EN COURS</span>
+      </div>
+    </div>
+    <div id="scan-result" style="display:none;">
+      <div id="scan-result-icon"></div>
+      <div id="scan-result-text"></div>
+      <div id="scan-result-name"></div>
+    </div>
+  </div>
+
+  <!-- Sleep indicator — visible uniquement en mode veille -->
+  <div id="sleep-indicator">
+    <div id="sleep-indicator-dot"></div>
+    <span id="sleep-indicator-label">EN VEILLE</span>
+  </div>
+
   <script>
   // ── Mindmap ───────────────────────────────────────────────────────────────
   mermaid.initialize({ startOnLoad: false, theme: 'dark', darkMode: true });
@@ -3003,6 +3215,9 @@
     URL.revokeObjectURL(url);
   });
   </script>
+  <!-- Wake Up sequence (Phase 0 — veille + timer, phases 1-5 à venir) -->
+  <!-- Chargé en dernier car dépend de GSAP -->
+  <script src="/wakeup.js"></script>
 </body>
 
 </html>

@@ -865,6 +865,7 @@ function paintParams() {
   ].join(''));
 
   html += _section('jarvis', '▼ JARVIS', false, [
+    _row('Mode Québécois 🍁', _toggle('QUEBEC_MODE', jarvis.quebec_mode)),
     _row('Niveau log',  _select('LOG_LEVEL', [['DEBUG','DEBUG'],['INFO','INFO'],['WARNING','WARNING'],['ERROR','ERROR']], jarvis.log_level||'INFO')),
     _row('Environnement', `<span style="font-family:'DM Mono',monospace;font-size:10px;color:var(--text-dim)">${_esc(jarvis.environment||'development')}</span>`),
   ].join(''));

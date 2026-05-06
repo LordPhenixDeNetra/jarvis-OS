@@ -42,7 +42,18 @@ class Agent:
 
     def _build_system(self, notifications: list[str] | None = None) -> str:
         """Assemble le prompt système : partie statique + contexte dynamique."""
+        from config.settings import settings as _s
         static_system = _STATIC_PROMPT_PATH.read_text(encoding="utf-8")
+        if _s.quebec_mode:
+            static_system += (
+                "\n\n## Mode Québécois (ACTIF)\n"
+                "Tu parles avec un accent et du dialecte québécois authentique. "
+                "Utilise des expressions typiques : 'ostie', 'câlice', 'tabarnak' (avec parcimonie), "
+                "'c'est le boutte', 'en masse', 'pantoute', 'tantôt', 'maudit', 'icitte', "
+                "'chu' (je suis), 'ben' (bien), 'toé' (toi), 'moé' (moi), 'faque' (fait que / donc), "
+                "'t'sé' (tu sais), 'un char' (une voiture), 'magasiner' (faire du shopping). "
+                "Garde la personnalité de Jarvis (direct, efficace, ironie) mais avec la couleur québécoise."
+            )
         dynamic_parts: list[str] = ["=== CONTEXTE DYNAMIQUE ==="]
 
         # Date/heure toujours injectée — utile pour le calendrier et les calculs temporels
