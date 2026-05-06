@@ -1,7 +1,5 @@
 <div align="center">
 
-![Jarvis OS](Cover_Jarvis_Github.png)
-
 # Jarvis OS
 
 [![Python 3.11+](https://img.shields.io/badge/Python-3.11+-3776AB?style=flat-square&logo=python&logoColor=white)](https://python.org)
@@ -9,6 +7,11 @@
 [![LiveKit](https://img.shields.io/badge/LiveKit-voice-F5A623?style=flat-square)](https://livekit.io)
 [![Claude](https://img.shields.io/badge/Claude-Anthropic-8B5CF6?style=flat-square)](https://anthropic.com)
 [![License: MIT](https://img.shields.io/badge/License-MIT-22C55E?style=flat-square)](LICENSE)
+
+[![Jarvis OS](https://img.shields.io/badge/Jarvis_OS-repo-0F172A?style=for-the-badge&logo=github)](https://github.com/Grominet95/jarvis-OS)
+[![Dashboard Monde](https://img.shields.io/badge/Dashboard_Monde-repo-1E3A5F?style=for-the-badge&logo=github)](https://github.com/Grominet95/dashboard_monde)
+
+![Jarvis OS](Cover_Jarvis_Github.png)
 
 Assistant personnel IA, texte & voix temps réel, self-hosted, stack open source.
 
@@ -166,7 +169,7 @@ Tous les fichiers mémoire vivent dans `memory_data/` qui est gitignorés, ils r
 
 ## Dashboard Monde (World Monitor)
 
-L'onglet **Intel Monde** de l'interface Jarvis affiche [World Monitor](https://github.com/Grominet95/dashboard_monde), un tableau de bord géopolitique temps réel (globe 3D, flux d'actualités IA, radars financiers, suivi d'infrastructures).
+L'onglet **Intel Monde** de l'interface Jarvis affiche un **Dashboard Monde**, un tableau de bord géopolitique temps réel (globe 3D, flux d'actualités IA, radars financiers, suivi d'infrastructures).
 
 **Prérequis :** Node.js 18+
 
