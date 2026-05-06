@@ -6,7 +6,7 @@
 [![FastAPI](https://img.shields.io/badge/FastAPI-async-009688?style=flat-square&logo=fastapi&logoColor=white)](https://fastapi.tiangolo.com)
 [![LiveKit](https://img.shields.io/badge/LiveKit-voice-F5A623?style=flat-square)](https://livekit.io)
 [![Claude](https://img.shields.io/badge/Claude-Anthropic-8B5CF6?style=flat-square)](https://anthropic.com)
-[![License: MIT](https://img.shields.io/badge/License-MIT-22C55E?style=flat-square)](LICENSE)
+[![License: Proprietary](https://img.shields.io/badge/License-Proprietary-red?style=flat-square)](LICENSE)
 
 [![Jarvis OS](https://img.shields.io/badge/Jarvis_OS-repo-0F172A?style=for-the-badge&logo=github)](https://github.com/Grominet95/jarvis-OS)
 [![Dashboard Monde](https://img.shields.io/badge/Dashboard_Monde-repo-1E3A5F?style=for-the-badge&logo=github)](https://github.com/Grominet95/dashboard_monde)

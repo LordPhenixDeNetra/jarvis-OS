@@ -1,0 +1,72 @@
+Copyright (c) 2026 Barthélemy Houot. All rights reserved.
+
+================================================================================
+JARVIS OS — Proprietary Source License
+================================================================================
+
+This software and all associated source code, documentation, assets, and related
+files (the "Software") are the exclusive intellectual property of Barthélemy
+Houot ("the Author").
+
+--------------------------------------------------------------------------------
+1. PERMITTED USE
+--------------------------------------------------------------------------------
+
+You may:
+- View and read the source code for personal, educational, and non-commercial
+  purposes.
+- Run the Software locally for strictly personal, private use.
+
+--------------------------------------------------------------------------------
+2. RESTRICTIONS
+--------------------------------------------------------------------------------
+
+You may NOT, without prior written permission from the Author:
+
+a) Use the Software or any part of it for commercial purposes, including but not
+   limited to SaaS products, paid services, or any revenue-generating activity.
+
+b) Redistribute, publish, sublicense, sell, rent, or transfer the Software or
+   any derivative of it.
+
+c) Modify, adapt, translate, or create derivative works based on the Software.
+
+d) Use the Software, its name, its interface, or its design in any public
+   content — including but not limited to videos, live streams, podcasts,
+   articles, blog posts, social media posts, presentations, or tutorials —
+   without crediting the Author with a visible, explicit mention.
+
+   Required attribution format for public content:
+       "Jarvis OS by @Grominet95 — github.com/Grominet95/jarvis-OS"
+
+e) Deploy or host the Software or any derivative of it in a way that makes it
+   accessible to third parties.
+
+f) Claim authorship or ownership of the Software or any substantial portion
+   of it.
+
+--------------------------------------------------------------------------------
+3. NO WARRANTY
+--------------------------------------------------------------------------------
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED. THE AUTHOR SHALL NOT BE LIABLE FOR ANY CLAIM, DAMAGES, OR OTHER
+LIABILITY ARISING FROM THE USE OF THE SOFTWARE.
+
+--------------------------------------------------------------------------------
+4. TERMINATION
+--------------------------------------------------------------------------------
+
+Any violation of the terms above automatically terminates your rights under
+this license. Upon termination, you must immediately cease all use and delete
+all copies of the Software in your possession.
+
+--------------------------------------------------------------------------------
+5. CONTACT
+--------------------------------------------------------------------------------
+
+For licensing inquiries, commercial use, or collaboration requests:
+    GitHub: https://github.com/Grominet95
+    Email:  barthelemy.houot@2023.icam.fr
+
+================================================================================
