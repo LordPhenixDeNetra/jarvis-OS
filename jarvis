@@ -1,0 +1,18 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+case "${1:-}" in
+  eclosion) bash setup.sh ;;
+  run)      uv run python main.py ;;
+  voice)    uv run python voice_agent.py dev ;;
+  *)
+    echo ""
+    echo "  Usage : jarvis <commande>"
+    echo ""
+    echo "    eclosion   —  installation et configuration"
+    echo "    run        —  démarre le serveur"
+    echo "    voice      —  démarre le pipeline vocal"
+    echo ""
+    exit 1
+    ;;
+esac

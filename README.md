@@ -76,57 +76,38 @@ voice_agent.py  ──LiveKit──►  STT ──► Gateway ──► TTS
 ```bash
 git clone https://github.com/Grominet95/jarvis-OS.git
 cd jarvis-OS
-bash install.sh
+./jarvis eclosion
 ```
 
-Le script :
-1. Vérifie Python 3.11+
-2. Installe/met à jour `uv`
-3. Crée `.venv` et installe toutes les dépendances Python (`pyproject.toml`)
-4. Copie `.env.example` → `.env`
-5. Télécharge le modèle YOLOv8n (~6 Mo)
-6. Télécharge le modèle Piper TTS français (~73 Mo)
-7. Crée les dossiers `memory_data/` et `workspace/`
+Le wizard interactif :
+1. Vérifie Python 3.11+ et installe `uv` si absent
+2. Installe toutes les dépendances Python (`pyproject.toml`)
+3. Demande ta clé API Anthropic (seule clé obligatoire)
+4. Configure ta localisation pour le moteur proactif
+5. Propose les modules optionnels (ElevenLabs, LiveKit, AISstream)
+6. Télécharge les modèles ML (YOLOv8n, Piper TTS)
+7. Génère le `.env` et installe la commande `jarvis` globalement
 
----
-
-## Configuration
-
-Édite `.env` — toutes les clés sont documentées dans `.env.example` :
-
-```bash
-# Minimum pour démarrer (mode texte, Anthropic)
-ANTHROPIC_API_KEY=sk-ant-...
-LLM_PROVIDER=api
-
-# Pipeline vocal (LiveKit + Deepgram)
-LIVEKIT_URL=wss://ton-projet.livekit.cloud
-LIVEKIT_API_KEY=APIxxx
-LIVEKIT_API_SECRET=xxx
-DEEPGRAM_API_KEY=xxx
-```
-
-Services optionnels : ElevenLabs TTS, Mistral, Gemini, AISstream, Spotify.
-
-**Intégrations Google (Gmail / Calendar) :** place ton `credentials.json` issu de Google Cloud Console dans `config/google_credentials.json`, puis démarre Jarvis — il ouvrira le flux d'authentification OAuth et sauvegardera les tokens en local (ils sont gitignorés).
+> La première fois, utilise `./jarvis eclosion`. Le wizard installe ensuite la commande globalement — tu peux utiliser `jarvis` depuis n'importe où.
 
 ---
 
 ## Démarrage
 
-**Serveur texte + API :**
 ```bash
-uv run python main.py
-# Serveur sur http://localhost:8000
-# UI admin : http://localhost:8000/admin
-```
-
-**Voice agent (LiveKit) :**
-```bash
-uv run python voice_agent.py dev
+jarvis run      # serveur principal  →  localhost:8000/admin
+jarvis voice    # pipeline vocal LiveKit (optionnel)
 ```
 
 Les deux peuvent tourner simultanément — le voice agent délègue au gateway du serveur principal, donc ils partagent la même session, la même mémoire et les mêmes outils.
+
+---
+
+## Configuration
+
+Tout est configuré pendant l'éclosion. Pour modifier une clé après coup, édite `.env` à la racine du projet.
+
+**Intégrations Google (Gmail / Calendar) :** place ton `credentials.json` issu de Google Cloud Console dans `config/google_credentials.json`, puis démarre Jarvis — il ouvrira le flux d'authentification OAuth et sauvegardera les tokens en local (ils sont gitignorés).
 
 ---
 
