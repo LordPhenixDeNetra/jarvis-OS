@@ -165,19 +165,13 @@ async def entrypoint(ctx: object) -> None:
 
     gateway_llm = JarvisGatewayLLM(session_id=session_id)
 
-    # Re-lire .env à chaque session pour que QUEBEC_MODE soit pris en compte sans restart
-    from dotenv import dotenv_values
-    _env = dotenv_values(".env")
+    _env_file = os.path.join(os.path.dirname(os.path.abspath(__file__)), ".env")
+    _env = __import__("dotenv").dotenv_values(_env_file)
     _quebec_mode = _env.get("QUEBEC_MODE", "false").strip().lower() in ("true", "1", "yes")
     _voice_id = (
         _env.get("QUEBEC_VOICE_ID", "RBhYSNMNu6b2CGZ9Fn1M")
         if _quebec_mode
-        else _env.get("ELEVENLABS_VOICE_ID", "")
-    )
-    _tts_model = (
-        "eleven_multilingual_v2"
-        if _quebec_mode
-        else _env.get("ELEVENLABS_MODEL", "eleven_flash_v2_5")
+        else _env.get("ELEVENLABS_VOICE_ID", os.getenv("ELEVENLABS_VOICE_ID", ""))
     )
 
     session = AgentSession(
@@ -194,9 +188,9 @@ async def entrypoint(ctx: object) -> None:
         ),
         llm=gateway_llm,
         tts=elevenlabs.TTS(
-            model=_tts_model,
+            model="eleven_turbo_v2_5",
             voice_id=_voice_id,
-            api_key=_env.get("ELEVENLABS_API_KEY", os.getenv("ELEVENLABS_API_KEY", "")),
+            api_key=os.getenv("ELEVENLABS_API_KEY", ""),
             voice_settings=VoiceSettings(
                 stability=0.4,
                 similarity_boost=0.8,
