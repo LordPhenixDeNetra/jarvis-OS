@@ -1338,7 +1338,9 @@
     }
 
     tb.appendChild(el("div", { class: "kp-toolbar-spacer" }));
-    tb.appendChild(statusPill(state.status));
+    const pill = statusPill(state.status);
+    pill.id = "kp-status-pill";
+    tb.appendChild(pill);
     tb.appendChild(btn({
       variant: "primary", icon: "save", onClick: saveBundle,
       disabled: !state.workspaceValid || state.saving,
@@ -1400,32 +1402,6 @@
   }
 
   /* ─────────────── Main render ─────────────── */
-  function tabsBar() {
-    const items = [
-      { id: "keys",    label: "Touches",     icon: "keyboard" },
-      { id: "light",   label: "Éclairage",   icon: "lightbulb" },
-      { id: "profiles",label: "Profils",     icon: "layers" },
-      { id: "device",  label: "Appareil",    icon: "usb" },
-      { id: "firmware",label: "Mise à jour", icon: "cpu" },
-      { id: "drivers", label: "Pilotes",     icon: "wrench" },
-      { id: "about",   label: "À propos",    icon: "info" },
-    ];
-    const bar = el("div", { class: "kp-tabs" });
-    items.forEach((it) => {
-      const b = el("button", {
-        type: "button", class: "kp-tab" + (state.tab === it.id ? " is-on" : ""),
-        onclick: () => {
-          state.tab = it.id;
-          if (it.id !== "light") stopLightLoop();
-          try { history.replaceState(null, "", "#" + it.id); } catch (_) {}
-          render();
-        },
-      }, [svgIcon(ICONS[it.icon] || it.icon, 14), document.createTextNode(it.label)]);
-      bar.appendChild(b);
-    });
-    return bar;
-  }
-
   function render() {
     const root = document.getElementById("page-root");
     if (!root) return;
@@ -1440,8 +1416,8 @@
     }
 
     root.appendChild(renderToolbar());
-    root.appendChild(tabsBar());
 
+    const pageWrap = el("div", { class: "kp-page-wrap" });
     let page;
     switch (state.tab) {
       case "keys":     page = renderKeysPage(); break;
@@ -1454,7 +1430,8 @@
       default:         page = renderKeysPage();
     }
     page.classList.add("kp-fade-in");
-    root.appendChild(page);
+    pageWrap.appendChild(page);
+    root.appendChild(pageWrap);
 
     if (state.tab === "light") startLightLoop();
     else stopLightLoop();
@@ -1534,11 +1511,26 @@
     render();
   }
 
+  function _statusKey(s) {
+    if (!s) return "none";
+    return (s.bootloaderPresent ? "1" : "0") + (s.hidPresent ? "1" : "0");
+  }
+
   async function pollStatus() {
     try {
-      state.status = await api.status();
+      const next = await api.status();
+      const prevKey = _statusKey(state.status);
+      const nextKey = _statusKey(next);
+      state.status = next;
+      if (prevKey !== nextKey) {
+        const oldPill = document.getElementById("kp-status-pill");
+        if (oldPill && oldPill.parentNode) {
+          const newPill = statusPill(next);
+          newPill.id = "kp-status-pill";
+          oldPill.replaceWith(newPill);
+        }
+      }
     } catch (e) { /* ignore */ }
-    render();
     setTimeout(pollStatus, 2500);
   }
 
