@@ -1191,19 +1191,25 @@ async def voice_generate(body: VoiceGenerateRequest, request: Request):
 
 @router.get("/api/voice/token")
 async def get_voice_token(session_id: str | None = None) -> dict:
-    """Génère un token LiveKit pour la session vocale browser.
-    session_id: si fourni, la session vocale partagera l'historique du chat texte.
-    """
-    import json as _json
+    """Génère un token LiveKit et dispatche l'agent jarvis dans la room."""
     import os
     import uuid
-    from livekit.api import AccessToken, RoomAgentDispatch, RoomConfiguration, VideoGrants
+    from livekit.api import (
+        AccessToken, VideoGrants,
+        LiveKitAPI, CreateRoomRequest, CreateAgentDispatchRequest,
+    )
 
-    api_key = os.getenv("LIVEKIT_API_KEY")
+    api_key    = os.getenv("LIVEKIT_API_KEY")
     api_secret = os.getenv("LIVEKIT_API_SECRET")
+    livekit_url = os.getenv("LIVEKIT_URL")
 
-    # Room name = session_id partagée — lue par l'agent via ctx.room.name sans race condition
-    room_name = f"jarvis-{session_id}" if session_id else f"jarvis-{uuid.uuid4().hex[:8]}"
+    room_name = f"jarvis-{uuid.uuid4().hex[:8]}"
+
+    async with LiveKitAPI(url=livekit_url, api_key=api_key, api_secret=api_secret) as lkapi:
+        await lkapi.room.create_room(CreateRoomRequest(name=room_name))
+        await lkapi.agent_dispatch.create_dispatch(
+            CreateAgentDispatchRequest(room=room_name, agent_name="jarvis")
+        )
 
     token = (
         AccessToken(api_key=api_key, api_secret=api_secret)
@@ -1215,13 +1221,10 @@ async def get_voice_token(session_id: str | None = None) -> dict:
             can_publish=True,
             can_subscribe=True,
         ))
-        .with_room_config(RoomConfiguration(
-            agents=[RoomAgentDispatch(agent_name="jarvis")],
-        ))
         .to_jwt()
     )
 
-    return {"token": token, "url": os.getenv("LIVEKIT_URL")}
+    return {"token": token, "url": livekit_url}
 
 
 # ── Analytics API ─────────────────────────────────────────────────────────────

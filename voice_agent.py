@@ -17,10 +17,11 @@ from livekit.agents import (
 
 import logging
 import os
+from pathlib import Path
 
 from dotenv import load_dotenv
 
-load_dotenv()
+load_dotenv(Path(__file__).parent / ".env")
 
 
 logger = logging.getLogger("jarvis-voice")
@@ -89,8 +90,9 @@ async def entrypoint(ctx: object) -> None:
         tts=elevenlabs.TTS(
             model="eleven_turbo_v2_5",
             voice_id=os.getenv("ELEVENLABS_VOICE_ID", ""),
-            optimize_streaming_latency=3,
-            output_format="pcm_24000",
+            api_key=os.getenv("ELEVENLABS_API_KEY"),
+            encoding="pcm_24000",
+            streaming_latency=3,
         ),
     )
 
