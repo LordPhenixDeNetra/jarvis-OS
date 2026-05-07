@@ -255,17 +255,11 @@
     if (nearbyCount) statParts.push(nearbyCount + " à proximité");
     root.innerHTML = "";
     root.appendChild(secHd("04", "Devices", "Tes appareils", statParts.join(" · ") || "—"));
-    root.appendChild(el("div", {
-      style: { display: "flex", justifyContent: "flex-end", marginBottom: "14px" },
-    }, [
-      el("button", {
-        class: "btn-accent",
-        text: "Ajouter un appareil",
-        onclick: () => { window.location.href = "/keypad"; },
-      }),
-    ]));
     if (data.length === 0) {
       root.appendChild(el("div", { class: "j-empty", text: "Aucun appareil détecté" }));
+      root.appendChild(el("div", { style: { marginTop: "14px" } }, [
+        el("a", { class: "btn-ghost", href: "/keypad", text: "Ajouter un appareil Jarvis (Keypad Studio)" }),
+      ]));
       return;
     }
     const grid = el("div", { style: { display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: "12px" } });
@@ -273,7 +267,7 @@
       const col = COL[d.col] || d.col;
       const aRaw = d.a && d.a.length > 1 ? String(d.a[1]) : "—";
       const bRaw = d.b && d.b.length > 1 ? String(d.b[1]) : "—";
-      grid.appendChild(el("div", { class: "dev-card" }, [
+      const parts = [
         el("div", { class: "dev-head" }, [
           el("div", {}, [
             el("div", { class: "dev-name", text: d.name }),
@@ -297,9 +291,21 @@
             el("div", { class: "val" }, [document.createTextNode(bRaw)]),
           ]),
         ]),
-      ]));
+      ];
+      if (d.type === "macropad") {
+        parts.push(el("div", { style: { marginTop: "10px" } }, [
+          el("a", { class: "btn-ghost", href: "/keypad", text: "Configurer dans Keypad Studio" }),
+        ]));
+      }
+      grid.appendChild(el("div", { class: "dev-card" }, parts));
     });
     root.appendChild(grid);
+    root.appendChild(el("div", {
+      style: { display: "flex", justifyContent: "flex-start", marginTop: "16px", flexWrap: "wrap", gap: "8px", alignItems: "center" },
+    }, [
+      el("a", { class: "btn-ghost", href: "/keypad", text: "Ajouter un appareil" }),
+      el("span", { class: "t-mono", style: { fontSize: "10px", color: "var(--fg-3)" }, text: "Macropad 2K et suivants · Keypad Studio" }),
+    ]));
   }
 
   function renderAnalytics(root, data) {
