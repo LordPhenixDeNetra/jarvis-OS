@@ -453,7 +453,8 @@ body.intel-mode #settings-nav-btn {
 body.globe-mode .layout {
   pointer-events: none;
 }
-body.globe-mode .panel-left {
+body.globe-mode .panel-left,
+body.globe-mode .panel-right {
   pointer-events: auto;
 }
 
