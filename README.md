@@ -225,6 +225,8 @@ uv run python scripts/test_llm.py --provider mistral
 
 ---
 
+[![Star History Chart](https://api.star-history.com/svg?repos=Grominet95/jarvis-OS&type=Date)](https://star-history.com/#Grominet95/jarvis-OS&Date)
+
 ## Licence
 
 MIT
