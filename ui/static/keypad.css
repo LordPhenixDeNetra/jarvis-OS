@@ -671,21 +671,27 @@ select.kp-field {
 }
 
 /* ── Mode drawer (embedded) ─────────────────────────────────────── */
-body.is-embedded .app {
-  grid-template-columns: 1fr;
-}
-body.is-embedded .sidebar {
+body.is-embedded #sidebar {
   display: none;
 }
 body.is-embedded .topbar {
   display: none;
 }
+body.is-embedded .app {
+  grid-template-columns: 1fr;
+  grid-template-rows: 100vh;
+}
 body.is-embedded .main {
+  height: 100vh;
   overflow: hidden;
+  display: flex;
+  flex-direction: column;
 }
 body.is-embedded .kp-root {
-  height: 100vh;
-  max-height: 100vh;
+  flex: 1;
+  min-height: 0;
+  height: auto;
+  max-height: none;
 }
 
 .kp-emb-tabs {
