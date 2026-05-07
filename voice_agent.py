@@ -10,10 +10,10 @@ from livekit.plugins import deepgram, elevenlabs, silero
 from livekit.agents import (
     Agent,
     AgentSession,
-    RoomInputOptions,
     WorkerOptions,
     cli,
 )
+from livekit.agents.voice.room_io import RoomOptions, AudioInputOptions
 
 import logging
 import os
@@ -67,6 +67,15 @@ class JarvisVoiceAgent(Agent):
 
 
 async def entrypoint(ctx: object) -> None:
+    from dotenv import dotenv_values
+    _env = dotenv_values(Path(__file__).parent / ".env")
+
+    _quebec = _env.get("QUEBEC_MODE", "false").strip().lower() in ("true", "1", "yes")
+    _voice_id = _env.get("QUEBEC_VOICE_ID") if _quebec else _env.get("ELEVENLABS_VOICE_ID", "")
+    _tts_model = "eleven_multilingual_v2" if _quebec else _env.get("ELEVENLABS_MODEL", "eleven_turbo_v2_5")
+
+    logger.info("TTS config — quebec=%s model=%s voice=%s", _quebec, _tts_model, _voice_id)
+
     session = AgentSession(
         # VAD — détection de voix
         vad=silero.VAD.load(
@@ -83,14 +92,14 @@ async def entrypoint(ctx: object) -> None:
         ),
         # LLM — Gemini 2.5 Flash
         llm=lk_google.LLM(
-            model="gemini-2.5-flash-preview-05-20",
+            model="gemini-2.5-flash",
             temperature=0.7,
         ),
-        # TTS — ElevenLabs Turbo
+        # TTS — ElevenLabs
         tts=elevenlabs.TTS(
-            model="eleven_turbo_v2_5",
-            voice_id=os.getenv("ELEVENLABS_VOICE_ID", ""),
-            api_key=os.getenv("ELEVENLABS_API_KEY"),
+            model=_tts_model,
+            voice_id=_voice_id,
+            api_key=_env.get("ELEVENLABS_API_KEY", os.getenv("ELEVENLABS_API_KEY", "")),
             encoding="pcm_24000",
             streaming_latency=3,
         ),
@@ -101,8 +110,8 @@ async def entrypoint(ctx: object) -> None:
     await session.start(
         room=ctx.room,
         agent=agent,
-        room_input_options=RoomInputOptions(
-            noise_cancellation=True,
+        room_options=RoomOptions(
+            audio_input=AudioInputOptions(noise_cancellation=None),
         ),
     )
 
