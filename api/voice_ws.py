@@ -11,6 +11,7 @@ from loguru import logger
 from audio.chunker import StreamChunker
 from audio.receiver import VoiceReceiver
 from audio.tts import tts_engine
+from config.settings import settings
 from background.notifications import ProactiveQueue
 from background.worker import BackgroundTask, BackgroundWorker
 from core.gateway import _FALLBACK, Gateway
@@ -111,8 +112,15 @@ async def voice_ws(websocket: WebSocket) -> None:
     auto_dream: AutoDream = websocket.app.state.auto_dream
     proactive: ProactiveQueue = websocket.app.state.proactive_queue
 
+    # Restaure la session existante si le client passe un session_id
+    initial_session_id: str | None = websocket.query_params.get("session_id") or None
+
     loop = asyncio.get_running_loop()
-    receiver = VoiceReceiver()
+    if settings.stt_provider == "deepgram":
+        from audio.deepgram_receiver import DeepgramReceiver
+        receiver: VoiceReceiver | DeepgramReceiver = DeepgramReceiver()
+    else:
+        receiver = VoiceReceiver()
     await asyncio.to_thread(receiver.start, loop)
 
     voice_session = VoiceSession()
@@ -142,7 +150,7 @@ async def voice_ws(websocket: WebSocket) -> None:
 
     # ── Process loop ──────────────────────────────────────────────────────────
     async def process_loop() -> None:
-        session_id: str | None = None
+        session_id: str | None = initial_session_id
         while True:
             text = await receiver.next_transcript()
             logger.debug("Transcript received", text=text[:60])
@@ -153,7 +161,7 @@ async def voice_ws(websocket: WebSocket) -> None:
             voice_session.interrupt_event.clear()
 
             session, route, response = await gateway.handle(
-                message=text,
+                message=text.strip() + " [voix]",
                 session_id=session_id,
                 stream=True,
             )

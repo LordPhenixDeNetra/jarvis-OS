@@ -50,6 +50,7 @@ Thumbs.db
 .idea/
 *.swp
 *.swo
+*.code-workspace
 
 tools/arduino-cli/*
 !tools/arduino-cli/.gitkeep

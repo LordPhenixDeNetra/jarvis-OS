@@ -31,6 +31,7 @@ from api.music import router as music_router
 from api.widgets import router as widgets_router
 from api.keypad import _ui_router as keypad_ui_router
 from api.keypad import router as keypad_router
+from api.google_oauth import router as google_oauth_router
 from background.notifications import NotificationQueue, ProactiveQueue
 from proactive.engine import ProactiveEngine
 from background.scheduler import Scheduler
@@ -288,6 +289,7 @@ app.include_router(music_router)
 app.include_router(globe_router)
 app.include_router(keypad_router)
 app.include_router(keypad_ui_router)
+app.include_router(google_oauth_router)
 
 @app.get("/static/mapbox-style.json")
 async def mapbox_style():

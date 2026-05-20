@@ -49,17 +49,55 @@ class SpotifyTool(Tool):
             async with httpx.AsyncClient(timeout=8.0) as client:
                 headers = {"Authorization": f"Bearer {token}"}
 
+                async def _active_device_id() -> str | None:
+                    """Retourne l'ID du device actif, préfère JARVIS, sinon premier dispo."""
+                    r = await client.get(f"{_API_BASE}/me/player/devices", headers=headers)
+                    if not r.is_success:
+                        return None
+                    devices = r.json().get("devices", [])
+                    if not devices:
+                        return None
+                    jarvis = next((d for d in devices if d.get("name") == "JARVIS"), None)
+                    active = next((d for d in devices if d.get("is_active")), None)
+                    return (jarvis or active or devices[0])["id"]
+
+                async def _play(body: dict | None = None) -> httpx.Response:
+                    """Lance la lecture, transfère sur un device si nécessaire."""
+                    r = await client.put(
+                        f"{_API_BASE}/me/player/play",
+                        headers=headers,
+                        json=body or {},
+                    )
+                    if r.status_code == 404:
+                        device_id = await _active_device_id()
+                        if not device_id:
+                            return r
+                        # Transférer la lecture sur ce device d'abord
+                        await client.put(
+                            f"{_API_BASE}/me/player",
+                            headers=headers,
+                            json={"device_ids": [device_id], "play": False},
+                        )
+                        r = await client.put(
+                            f"{_API_BASE}/me/player/play",
+                            headers=headers,
+                            params={"device_id": device_id},
+                            json=body or {},
+                        )
+                    return r
+
                 if action == "toggle":
                     r = await client.get(f"{_API_BASE}/me/player", headers=headers)
                     is_playing = r.status_code == 200 and r.json().get("is_playing", False)
-                    endpoint = f"{_API_BASE}/me/player/{'pause' if is_playing else 'play'}"
-                    method = client.put
-                    r2 = await method(endpoint, headers=headers)
+                    if is_playing:
+                        r2 = await client.put(f"{_API_BASE}/me/player/pause", headers=headers)
+                    else:
+                        r2 = await _play()
                     label = "Pause." if is_playing else "Lecture reprise."
                     return ToolResult(content=label if r2.status_code in (200, 204) else f"Erreur Spotify ({r2.status_code})")
 
                 if action == "play":
-                    r = await client.put(f"{_API_BASE}/me/player/play", headers=headers)
+                    r = await _play()
                     return ToolResult(content="Lecture reprise." if r.status_code in (200, 204) else f"Erreur Spotify ({r.status_code})")
 
                 if action == "pause":
@@ -91,11 +129,7 @@ class SpotifyTool(Tool):
                     uri = track["uri"]
                     name = track["name"]
                     artist = ", ".join(a["name"] for a in track.get("artists", []))
-                    play_r = await client.put(
-                        f"{_API_BASE}/me/player/play",
-                        headers=headers,
-                        json={"uris": [uri]},
-                    )
+                    play_r = await _play({"uris": [uri]})
                     if play_r.status_code in (200, 204):
                         return ToolResult(content=f"Lecture de « {name} » par {artist}.")
                     return ToolResult(content=f"Morceau trouvé ({name}) mais impossible de lancer ({play_r.status_code}).", is_error=True)
@@ -134,11 +168,7 @@ class SpotifyTool(Tool):
                     name = playlist.get("name", query)
                     if not uri:
                         return ToolResult(content=f"Playlist « {name} » trouvée mais URI manquant.", is_error=True)
-                    play_r = await client.put(
-                        f"{_API_BASE}/me/player/play",
-                        headers=headers,
-                        json={"context_uri": uri},
-                    )
+                    play_r = await _play({"context_uri": uri})
                     if play_r.status_code in (200, 204):
                         return ToolResult(content=f"Lecture de la playlist « {name} ».")
                     return ToolResult(content=f"Playlist trouvée ({name}) mais impossible de lancer ({play_r.status_code}).", is_error=True)

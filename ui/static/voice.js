@@ -184,7 +184,8 @@ class VoiceClient {
   _connect() {
     return new Promise((resolve, reject) => {
       const proto = location.protocol === "https:" ? "wss" : "ws";
-      const ws    = new WebSocket(`${proto}://${location.host}/ws/voice`);
+      const sid   = this._sessionId ? `?session_id=${encodeURIComponent(this._sessionId)}` : "";
+      const ws    = new WebSocket(`${proto}://${location.host}/ws/voice${sid}`);
       ws.binaryType = "arraybuffer";
       ws.onopen    = () => resolve(ws);
       ws.onerror   = reject;

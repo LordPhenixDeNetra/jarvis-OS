@@ -1,17 +1,18 @@
 /* ─────────────────────────────────────────────────────────────────────
-   JARVIS V4 — Shared runtime (vanilla JS, ES2017+)
+   JARVIS — Shared runtime v2 (vanilla JS, ES2017+)
    Public API attached to window.Jarvis :
 
-     Jarvis.mountAtmosphere()                   → injects vignette/grain/aurora
-     Jarvis.mountSidebar({ sections, activeId, onNav, footer })
+     Jarvis.mountAtmosphere()
+     Jarvis.setMode(mode)                        → "home"|"workspace"|"capacites"|"config"
+     Jarvis.mountRooms({ mode, pages, activePage, onNav, onMissionControl })
      Jarvis.mountTopbar({ pageTitle, crumb, onAsk, onCmdK })
-     Jarvis.openCmdK()                          → show command palette
-     Jarvis.closeCmdK()
-     Jarvis.registerCommands(arr)               → add commands (slash + nav)
-     Jarvis.mountBottomNav({ active })          → persistent 5-icon nav (active: "sphere"|"control"|"globe"|"intel"|"system")
-     Jarvis.notify({ kind, text })              → kind: info|success|warn|error
-     Jarvis.api.get(path) / .post(path, body)   → fetch wrappers w/ JSON
+     Jarvis.openCmdK() / .closeCmdK()
+     Jarvis.openMissionControl() / .closeMissionControl()
+     Jarvis.registerCommands(arr)
+     Jarvis.notify({ kind, text })
+     Jarvis.api.get(path) / .post(path, body)
      Jarvis.fmt.num(v) / .pct(v) / .relTime(d)
+     Jarvis.sparkline(data, opts)
 
    Depends on _shared.css being loaded first.
    ───────────────────────────────────────────────────────────────────── */
@@ -73,7 +74,7 @@
     },
   };
 
-  /* ───────── API wrapper (use existing FastAPI/Flask backend) ───────── */
+  /* ───────── API wrapper ───────── */
   Jarvis.api = {
     base: window.JARVIS_API_BASE || "",
     async get(path) {
@@ -83,8 +84,7 @@
     },
     async post(path, body) {
       const r = await fetch(this.base + path, {
-        method: "POST",
-        credentials: "same-origin",
+        method: "POST", credentials: "same-origin",
         headers: { "Content-Type": "application/json" },
         body: body == null ? null : JSON.stringify(body),
       });
@@ -93,8 +93,7 @@
     },
     async put(path, body) {
       const r = await fetch(this.base + path, {
-        method: "PUT",
-        credentials: "same-origin",
+        method: "PUT", credentials: "same-origin",
         headers: { "Content-Type": "application/json" },
         body: body == null ? null : JSON.stringify(body),
       });
@@ -102,28 +101,267 @@
       return r.json();
     },
     async delete(path) {
-      const r = await fetch(this.base + path, {
-        method: "DELETE",
-        credentials: "same-origin",
-      });
+      const r = await fetch(this.base + path, { method: "DELETE", credentials: "same-origin" });
       if (!r.ok) throw new Error("DELETE " + path + " → " + r.status);
       return r.json();
     },
   };
 
-  /* ───────── Atmosphere (vignette + grain + aurora) ───────── */
+  /* ───────── Navigation (iframe-aware) ───────── */
+  Jarvis.navigate = function (url) {
+    // Si on tourne dans l'iframe, déléguer au shell parent
+    if (window !== window.top && window.top.Jarvis?.navigateFrame) {
+      window.top.Jarvis.navigateFrame(url);
+      return;
+    }
+    // Si le shell home a enregistré un handler iframe
+    if (typeof Jarvis.navigateFrame === "function") {
+      Jarvis.navigateFrame(url);
+      return;
+    }
+    window.location.href = url;
+  };
+
+  /* ───────── Atmosphere ───────── */
   Jarvis.mountAtmosphere = function () {
     if (document.querySelector(".atmo--vignette")) return;
+    document.body.appendChild(el("div", { class: "spotlight", id: "j-spotlight" }));
     document.body.appendChild(el("div", { class: "atmo atmo--aurora" }));
     document.body.appendChild(el("div", { class: "atmo atmo--vignette" }));
     document.body.appendChild(el("div", { class: "atmo atmo--grain" }));
+    document.body.appendChild(el("div", { class: "mode-glow" }));
+
+    // Spotlight mouse tracking
+    document.addEventListener("mousemove", (e) => {
+      const sp = document.getElementById("j-spotlight");
+      if (sp) {
+        sp.style.setProperty("--mx", e.clientX + "px");
+        sp.style.setProperty("--my", e.clientY + "px");
+      }
+    }, { passive: true });
   };
 
-  /* ───────── Sidebar ─────────
-     opts:
-       sections: [{ label, items: [{ id, label, meta, dot? }] }]
-       activeId, onNav(id)
-       footer: { spend: "$X.YZ", cpu: "14%", ramPct: 0.42 }   (optional)
+  /* ───────── Mode system ───────── */
+  const MODE_META = {
+    home:       { chapter: "—",  num: "00", label: "JARVIS",        watermark: "" },
+    workspace:  { chapter: "I",  num: "01", label: "PILOTAGE",      watermark: "Pilotage" },
+    capacites:  { chapter: "II", num: "02", label: "ATELIER",       watermark: "Atelier" },
+    config:     { chapter: "III",num: "03", label: "RÉGLAGES",      watermark: "Réglages" },
+  };
+
+  Jarvis.setMode = function (mode) {
+    document.body.dataset.mode = mode;
+    // Watermark
+    let wm = document.getElementById("j-watermark");
+    const meta = MODE_META[mode] || MODE_META.home;
+    if (meta.watermark) {
+      if (!wm) {
+        wm = el("div", { id: "j-watermark", class: "mode-watermark" });
+        document.body.appendChild(wm);
+      }
+      wm.textContent = meta.watermark;
+    } else if (wm) {
+      wm.textContent = "";
+    }
+    // Chapter indicator
+    const ch = document.getElementById("j-rooms-chapter");
+    if (ch && meta.chapter !== "—") {
+      ch.querySelector(".rooms-num").textContent = meta.chapter;
+      ch.querySelector(".rooms-lbl").textContent = meta.label;
+    }
+  };
+
+  /* ───────── Scene card ───────── */
+  Jarvis.showSceneCard = function (chapter, title, duration) {
+    duration = duration || 900;
+    let sc = document.getElementById("j-scene-card");
+    if (!sc) {
+      sc = el("div", { id: "j-scene-card", class: "scene-card" });
+      const inner = el("div", { class: "scene-card-inner" }, [
+        el("div", { class: "scene-card-chapter", id: "j-sc-chapter" }),
+        el("div", { class: "scene-card-title",   id: "j-sc-title" }),
+      ]);
+      sc.appendChild(inner);
+      document.body.appendChild(sc);
+    }
+    sc.querySelector("#j-sc-chapter").textContent = chapter || "";
+    sc.querySelector("#j-sc-title").textContent   = title   || "";
+    sc.classList.add("is-visible");
+    setTimeout(() => {
+      sc.style.transition = "opacity .5s ease";
+      sc.style.opacity = "0";
+      setTimeout(() => { sc.classList.remove("is-visible"); sc.style.opacity = ""; sc.style.transition = ""; }, 520);
+    }, duration);
+  };
+
+  /* ─────────────────────────────────────────────────────────────────
+     Rooms navigation (chapter indicator + subpages editorial sidebar)
+  ───────────────────────────────────────────────────────────────────── */
+  let _roomsOpts = null;
+
+  Jarvis.mountRooms = function (opts) {
+    _roomsOpts = opts;
+    const { mode, pages, activePage, onNav } = opts;
+    document.body.dataset.mode = mode;
+
+    // ── Chapter indicator top-left ──
+    let ch = document.getElementById("j-rooms-chapter");
+    if (!ch) {
+      ch = el("div", { id: "j-rooms-chapter", class: "rooms-chapter" });
+      document.body.appendChild(ch);
+    }
+    const meta = MODE_META[mode] || MODE_META.home;
+    ch.innerHTML = "";
+    ch.appendChild(el("span", { class: "rooms-num", text: meta.chapter }));
+    ch.appendChild(el("span", { class: "rooms-bar" }));
+    ch.appendChild(el("span", { class: "rooms-lbl", text: meta.label }));
+
+    // ── Watermark ──
+    Jarvis.setMode(mode);
+
+    // ── Mission Control trigger bottom-left ──
+    let mc = document.getElementById("j-rooms-mc");
+    if (!mc) {
+      mc = el("button", { id: "j-rooms-mc", class: "rooms-mc", onclick: () => Jarvis.openMissionControl() });
+      const icon = el("span", { class: "mc-icon" });
+      for (let i = 0; i < 4; i++) icon.appendChild(el("i"));
+      const kbd = el("span", { class: "mc-kbd" });
+      kbd.appendChild(el("span", { text: "⌘" }));
+      kbd.appendChild(el("span", { text: "T" }));
+      mc.appendChild(icon);
+      mc.appendChild(el("span", { text: "Mission Control" }));
+      mc.appendChild(kbd);
+      document.body.appendChild(mc);
+    }
+
+    // ── Subpages nav (editorial sidebar or bottom pill) ──
+    const isEditorial = mode !== "home";
+    if (isEditorial) {
+      document.body.dataset.subpages = "cocoon-wide-display";
+    } else {
+      delete document.body.dataset.subpages;
+    }
+
+    let nav = document.getElementById("j-rooms-pages");
+    if (!nav) {
+      nav = el("div", { id: "j-rooms-pages", class: "rooms-pages" });
+      document.body.appendChild(nav);
+    }
+    nav.dataset.modeLabel = meta.label;
+    nav.innerHTML = "";
+
+    (pages || []).forEach((p, idx) => {
+      const btn = el("button", {
+        dataset: { active: p.id === activePage ? "true" : "false" },
+        onclick: () => {
+          $$(".rooms-pages button", nav).forEach(b => b.dataset.active = "false");
+          btn.dataset.active = "true";
+          onNav && onNav(p.id);
+        },
+      });
+      btn.appendChild(el("span", { class: "num", text: String(idx + 1).padStart(2, "0") }));
+      btn.appendChild(el("span", { class: "lbl", text: p.label }));
+      nav.appendChild(btn);
+    });
+
+    // Keyboard ←/→ for subpage cycling
+    document.addEventListener("keydown", _handleRoomsKey, { once: false });
+  };
+
+  function _handleRoomsKey(e) {
+    if (cmdkOpen || mcOpen) return;
+    if (!_roomsOpts || !_roomsOpts.pages) return;
+    if (e.key !== "ArrowLeft" && e.key !== "ArrowRight") return;
+    if (document.activeElement && ["INPUT","TEXTAREA"].includes(document.activeElement.tagName)) return;
+
+    const pages = _roomsOpts.pages;
+    const nav = document.getElementById("j-rooms-pages");
+    if (!nav) return;
+    const btns = $$("button", nav);
+    const curIdx = btns.findIndex(b => b.dataset.active === "true");
+    let next = e.key === "ArrowRight" ? curIdx + 1 : curIdx - 1;
+    next = Math.max(0, Math.min(next, pages.length - 1));
+    if (next === curIdx) return;
+    e.preventDefault();
+    btns.forEach(b => b.dataset.active = "false");
+    btns[next].dataset.active = "true";
+    _roomsOpts.onNav && _roomsOpts.onNav(pages[next].id);
+  }
+
+  /* ─────────────────────────────────────────────────────────────────
+     Mission Control overlay (⌘T)
+  ───────────────────────────────────────────────────────────────────── */
+  let mcRoot = null;
+  let mcOpen = false;
+
+  const ROOMS = [
+    { mode: "home",      label: "Home",          sub: "Ambient · À l'écoute",                  href: "/",             chapter: "—",   pages: [] },
+    { mode: "workspace", label: "Workspace",      sub: "Ce que tu pilotes en ce moment",         href: "/dashboard",    chapter: "I",   pages: ["Aperçu","Initiatives","Missions","Tâches","Analytics"] },
+    { mode: "capacites", label: "Capacités",      sub: "Ce que Jarvis sait faire pour toi",      href: "/capabilities", chapter: "II",  pages: ["Intégrations","Skills","Routines","Ambiances","Store","Écosystème"] },
+    { mode: "config",    label: "Configuration",  sub: "Tes préférences et ton coffre",           href: "/settings",     chapter: "III", pages: ["Préférences","Modèles & API","Audio & voix","Conso","Système","À propos"] },
+  ];
+
+  function ensureMissionControl() {
+    if (mcRoot) return;
+    mcRoot = el("div", { class: "mission-overlay is-hidden", onclick: (e) => { if (e.target === mcRoot) Jarvis.closeMissionControl(); } });
+
+    // Header bar
+    const header = el("div", { class: "mc-header" });
+    header.appendChild(el("span", { class: "mc-header-title", text: "Mission Control" }));
+    const hint = el("span", { class: "mc-header-hint" });
+    const kbd1 = el("span", { class: "mc-hkbd" });
+    kbd1.appendChild(el("span", { text: "⌘" }));
+    kbd1.appendChild(el("span", { text: "T" }));
+    hint.appendChild(kbd1);
+    hint.appendChild(document.createTextNode(" pour fermer"));
+    hint.appendChild(el("span", { class: "mc-hdot", text: " · " }));
+    hint.appendChild(el("span", { class: "mc-hkbd", text: "ESC" }));
+    header.appendChild(hint);
+    header.appendChild(el("button", { class: "mc-close", onclick: () => Jarvis.closeMissionControl(), text: "×" }));
+    mcRoot.appendChild(header);
+
+    const grid = el("div", { class: "mission-grid" });
+    ROOMS.forEach(r => {
+      const card = el("button", {
+        class: "mission-card",
+        dataset: { mode: r.mode },
+        onclick: () => { Jarvis.closeMissionControl(); Jarvis.navigate(r.href); },
+      });
+      const eyebrow = el("div", { class: "mc-card-eyebrow" });
+      eyebrow.appendChild(el("span", { class: "mc-card-num", text: r.chapter }));
+      if (r.pages.length) eyebrow.appendChild(el("span", { text: r.pages.length + " SECTIONS" }));
+      card.appendChild(eyebrow);
+      card.appendChild(el("div", { class: "mc-card-title", text: r.label }));
+      card.appendChild(el("div", { class: "mc-card-sub",   text: r.sub }));
+      if (r.pages.length) {
+        const pagesEl = el("div", { class: "mc-card-pages" });
+        r.pages.forEach((p, i) => {
+          pagesEl.appendChild(el("span", { class: "mc-card-page" }, [
+            el("span", { class: "mc-pg-num", text: String(i + 1).padStart(2, "0") }),
+            el("span", { class: "mc-pg-lbl", text: p }),
+          ]));
+        });
+        card.appendChild(pagesEl);
+      }
+      grid.appendChild(card);
+    });
+    mcRoot.appendChild(grid);
+    document.body.appendChild(mcRoot);
+  }
+
+  Jarvis.openMissionControl = function () {
+    ensureMissionControl();
+    mcOpen = true;
+    mcRoot.classList.remove("is-hidden");
+  };
+  Jarvis.closeMissionControl = function () {
+    if (!mcRoot) return;
+    mcOpen = false;
+    mcRoot.classList.add("is-hidden");
+  };
+
+  /* ───────── Legacy sidebar (still used on pages without rooms nav) ─────────
+     opts: sections, activeId, onNav, footer
   */
   Jarvis.mountSidebar = function (opts) {
     const root = document.getElementById("sidebar") || el("aside", { id: "sidebar" });
@@ -131,7 +369,6 @@
     root.className = "sidebar";
     root.innerHTML = "";
 
-    // Brand
     root.appendChild(el("div", { class: "sb-brand" }, [
       brandMark(),
       el("div", { class: "sb-brand-text" }, [
@@ -140,7 +377,6 @@
       ]),
     ]));
 
-    // Sections
     (opts.sections || []).forEach(sec => {
       root.appendChild(el("div", { class: "sb-section-eyebrow" }, [
         el("span", { text: sec.label }),
@@ -162,7 +398,6 @@
       root.appendChild(nav);
     });
 
-    // Footer (system pulse)
     if (opts.footer) {
       const f = el("div", { class: "sb-foot" });
       f.appendChild(el("div", { class: "sb-foot-row" }, [
@@ -174,11 +409,10 @@
         el("span", { text: opts.footer.cpu || "—" }),
       ]));
       const bar = el("div", { class: "sb-foot-bar" });
-      const fill = el("div", { style: { width: ((opts.footer.ramPct || 0) * 100) + "%" } });
-      bar.appendChild(fill); f.appendChild(bar);
+      bar.appendChild(el("div", { style: { width: ((opts.footer.ramPct || 0) * 100) + "%" } }));
+      f.appendChild(bar);
       root.appendChild(f);
     }
-
     return root;
   };
 
@@ -188,14 +422,12 @@
     svg.setAttribute("width", "26"); svg.setAttribute("height", "26"); svg.setAttribute("viewBox", "0 0 26 26");
     const c = document.createElementNS(ns, "circle");
     c.setAttribute("cx", "13"); c.setAttribute("cy", "13"); c.setAttribute("r", "11");
-    c.setAttribute("fill", "none"); c.setAttribute("stroke", "var(--accent)"); c.setAttribute("stroke-width", "1");
-    c.setAttribute("opacity", "0.8");
+    c.setAttribute("fill", "none"); c.setAttribute("stroke", "var(--accent)"); c.setAttribute("stroke-width", "1"); c.setAttribute("opacity", "0.8");
     const c2 = document.createElementNS(ns, "circle");
     c2.setAttribute("cx", "13"); c2.setAttribute("cy", "13"); c2.setAttribute("r", "5");
     c2.setAttribute("fill", "var(--accent)"); c2.setAttribute("opacity", "0.18");
     const c3 = document.createElementNS(ns, "circle");
-    c3.setAttribute("cx", "13"); c3.setAttribute("cy", "13"); c3.setAttribute("r", "1.6");
-    c3.setAttribute("fill", "var(--accent)");
+    c3.setAttribute("cx", "13"); c3.setAttribute("cy", "13"); c3.setAttribute("r", "1.6"); c3.setAttribute("fill", "var(--accent)");
     svg.appendChild(c); svg.appendChild(c2); svg.appendChild(c3);
     return svg;
   }
@@ -211,7 +443,7 @@
 
     root.appendChild(el("div", { class: "topbar-l" }, [
       el("span", { class: "topbar-page-title", text: opts.pageTitle || "Dashboard" }),
-      el("span", { class: "topbar-crumb", text: opts.crumb || "/ control" }),
+      el("span", { class: "topbar-crumb",      text: opts.crumb || "/ control" }),
     ]));
 
     root.appendChild(el("div", { class: "topbar-c" }, [
@@ -224,17 +456,11 @@
     ]));
 
     root.appendChild(el("div", { class: "topbar-r" }, [
-      el("button", {
-        class: "tb-btn",
-        onclick: () => Jarvis.openCmdK(),
-      }, [
-        el("span", { text: "Search" }),
+      el("button", { class: "tb-btn", onclick: () => Jarvis.openCmdK() }, [
+        el("span", { text: "Recherche" }),
         el("span", { class: "kbd", text: "⌘K" }),
       ]),
-      el("button", {
-        class: "tb-btn",
-        onclick: () => opts.onAsk && opts.onAsk(),
-      }, [
+      el("button", { class: "tb-btn", onclick: () => opts.onAsk && opts.onAsk() }, [
         el("span", { text: "Ask Jarvis" }),
       ]),
     ]));
@@ -242,17 +468,23 @@
     return root;
   };
 
-  /* ───────── Command palette + slash commands ───────── */
-  let cmdkRoot = null;
-  let cmdkInput = null;
-  let cmdkList = null;
-  let cmdkPrefix = null;
-  let cmdkCommands = [];
-  let cmdkSelected = 0;
-  let cmdkOpen = false;
+  /* ─────────────────────────────────────────────────────────────────
+     Command palette (⌘K)
+  ───────────────────────────────────────────────────────────────────── */
+  let cmdkRoot = null, cmdkInput = null, cmdkList = null;
+  let cmdkCommands = [], cmdkSelected = 0, cmdkOpen = false;
+
+  // Seed with room navigation commands
+  const _navCmds = ROOMS.map(r => ({
+    kind: "nav", id: "goto-" + r.mode, group: "Aller à",
+    title: r.label, sub: r.href, glyph: "→",
+    run: () => { Jarvis.navigate(r.href); },
+  }));
+  cmdkCommands = _navCmds;
 
   Jarvis.registerCommands = function (cmds) {
-    cmdkCommands = cmdkCommands.concat(cmds);
+    const ids = new Set(cmdkCommands.map(c => c.id));
+    cmds.forEach(c => { if (!ids.has(c.id)) cmdkCommands.push(c); });
   };
 
   function ensureCmdK() {
@@ -260,19 +492,30 @@
     cmdkRoot = el("div", { class: "cmdk-back is-hidden", onclick: (e) => { if (e.target === cmdkRoot) Jarvis.closeCmdK(); } });
     const box = el("div", { class: "cmdk" });
     const inputWrap = el("div", { class: "cmdk-input-wrap" });
-    cmdkPrefix = el("span", { class: "cmdk-prefix", text: ">", style: { display: "none" } });
+    const prefix = el("span", { class: "cmdk-prefix", text: ">", style: { display: "none" } });
     cmdkInput = el("input", {
       class: "cmdk-input",
-      placeholder: "Cherche · navigue · tape > pour les commandes",
+      placeholder: "Cherche · navigue · > commandes",
       autocomplete: "off",
-      oninput: handleCmdKInput,
-      onkeydown: handleCmdKKey,
+      oninput: (e) => {
+        const v = e.target.value;
+        const slash = v.startsWith(">");
+        prefix.style.display = slash ? "block" : "none";
+        cmdkInput.classList.toggle("has-prefix", slash);
+        cmdkSelected = 0; renderCmdK(v);
+      },
+      onkeydown: (e) => {
+        if (e.key === "Escape")    { e.preventDefault(); Jarvis.closeCmdK(); }
+        if (e.key === "ArrowDown") { e.preventDefault(); cmdkSelected = Math.min(cmdkSelected + 1, currentResults().length - 1); renderCmdK(cmdkInput.value, true); }
+        if (e.key === "ArrowUp")   { e.preventDefault(); cmdkSelected = Math.max(cmdkSelected - 1, 0); renderCmdK(cmdkInput.value, true); }
+        if (e.key === "Enter")     { e.preventDefault(); execSelected(); }
+      },
     });
-    inputWrap.appendChild(cmdkPrefix); inputWrap.appendChild(cmdkInput);
+    inputWrap.appendChild(prefix); inputWrap.appendChild(cmdkInput);
     cmdkList = el("div", { class: "cmdk-list" });
     const foot = el("div", { class: "cmdk-foot" }, [
       el("span", { text: "↑↓ naviguer · ↵ exécuter · esc fermer" }),
-      el("span", { text: "tape > pour slash commands" }),
+      el("span", { text: "> pour commandes" }),
     ]);
     box.appendChild(inputWrap); box.appendChild(cmdkList); box.appendChild(foot);
     cmdkRoot.appendChild(box);
@@ -284,8 +527,6 @@
     cmdkOpen = true;
     cmdkRoot.classList.remove("is-hidden");
     cmdkInput.value = ""; cmdkSelected = 0;
-    cmdkPrefix.style.display = "none";
-    cmdkInput.classList.remove("has-prefix");
     renderCmdK("");
     setTimeout(() => cmdkInput.focus(), 30);
   };
@@ -295,33 +536,17 @@
     cmdkRoot.classList.add("is-hidden");
   };
 
-  function handleCmdKInput(e) {
-    const v = e.target.value;
-    const slash = v.startsWith(">");
-    cmdkPrefix.style.display = slash ? "block" : "none";
-    cmdkInput.classList.toggle("has-prefix", slash);
-    cmdkSelected = 0;
-    renderCmdK(v);
-  }
-  function handleCmdKKey(e) {
-    if (e.key === "Escape")   { e.preventDefault(); Jarvis.closeCmdK(); return; }
-    if (e.key === "ArrowDown"){ e.preventDefault(); cmdkSelected = Math.min(cmdkSelected + 1, currentResults().length - 1); renderCmdK(cmdkInput.value, true); return; }
-    if (e.key === "ArrowUp")  { e.preventDefault(); cmdkSelected = Math.max(cmdkSelected - 1, 0); renderCmdK(cmdkInput.value, true); return; }
-    if (e.key === "Enter")    { e.preventDefault(); execSelected(); return; }
-  }
-
   function currentResults() {
     const v = cmdkInput.value.trim();
     if (v.startsWith(">")) {
       const q = v.slice(1).trim().toLowerCase();
+      if (q.startsWith("ask ")) {
+        const p = q.slice(4);
+        return [{ kind: "ask", id: "ask", title: 'Demander : "' + p + '"', glyph: "›", group: "Faire", run: () => _askJarvis(p) }];
+      }
       const slash = cmdkCommands.filter(c => c.kind === "slash");
       if (!q) return slash;
-      // ">ask hello world" → expose Ask Jarvis pseudo-command
-      if (q.startsWith("ask ")) {
-        const prompt = q.slice(4);
-        return [{ kind: "ask", id: "ask-jarvis", title: 'Demander à Jarvis : "' + prompt + '"', sub: "envoie au LLM", glyph: "›", run: () => askJarvis(prompt) }];
-      }
-      return slash.filter(c => c.title.toLowerCase().includes(q) || (c.id || "").includes(q));
+      return slash.filter(c => c.title.toLowerCase().includes(q));
     }
     const q = v.toLowerCase();
     const all = cmdkCommands.filter(c => c.kind !== "slash");
@@ -336,12 +561,8 @@
       cmdkList.appendChild(el("div", { class: "cmdk-empty", text: "Aucune commande" }));
       return;
     }
-    // Group by section
     const groups = {};
-    items.forEach(it => {
-      const g = it.group || (it.kind === "slash" ? "Commandes" : "Navigation");
-      (groups[g] = groups[g] || []).push(it);
-    });
+    items.forEach(it => { const g = it.group || "Navigation"; (groups[g] = groups[g] || []).push(it); });
     let idx = 0;
     Object.keys(groups).forEach(g => {
       cmdkList.appendChild(el("div", { class: "cmdk-group-lbl", text: g }));
@@ -352,7 +573,7 @@
           onclick: () => { cmdkSelected = i; execSelected(); },
           onmousemove: () => { if (cmdkSelected !== i) { cmdkSelected = i; renderCmdK(cmdkInput.value, true); } },
         }, [
-          el("span", { class: "ck-glyph", text: it.glyph || (it.kind === "slash" ? ">" : "·") }),
+          el("span", { class: "ck-glyph", text: it.glyph || "·" }),
           el("div", {}, [
             el("span", { text: it.title }),
             it.sub ? el("span", { class: "ck-sub", text: it.sub }) : null,
@@ -366,58 +587,59 @@
   }
 
   function execSelected() {
-    const items = currentResults();
-    const it = items[cmdkSelected];
+    const it = currentResults()[cmdkSelected];
     if (!it) return;
     Jarvis.closeCmdK();
     if (typeof it.run === "function") it.run();
   }
 
-  async function askJarvis(prompt) {
-    Jarvis.notify({ kind: "info", text: "Jarvis · réflexion en cours…" });
+  async function _askJarvis(prompt) {
+    Jarvis.notify({ kind: "info", text: "Jarvis · réflexion…" });
     try {
-      // Try the bundled claude.complete helper first (artifact mode)
-      let answer;
-      if (window.claude && window.claude.complete) {
-        answer = await window.claude.complete(prompt);
-      } else {
-        // Otherwise post to backend agent endpoint (TODO: confirm path)
-        const r = await Jarvis.api.post("/api/agent/ask", { prompt });
-        answer = r.answer || r.text || JSON.stringify(r);
-      }
-      Jarvis.notify({ kind: "success", text: answer.slice(0, 240) });
+      const r = await Jarvis.api.post("/api/agent/ask", { prompt });
+      Jarvis.notify({ kind: "success", text: (r.answer || r.text || "").slice(0, 240) });
     } catch (err) {
       Jarvis.notify({ kind: "error", text: "Échec : " + err.message });
     }
   }
 
-  /* Global ⌘K + slash shortcut binding */
+  /* ───────── Global keyboard shortcuts ───────── */
   document.addEventListener("keydown", (e) => {
+    // ⌘K — palette
     if ((e.metaKey || e.ctrlKey) && (e.key === "k" || e.key === "K")) {
       e.preventDefault();
       cmdkOpen ? Jarvis.closeCmdK() : Jarvis.openCmdK();
     }
+    // ⌘T — Mission Control
+    if ((e.metaKey || e.ctrlKey) && (e.key === "t" || e.key === "T")) {
+      e.preventDefault();
+      mcOpen ? Jarvis.closeMissionControl() : Jarvis.openMissionControl();
+    }
+    // Escape
+    if (e.key === "Escape") {
+      if (cmdkOpen) Jarvis.closeCmdK();
+      if (mcOpen)   Jarvis.closeMissionControl();
+    }
   });
 
-  /* ───────── Inspector mode (hold Alt) ───────── */
+  /* ───────── Inspector mode (Alt) ───────── */
   let inspectHint = null;
   function setInspect(on) {
     document.documentElement.classList.toggle("inspect", on);
     if (on && !inspectHint) {
       inspectHint = el("div", { class: "inspect-hint" }, [
-        el("span", { class: "dot" }),
-        el("span", { text: "INSPECTOR · ⌥" }),
+        el("span", { class: "dot" }), el("span", { text: "INSPECTOR · ⌥" }),
       ]);
       document.body.appendChild(inspectHint);
     } else if (!on && inspectHint) {
       inspectHint.remove(); inspectHint = null;
     }
   }
-  document.addEventListener("keydown", (e) => { if (e.key === "Alt" || e.altKey) setInspect(true); });
-  document.addEventListener("keyup",   (e) => { if (e.key === "Alt" || !e.altKey) setInspect(false); });
+  document.addEventListener("keydown", (e) => { if (e.key === "Alt") setInspect(true); });
+  document.addEventListener("keyup",   (e) => { if (e.key === "Alt") setInspect(false); });
   window.addEventListener("blur", () => setInspect(false));
 
-  /* ───────── Notification ribbon + sidebar breath ───────── */
+  /* ───────── Notification ribbon ───────── */
   let notifStack = null;
   Jarvis.notify = function ({ kind = "info", text = "" }) {
     if (!notifStack) {
@@ -432,8 +654,6 @@
     ]);
     notifStack.appendChild(node);
     setTimeout(() => node.remove(), 4400);
-
-    // Sidebar breath
     const sb = document.querySelector(".sidebar");
     if (sb) {
       const breath = el("div", { class: "sb-breath" });
@@ -442,63 +662,38 @@
     }
   };
 
-  /* ───────── Sparkline (SVG, used by KPIs and sidebar) ───────── */
+  /* ───────── Sparkline ───────── */
   Jarvis.sparkline = function (data, opts) {
     opts = opts || {};
     const w = opts.width || 180, h = opts.height || 28;
     const color = opts.color || "var(--accent)";
     if (!data || !data.length) return el("svg", { width: w, height: h });
-    const min = Math.min.apply(null, data), max = Math.max.apply(null, data);
-    const range = max - min || 1;
-    const pts = data.map((v, i) => {
-      const x = (i / (data.length - 1)) * w;
-      const y = h - ((v - min) / range) * h * 0.85 - 2;
-      return [x, y];
-    });
+    const min = Math.min(...data), max = Math.max(...data), range = max - min || 1;
+    const pts = data.map((v, i) => [
+      (i / (data.length - 1)) * w,
+      h - ((v - min) / range) * h * 0.85 - 2,
+    ]);
     const ns = "http://www.w3.org/2000/svg";
     const svg = document.createElementNS(ns, "svg");
-    svg.setAttribute("width", w); svg.setAttribute("height", h); svg.setAttribute("viewBox", "0 0 " + w + " " + h);
+    svg.setAttribute("width", w); svg.setAttribute("height", h);
+    svg.setAttribute("viewBox", "0 0 " + w + " " + h);
     const path = document.createElementNS(ns, "path");
-    path.setAttribute("d", pts.map((p, i) => (i ? "L" : "M") + p[0] + " " + p[1]).join(" "));
+    path.setAttribute("d", pts.map((p, i) => (i ? "L" : "M") + p[0].toFixed(1) + " " + p[1].toFixed(1)).join(" "));
     path.setAttribute("fill", "none"); path.setAttribute("stroke", color);
     path.setAttribute("stroke-width", "1.4"); path.setAttribute("stroke-linecap", "round");
     svg.appendChild(path);
     const last = pts[pts.length - 1];
     const dot = document.createElementNS(ns, "circle");
-    dot.setAttribute("cx", last[0]); dot.setAttribute("cy", last[1]); dot.setAttribute("r", "2");
-    dot.setAttribute("fill", color);
+    dot.setAttribute("cx", last[0]); dot.setAttribute("cy", last[1]);
+    dot.setAttribute("r", "2"); dot.setAttribute("fill", color);
     svg.appendChild(dot);
     return svg;
   };
 
-  /* ───────── Bottom nav (persistent across pages) ───────── */
+  /* ───────── Bottom nav (legacy, conservé pour compat) ───────── */
   Jarvis.mountBottomNav = function (opts) {
-    opts = opts || {};
-    const active = opts.active; // "sphere"|"control"|"globe"|"intel"|"system"
-
     const existing = document.getElementById("j-bottom-nav");
     if (existing) existing.remove();
-
-    const nav = el("div", { id: "j-bottom-nav" });
-
-    const BTNS = [
-      { key: "sphere",  title: "Jarvis",        href: "/",          svg: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="1.8" fill="currentColor" stroke="none"/><circle cx="7.5" cy="9" r="1" fill="currentColor" stroke="none"/><circle cx="16.5" cy="9" r="1" fill="currentColor" stroke="none"/><circle cx="7.5" cy="15" r="1" fill="currentColor" stroke="none"/><circle cx="16.5" cy="15" r="1" fill="currentColor" stroke="none"/></svg>' },
-      { key: "control", title: "Control",       href: "/dashboard", svg: '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>' },
-      { key: "globe",   title: "Globe mondial", href: "/",          svg: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>' },
-      { key: "intel",   title: "Intel Monde",   href: "/",          svg: '<svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" stroke="none"><path d="M13 2L4.09 13H11L10 22L19.91 11H13V2Z"/></svg>' },
-      { key: "system",  title: "Système",       href: "/settings",  svg: '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>' },
-    ];
-
-    BTNS.forEach(function (cfg) {
-      const b = document.createElement("button");
-      b.className = "jnav-btn" + (cfg.key === active ? " active" : "");
-      b.title = cfg.title;
-      b.innerHTML = cfg.svg;
-      b.addEventListener("click", function () { window.location.href = cfg.href; });
-      nav.appendChild(b);
-    });
-
-    document.body.appendChild(nav);
-    return nav;
+    // No-op in v2 — navigation handled by rooms system
   };
 })();

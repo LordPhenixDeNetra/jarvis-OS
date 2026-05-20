@@ -260,7 +260,7 @@ class UsageTracker:
         # Build usage type list
         TYPE_META = {
             "conversation": {"label": "Échange direct",          "sub": "chat synchrone · Marc ↔ Jarvis", "color": "#4A9EFF"},
-            "mission":      {"label": "Agents en arrière-plan",  "sub": "missions autonomes · 24/7",       "color": "#D97757"},
+            "mission":      {"label": "Agents en mission",  "sub": "missions autonomes · 24/7",       "color": "#D97757"},
             "memory":       {"label": "Indexation & mémoire",    "sub": "lectures & écritures mémoire",    "color": "#B8963E"},
             "proactive":    {"label": "Proactif",                "sub": "tâches proactives · auto",        "color": "#36D399"},
             "voice":        {"label": "Voix · STT/TTS",          "sub": "synthèse & transcription",        "color": "#A78BFA"},
@@ -288,6 +288,51 @@ class UsageTracker:
             "providers": prov_list,
             "by_type":   type_list,
         }
+
+
+    def get_monthly_by_model(self) -> list[dict]:
+        """Tokens et coût par modèle pour le mois courant, triés par coût."""
+        today = date.today()
+        first = today.replace(day=1)
+        model_acc: dict[str, dict] = {}
+        total_cost = 0.0
+
+        d = first
+        while d <= today:
+            for e in self._read_day(d):
+                model = e.get("model", "unknown")
+                cost = e.get("cost_usd", 0.0)
+                tokens = e.get("input_tokens", 0) + e.get("output_tokens", 0)
+                if model not in model_acc:
+                    model_acc[model] = {"cost": 0.0, "tokens": 0}
+                model_acc[model]["cost"] += cost
+                model_acc[model]["tokens"] += tokens
+                total_cost += cost
+            d += timedelta(days=1)
+
+        total_cost = total_cost or 1e-9
+        return [
+            {
+                "model": name,
+                "cost_usd": round(v["cost"], 4),
+                "tokens": v["tokens"],
+                "pct": round(v["cost"] / total_cost * 100),
+            }
+            for name, v in sorted(model_acc.items(), key=lambda x: -x[1]["cost"])
+        ]
+
+    def get_today_hourly(self) -> list[float]:
+        """Coût par heure (locale) pour aujourd'hui — liste de 24 valeurs."""
+        entries = self._read_day(date.today())
+        hours = [0.0] * 24
+        for e in entries:
+            ts = e.get("timestamp", "")
+            try:
+                hour = int(ts[11:13])
+                hours[hour] += e.get("cost_usd", 0.0)
+            except (ValueError, IndexError):
+                pass
+        return [round(h, 6) for h in hours]
 
 
 tracker = UsageTracker()

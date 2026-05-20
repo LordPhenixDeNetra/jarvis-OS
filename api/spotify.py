@@ -172,6 +172,34 @@ async def _get_player_state() -> dict:
         return {"connected": False}
 
     if resp.status_code == 204:
+        # Pas de lecture active — fallback sur le dernier morceau joué
+        try:
+            async with httpx.AsyncClient(timeout=5.0) as rc:
+                recent = await rc.get(
+                    f"{_API_BASE}/me/player/recently-played",
+                    headers={"Authorization": f"Bearer {token}"},
+                    params={"limit": 1},
+                )
+            if recent.is_success:
+                items = recent.json().get("items", [])
+                if items:
+                    item = items[0].get("track") or {}
+                    artists = ", ".join(a["name"] for a in item.get("artists", []))
+                    images = (item.get("album") or {}).get("images", [])
+                    return {
+                        "connected": True,
+                        "is_playing": False,
+                        "track": item.get("name", ""),
+                        "artist": artists,
+                        "album": (item.get("album") or {}).get("name", ""),
+                        "album_art": images[0]["url"] if images else None,
+                        "progress_ms": 0,
+                        "duration_ms": item.get("duration_ms", 0),
+                        "track_url": (item.get("external_urls") or {}).get("spotify", ""),
+                        "last_played": True,
+                    }
+        except Exception:
+            pass
         return {"connected": True, "is_playing": False, "track": None}
 
     if not resp.is_success:

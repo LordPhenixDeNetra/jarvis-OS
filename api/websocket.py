@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import asyncio
 import json
+import time
 
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect
 from loguru import logger
@@ -18,6 +19,10 @@ from vision.objects_queue import get_vision_objects_queue
 router = APIRouter()
 
 _spotify_tool = SpotifyTool()
+
+# Cooldown présence : évite les annonces répétées quand la caméra est rouverte
+_PRESENCE_COOLDOWN_S = 600  # 10 min entre deux annonces du même état
+_presence_last_notified: dict[bool, float] = {True: 0.0, False: 0.0}
 
 
 # ── /ws/logs — stream log buffer to the dashboard Système › Logs panel ────────
@@ -103,7 +108,10 @@ async def _handle_vision_event(
 
     if event == "presence":
         active: bool = bool(data.get("active", True))
-        notifications.add(_PRESENCE_MSGS[active])
+        now = time.time()
+        if now - _presence_last_notified[active] >= _PRESENCE_COOLDOWN_S:
+            _presence_last_notified[active] = now
+            notifications.add(_PRESENCE_MSGS[active])
         logger.debug("Vision presence", active=active)
         return
 

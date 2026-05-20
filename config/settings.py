@@ -2,8 +2,15 @@ from __future__ import annotations
 
 from typing import Literal
 
-from pydantic import Field
+from pydantic import Field, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
+
+_VALID_WHISPER = frozenset({
+    "tiny.en", "tiny", "base.en", "base", "small.en", "small",
+    "medium.en", "medium", "large-v1", "large-v2", "large-v3", "large",
+    "distil-large-v2", "distil-medium.en", "distil-small.en", "distil-large-v3",
+    "large-v3-turbo", "turbo",
+})
 
 
 class Settings(BaseSettings):
@@ -120,10 +127,23 @@ class Settings(BaseSettings):
     # ── Audio / STT / TTS ─────────────────────────────────────
     openai_api_key: str = Field(
         default="", description="Clé API OpenAI (LLM principal si api_backend=openai, TTS, Vision).")
+    stt_provider: Literal["deepgram", "whisper"] = Field(
+        default="deepgram",
+        description="Backend STT : 'deepgram' (cloud, rapide) ou 'whisper' (local, hors-ligne).",
+    )
+    deepgram_api_key: str = Field(
+        default="", description="Clé API Deepgram (STT Nova-2 streaming).")
     whisper_model: str = Field(
         default="tiny",
         description="Taille du modèle faster-whisper : tiny, base, small, medium, large.",
     )
+
+    @field_validator("whisper_model", mode="before")
+    @classmethod
+    def _validate_whisper_model(cls, v: str) -> str:
+        if v not in _VALID_WHISPER:
+            return "tiny"
+        return v
     tts_voice: str = Field(
         default="alloy",
         description="Voix OpenAI TTS : alloy, echo, fable, onyx, nova, shimmer.",

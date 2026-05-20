@@ -1,2108 +1,771 @@
-/* settings.js — Page Système (vanilla)
- * Sessions · Mémoire · Outils · Conso · Paramètres · Système (logs)
+/* settings.js — Configuration (Réglages) v2
+ * 6 sous-pages : Profil · Modèles & API · Audio & voix · Conso · Système · À propos
  */
 (function () {
   "use strict";
   const J = window.Jarvis, el = J.el;
-  const Charts = window.JarvisCharts;
 
-  /* ───────── Mocks (TODO: replace with API) ───────── */
-  const SESSIONS = [
-    { id: "s_8a14", agent: "librarian",  start: "14:08:42", dur: "00:24:18", calls: 142, tok: "184.2k", status: "RUN",  cls: "ok" },
-    { id: "s_8a13", agent: "editor",     start: "13:51:09", dur: "00:41:03", calls: 86,  tok: "312.0k", status: "RUN",  cls: "ok" },
-    { id: "s_8a12", agent: "scheduler",  start: "13:42:00", dur: "00:08:11", calls: 24,  tok: "12.4k",  status: "WAIT", cls: "warn" },
-    { id: "s_8a11", agent: "finops",     start: "12:00:00", dur: "02:32:18", calls: 412, tok: "44.1k",  status: "RUN",  cls: "ok" },
-    { id: "s_8a10", agent: "digest",     start: "09:00:00", dur: "00:01:42", calls: 6,   tok: "8.2k",   status: "DONE", cls: "info" },
-    { id: "s_8a0f", agent: "triager",    start: "08:14:22", dur: "00:00:54", calls: 12,  tok: "4.4k",   status: "DONE", cls: "info" },
-  ];
-  const MEM_GROUPS = [
-    { id: "global",  label: "Global" },
-    { id: "prefs",   label: "Préférences" },
-    { id: "tools",   label: "Par outil" },
-    { id: "context", label: "Contexte long-terme" },
-  ];
-  const MEM_FILES = [
-    { id:"m1", group:"global",  name:"identity.md",        path:"global/identity.md",        size:"4.2 KB", pin:true,
-      body:{ title:"identity.md", fm:{Type:"global",Updated:"2026-04-28",Pinned:"true",Tokens:"1,142"}, sections:[
-        {p:["Marc, 32 ans, basé à Paris. Créateur de contenu YouTube (414K subs) sur la tech, l'IA et la productivité. Travaille en solo, full-remote."]},
-        {h:"Style de communication", p:["Direct, peu de fioritures, jamais de small talk inutile. Préfère les réponses denses au verbiage. Tutoiement par défaut."]},
-        {h:"Préférences", list:["Travaille mieux le matin (06:00 — 12:00)","Sport : 17:00 — 18:30 (ne pas planifier dessus)","Pas de réunion le vendredi"]},
-      ]}},
-    { id:"m2", group:"global",  name:"objectives-q2.md",   path:"global/objectives-q2.md",   size:"2.8 KB", pin:true,
-      body:{ title:"objectives-q2.md", fm:{Type:"global",Updated:"2026-04-12",Pinned:"true",Tokens:"784"}, sections:[
-        {h:"Objectifs Q2 2026", list:["Atteindre 500K subs YouTube (actuel : 414K)","Lancer la formation 'Build Your Own Jarvis' en juin","Réduire le temps email à <30 min/jour"]},
-        {h:"Note", p:["Réviser fin mai. Si en retard sur subs, pivoter sur les shorts."]},
-      ]}},
-    { id:"m3", group:"prefs",   name:"writing-style.md",   path:"preferences/writing-style.md", size:"3.1 KB",
-      body:{ title:"writing-style.md", fm:{Type:"preference",Updated:"2026-05-02",Used:"editor, digest"}, sections:[
-        {h:"Voix", p:["Phrases courtes. Une idée par phrase. Éviter les adverbes faibles."]},
-        {h:"À bannir", list:["Les listes à 7+ points","Les conclusions qui résument l'article","Les questions rhétoriques"]},
-        {h:"À utiliser", list:["Métaphores concrètes, jamais abstraites","Exemples avec chiffres précis","Anecdotes personnelles datées"]},
-      ]}},
-    { id:"m4", group:"prefs",   name:"coding.md",          path:"preferences/coding.md",        size:"1.8 KB",
-      body:{ title:"coding.md", fm:{Type:"preference",Updated:"2026-03-18",Used:"editor, planner"}, sections:[
-        {h:"Stack par défaut", list:["TypeScript + Bun","Tailwind v4","SQLite local-first quand possible"]},
-        {h:"Style", p:["2 espaces, pas de point-virgule. Components en kebab-case."]},
-      ]}},
-    { id:"m5", group:"tools",   name:"email.md",           path:"tools/email.md",               size:"5.4 KB",
-      body:{ title:"email.md", fm:{Type:"tool-memory",Tool:"email.imap",Updated:"il y a 12 min"}, sections:[
-        {h:"Triage automatique", list:["Newsletters → archive après 7j","Sponsors YouTube → label 'biz' + notif","Famille → toujours top inbox"]},
-        {h:"Brouillons fréquents", p:["Réponses sponsor : tarif 2026 = 8K€/intégration. Brief 7j avant, droit de refus."]},
-      ]}},
-    { id:"m6", group:"tools",   name:"calendar.md",        path:"tools/calendar.md",            size:"2.2 KB",
-      body:{ title:"calendar.md", fm:{Type:"tool-memory",Tool:"calendar",Updated:"il y a 3h"}, sections:[
-        {h:"Règles de scheduling", list:["Pas de meeting avant 10:00","Buffer 15 min entre meetings","Vendredi = 0 meeting"]},
-        {h:"Récurrents", list:["Lundi 11:00 — review hebdo","Mercredi 15:00 — sync éditeur vidéo"]},
-      ]}},
-    { id:"m7", group:"tools",   name:"youtube.md",         path:"tools/youtube.md",             size:"4.1 KB",
-      body:{ title:"youtube.md", fm:{Type:"tool-memory",Tool:"youtube.api",Updated:"hier"}, sections:[
-        {h:"Patterns de titre qui marchent", list:["Ne pas commencer par 'Comment'","Inclure un chiffre concret","Tension dans les 3 premiers mots"]},
-        {h:"Thumbnails", p:["Visage à gauche, texte à droite, max 4 mots. Pas de flèche rouge."]},
-      ]}},
-    { id:"m8", group:"tools",   name:"finops.md",          path:"tools/finops.md",              size:"1.4 KB",
-      body:{ title:"finops.md", fm:{Type:"tool-memory",Tool:"finops",Updated:"il y a 6h"}, sections:[
-        {h:"Budgets", list:["OpenAI : $200/mois (alerte $180)","Anthropic : $250/mois (alerte $220)","Cumulé infra : $500/mois max"]},
-      ]}},
-    { id:"m9", group:"context", name:"projects-active.md", path:"context/projects-active.md",   size:"6.8 KB",
-      body:{ title:"projects-active.md", fm:{Type:"context",Updated:"il y a 2j",Tokens:"1,940"}, sections:[
-        {h:"Formation BYO Jarvis", p:["Lancement 12 juin 2026. 8 modules, 14h. Tarif early-bird : 297€."]},
-        {h:"Refonte site perso",   p:["Stack : Astro + Tailwind v4. Maquettes faites. Après la formation."]},
-      ]}},
-    { id:"m10", group:"context",name:"learnings.md",       path:"context/learnings.md",         size:"12.4 KB",
-      body:{ title:"learnings.md", fm:{Type:"context",Updated:"il y a 4j",Tokens:"3,420"}, sections:[
-        {h:"Insights", list:["Les vidéos >12 min performent moins depuis mars 2026","Newsletter ouverte 2x plus si envoyée jeudi 09:00","Sleep <7h ⇒ output créatif /2 le lendemain"]},
-      ]}},
-  ];
-  const TOOLS = [
-    { glyph:"fs",  name:"filesystem",        sub:"read · write · search local files", calls:1842, lat:"12 ms",  on:true  },
-    { glyph:"wb",  name:"web · browser",     sub:"playwright headless · 6 sessions",   calls:412,  lat:"1.2 s",  on:true  },
-    { glyph:"em",  name:"email · imap",      sub:"Gmail OAuth · 4 mailboxes",          calls:287,  lat:"340 ms", on:true  },
-    { glyph:"cal", name:"calendar",          sub:"Google Calendar · read+write",       calls:92,   lat:"180 ms", on:true  },
-    { glyph:"yt",  name:"youtube · api",     sub:"v3 · stats + uploads",               calls:41,   lat:"240 ms", on:true  },
-    { glyph:"x",   name:"x · twitter",       sub:"posting + analytics · OAuth2",       calls:28,   lat:"410 ms", on:false },
-    { glyph:"vec", name:"vector · pinecone", sub:"ix-personal · 1536d",                calls:2104, lat:"48 ms",  on:true  },
-    { glyph:"fin", name:"finance · plaid",   sub:"3 comptes liés · read-only",         calls:14,   lat:"1.1 s",  on:false },
-  ];
-  const PROVIDERS = [
-    { name:"Anthropic",  color:"#D97757", cost:"$184.20", tok:"12.4M" },
-    { name:"OpenAI",     color:"#10A37F", cost:"$112.80", tok:"8.2M"  },
-    { name:"Pinecone",   color:"#4A9EFF", cost:"$32.40",  tok:"—"     },
-    { name:"ElevenLabs", color:"#B8963E", cost:"$24.10",  tok:"1.8M"  },
-    { name:"Mapbox",     color:"#36D399", cost:"$18.00",  tok:"—"     },
-  ];
-  function genSeries(base, vol, len) {
-    const out=[]; let v=base;
-    for (let i=0;i<len;i++){ v=Math.max(0,v+(Math.random()-0.45)*vol); out.push(Number(v.toFixed(2))); }
-    return out;
-  }
-  const CONSO_SERIES = [
-    { name:"Anthropic",  color:"#D97757", data: genSeries(5.5,1.6,30) },
-    { name:"OpenAI",     color:"#10A37F", data: genSeries(3.6,1.2,30) },
-    { name:"Pinecone",   color:"#4A9EFF", data: genSeries(1.2,0.4,30) },
-    { name:"ElevenLabs", color:"#B8963E", data: genSeries(0.8,0.3,30) },
-    { name:"Mapbox",     color:"#36D399", data: genSeries(0.6,0.2,30) },
-  ];
-  const USAGE_TYPES = [
-    { name:"Échange direct",        sub:"chat synchrone · Marc ↔ Jarvis",  pct:0.34, cost:"$126.30", tok:"6.4M",  color:"#4A9EFF" },
-    { name:"Agents en arrière-plan",sub:"missions autonomes · 24/7",       pct:0.41, cost:"$152.10", tok:"9.8M",  color:"#D97757" },
-    { name:"Indexation & embeddings",sub:"vector store · batch nightly",   pct:0.14, cost:"$52.00",  tok:"2.1M",  color:"#B8963E" },
-    { name:"Voice · STT/TTS",       sub:"transcription + synthèse",        pct:0.08, cost:"$28.40",  tok:"—",     color:"#36D399" },
-    { name:"Outils · web/scrape",   sub:"playwright + parsing",            pct:0.03, cost:"$12.70",  tok:"—",     color:"rgba(220,232,255,0.55)" },
-  ];
-  const HOURLY = Array.from({length:24},(_,i)=>{ const peak=i>=8&&i<=19?1:0.3; return Math.round((Math.random()*0.5+0.5)*peak*100); });
-  const LOG_SEED = [
-    { lv:"ok",   parts:[{t:"agent.librarian",cls:"accent"},{t:" · indexed 96/142 documents "},{t:"(cosine ≥ 0.78)",cls:"dim"}] },
-    { lv:"info", parts:[{t:"scheduler",cls:"accent"},{t:" · proposed 3 reschedule slots "},{t:"awaiting human",cls:"dim"}] },
-    { lv:"info", parts:[{t:"tool "},{t:"vector.pinecone",cls:"accent"},{t:" · 412 upserts "},{t:"batch 8/8",cls:"dim"}] },
-    { lv:"warn", parts:[{t:"rate-limit nearing on "},{t:"openai.gpt5",cls:"accent"},{t:" "},{t:"(82% of 10k req/min)",cls:"dim"}] },
-    { lv:"ok",   parts:[{t:"finops",cls:"accent"},{t:" · daily spend within budget "},{t:"($12.40 / $20.00)",cls:"dim"}] },
-    { lv:"info", parts:[{t:"memory page "},{t:"0x4F",cls:"accent"},{t:" evicted "},{t:"(LRU · cold for 7d)",cls:"dim"}] },
-    { lv:"err",  parts:[{t:"tool "},{t:"x.twitter",cls:"accent"},{t:" · auth refresh failed "},{t:"(401 · re-link required)",cls:"dim"}] },
-    { lv:"ok",   parts:[{t:"editor",cls:"accent"},{t:" · draft saved "},{t:"v3 · 1842 words",cls:"dim"}] },
+  const PAGES = [
+    { id: "preferences", label: "Préférences" },
+    { id: "modeles",     label: "Modèles" },
+    { id: "audio",       label: "Audio" },
+    { id: "conso",       label: "Conso" },
+    { id: "systeme",     label: "Système" },
+    { id: "apropos",     label: "À propos" },
   ];
 
-  /* ───────── Card / sec helpers ───────── */
-  function card(opts, children) {
-    const c = el("div", { class: "card" });
-    if (opts.title || opts.right) {
-      c.appendChild(el("div", { class: "card-hd" }, [
-        el("div", {}, [
-          el("div", { class: "card-title", text: opts.title }),
-          opts.sub ? el("div", { class: "card-sub", text: opts.sub }) : null,
-        ]),
-        opts.right || null,
-      ]));
-    }
-    (Array.isArray(children) ? children : [children]).forEach(ch => ch && c.appendChild(ch));
-    return c;
-  }
-  function secHd(num, title, display, right) {
-    return el("div", { class: "sec-hd" }, [
-      el("div", { class: "sec-hd-l" }, [
-        el("div", { class: "sec-hd-row" }, [
-          el("span", { class: "sec-hd-num", text: num }),
-          el("span", { class: "sec-hd-title", text: title }),
-        ]),
-        el("span", { class: "sec-hd-disp", text: display }),
-      ]),
-      right ? el("div", { class: "sec-hd-r", text: right }) : null,
-    ]);
+  let _activePage = "preferences";
+  const root = document.getElementById("page-root");
+  let _settings = null;
+
+  /* ───────── Helpers ───────── */
+  function pageWrapper(pageId, title, meta, body) {
+    const idx = PAGES.findIndex(p => p.id === pageId);
+    const num = String(idx + 1).padStart(2, "0");
+    const wrap = el("div", { class: "page room-in" });
+
+    const head = el("div", { class: "page-head" });
+    const left = el("div");
+    const eyebrow = el("div", { class: "page-eyebrow" });
+    eyebrow.appendChild(el("span", { class: "num", text: num }));
+    eyebrow.appendChild(el("span", { text: " · " + PAGES[idx].label.toUpperCase() }));
+    left.appendChild(eyebrow);
+    left.appendChild(el("h1", { text: title }));
+    head.appendChild(left);
+    if (meta) { const m = el("div", { class: "page-head-meta" }); m.innerHTML = meta; head.appendChild(m); }
+    wrap.appendChild(head);
+
+    const pb = el("div", { class: "page-body" });
+    pb.appendChild(body);
+    wrap.appendChild(pb);
+    return wrap;
   }
 
-  /* ───────── Sessions ───────── */
-  async function renderSessions(root) {
-    root.innerHTML = '<div class="surface"><div class="j-loading">Chargement…</div></div>';
-    let allSessions = SESSIONS.map(s => ({ ...s, fullId: s.id }));
-    try {
-      const raw = await J.api.get("/api/sessions");
-      if (raw && raw.length) {
-        allSessions = raw.map(s => ({
-          id:     s.id ? s.id.slice(0, 6) : "?",
-          fullId: s.id,
-          agent:  s.title || s.preview || "session",
-          start:  s.date || "—",
-          dur:    "—",
-          calls:  s.message_count || 0,
-          tok:    "—",
-          status: "DONE",
-          cls:    "info",
-        }));
-      }
-    } catch (_) { /* keep mock */ }
+  function ghostSec(title, sub, right, content) {
+    const sec = el("div", { class: "ghost-sec" });
+    const hd = el("div", { class: "ghost-sec-hd" });
+    const l = el("div");
+    l.appendChild(el("div", { class: "ghost-sec-title", text: title }));
+    if (sub) l.appendChild(el("div", { class: "ghost-sec-sub", text: sub }));
+    hd.appendChild(l);
+    if (right) hd.appendChild(el("div", { class: "ghost-sec-r", text: right }));
+    sec.appendChild(hd);
+    sec.appendChild(content);
+    return sec;
+  }
 
-    root.innerHTML = "";
-    root.appendChild(secHd("01", "Sessions", "Historique des conversations", allSessions.length + " sessions"));
+  function settingRow(label, sub, control) {
+    const row = el("div", { class: "setting-row" });
+    const txt = el("div");
+    txt.appendChild(el("div", { class: "setting-label", text: label }));
+    if (sub) txt.appendChild(el("div", { class: "setting-sub", text: sub }));
+    row.appendChild(txt);
+    row.appendChild(control);
+    return row;
+  }
 
-    const searchInput = el("input", {
-      class: "sessions-search-input",
-      type: "text",
-      placeholder: "Rechercher une session…",
-    });
+  function makeSelect(options, current, key) {
+    let selected = options.includes(current) ? current : (options[0] || "");
 
-    const bodyEl = el("div");
-    bodyEl.appendChild(el("div", {
-      class: "row-tab row-tab-hd",
-      style: { borderTop:"0", paddingTop:"0", paddingBottom:"10px", color:"var(--fg-3)", fontFamily:"var(--mono)", fontSize:"10px", letterSpacing:".1em", textTransform:"uppercase" },
-    }, [
-      el("span", { text: "ID" }),
-      el("span", { text: "Titre · date" }),
-      el("span", { style:{textAlign:"right"}, text: "Msgs" }),
-      el("span", { style:{textAlign:"right"}, text: "Tokens" }),
-      el("span", { style:{textAlign:"right"}, text: "State" }),
-      el("span"),
-    ]));
+    const wrap = el("div", { class: "csel-wrap" });
+    const btn  = el("button", { class: "csel-btn" });
+    const lbl  = el("span", { class: "csel-label", text: selected });
+    const chev = el("span", { class: "csel-chevron",
+      html: '<svg width="10" height="6" viewBox="0 0 10 6" fill="none"><path d="M1 1L5 5L9 1" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/></svg>' });
+    btn.appendChild(lbl); btn.appendChild(chev);
+    wrap.appendChild(btn);
 
-    function renderRows(filtered) {
-      bodyEl.querySelectorAll(".row-tab:not(.row-tab-hd)").forEach(r => r.remove());
-      filtered.forEach(s => {
-        const nameCell = el("span", { class: "rt-name" });
-
-        function setView() {
-          nameCell.innerHTML = "";
-          nameCell.appendChild(el("div", { class: "rt-title-row" }, [
-            el("span", { class: "rt-title-text", text: s.agent }),
-            el("button", { class: "rt-edit-btn", title: "Renommer" }, [ document.createTextNode("✎") ]),
-          ]));
-          nameCell.appendChild(el("span", { class: "rt-sub", text: "started " + s.start + " · " + s.dur }));
-          nameCell.querySelector(".rt-edit-btn").addEventListener("click", (e) => { e.stopPropagation(); setEdit(); });
-        }
-
-        function setEdit() {
-          nameCell.innerHTML = "";
-          const input = el("input", { class: "rt-edit-input", type: "text" });
-          input.value = s.agent;
-          nameCell.appendChild(input);
-          input.focus(); input.select();
-          let saved = false;
-          async function save() {
-            if (saved) return; saved = true;
-            const newTitle = input.value.trim();
-            if (newTitle && newTitle !== s.agent) {
-              try {
-                await J.api.put("/api/sessions/" + s.fullId + "/title", { title: newTitle });
-                s.agent = newTitle;
-                const found = allSessions.find(x => x.fullId === s.fullId);
-                if (found) found.agent = newTitle;
-              } catch { s.agent = s.agent; }
-            }
-            setView();
-          }
-          input.addEventListener("blur", save);
-          input.addEventListener("keydown", e => {
-            if (e.key === "Enter") { e.preventDefault(); input.blur(); }
-            if (e.key === "Escape") { saved = true; setView(); }
-          });
-        }
-
-        setView();
-
-        const row = el("div", { class: "row-tab" }, [
-          el("span", { class: "rt-id", text: s.id }),
-          nameCell,
-          el("span", { class: "rt-num", text: s.calls }),
-          el("span", { class: "rt-num", text: s.tok }),
-          el("span", { class: "rt-status", style: { color: s.cls === "ok" ? "var(--green)" : s.cls === "warn" ? "var(--gold)" : "var(--fg-3)" }, text: "● " + s.status }),
-          el("button", { class: "rt-del", title: "Supprimer la session" }, [ document.createTextNode("✕") ]),
-        ]);
-        row.querySelector(".rt-del").addEventListener("click", async (e) => {
-          e.stopPropagation();
-          if (!confirm("Supprimer cette session ?")) return;
-          try {
-            await J.api.delete("/api/sessions/" + s.fullId);
-            row.remove();
-            allSessions = allSessions.filter(x => x.fullId !== s.fullId);
-            const countSpan = root.querySelector(".sec-hd-r");
-            if (countSpan) countSpan.textContent = allSessions.length + " sessions";
-          } catch { alert("Erreur lors de la suppression."); }
-        });
-        bodyEl.appendChild(row);
+    const dropdown = el("div", { class: "csel-dropdown" });
+    options.forEach(o => {
+      const item = el("div", { class: "csel-item" + (o === selected ? " active" : ""), text: o });
+      item.addEventListener("click", () => {
+        selected = o;
+        lbl.textContent = o;
+        dropdown.querySelectorAll(".csel-item").forEach(it => it.classList.toggle("active", it.textContent === o));
+        close();
       });
-    }
-
-    renderRows(allSessions);
-
-    const cardEl = card({
-      title: "Sessions", sub: allSessions.length + " sessions · historique",
-      right: el("button", { class: "btn-ghost", text: "Stream live ●" }),
-    }, [
-      el("div", { class: "sessions-search" }, [searchInput]),
-      bodyEl,
-    ]);
-    root.appendChild(cardEl);
-
-    searchInput.addEventListener("input", () => {
-      const q = searchInput.value.trim().toLowerCase();
-      renderRows(q ? allSessions.filter(s => s.agent.toLowerCase().includes(q) || s.id.includes(q)) : allSessions);
+      dropdown.appendChild(item);
     });
-  }
+    wrap.appendChild(dropdown);
 
-  /* ───────── Markdown renderer ───────── */
-  function mdToHtml(text) {
-    function esc(s) {
-      return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
-    }
-    function inline(s) {
-      s = esc(s);
-      s = s.replace(/`([^`]+)`/g, "<code>$1</code>");
-      s = s.replace(/\*\*([^*]+)\*\*/g, "<strong>$1</strong>");
-      s = s.replace(/\*([^*]+)\*/g, "<em>$1</em>");
-      return s;
-    }
-    const lines = text.split("\n");
-    const out = [];
-    let inList = false;
-    for (const raw of lines) {
-      const line = raw.trimEnd();
-      const t = line.trim();
-      if (t.startsWith("### ")) {
-        if (inList) { out.push("</ul>"); inList = false; }
-        out.push("<h3>" + inline(t.slice(4)) + "</h3>");
-      } else if (t.startsWith("## ")) {
-        if (inList) { out.push("</ul>"); inList = false; }
-        out.push("<h2>" + inline(t.slice(3)) + "</h2>");
-      } else if (t.startsWith("# ")) {
-        if (inList) { out.push("</ul>"); inList = false; }
-        out.push("<h1>" + inline(t.slice(2)) + "</h1>");
-      } else if (t.startsWith("- ") || t.startsWith("* ")) {
-        if (!inList) { out.push("<ul>"); inList = true; }
-        out.push("<li>" + inline(t.slice(2)) + "</li>");
-      } else if (!t) {
-        if (inList) { out.push("</ul>"); inList = false; }
-      } else {
-        if (inList) { out.push("</ul>"); inList = false; }
-        out.push("<p>" + inline(t) + "</p>");
-      }
-    }
-    if (inList) out.push("</ul>");
-    return out.join("");
-  }
+    const handleOutside = e => { if (!wrap.contains(e.target)) close(); };
+    const close = () => {
+      wrap.classList.remove("open");
+      document.removeEventListener("click", handleOutside);
+    };
 
-  /* ───────── Memory ───────── */
-  async function renderMemory(root) {
-    // SHAPE EXPECTED (MEM_FILES): [{ id, group, name, path, size, pin, body:{title,fm,sections} }]
-    // Backend GET /api/memory/topics → [{ name, size, mtime }]
-    // Backend GET /api/memory/topics/{name} → { name, content }
-    // Transformation: topics are flat (no groups), displayed in a single "global" group
-    // body (viewer content) is loaded on-demand when a file is selected
-    root.innerHTML = '<div class="surface"><div class="j-loading">Chargement…</div></div>';
-    let memFiles = MEM_FILES;
-    try {
-      const raw = await J.api.get("/api/memory/topics");
-      if (raw && raw.length) {
-        memFiles = raw.map((t, i) => ({
-          id:    "t" + i,
-          group: "global",
-          name:  t.name,
-          path:  t.name,
-          size:  t.size > 1024 ? (t.size / 1024).toFixed(1) + " KB" : t.size + " B",
-          pin:   false,
-          body:  null,  // loaded on-demand
-        }));
-      }
-    } catch (_) { /* keep mock */ }
-
-    root.innerHTML = "";
-    root.appendChild(secHd("02", "Mémoire", "Ce que Jarvis sait de toi", memFiles.length + " fichiers"));
-
-    const firstId = memFiles.length > 0 ? memFiles[0].id : null;
-    let selectedId = firstId, query = "";
-    const cardEl = card({
-      title: "Mémoire", sub: memFiles.length + " fichiers · markdown",
-      right: el("div", { style: { display: "flex", gap: "6px" } }, [
-        el("button", { class: "btn-ghost", text: "+ New" }),
-        el("button", { class: "btn-ghost", text: "Reindex" }),
-      ]),
-    });
-
-    // Stats
-    const stats = el("div", { class: "mem-stats" });
-    [
-      ["Fichiers", String(memFiles.length), memFiles.length + " fichiers",null],
-      ["Pinnés",   "—",   "non implémenté","var(--gold)"],
-    ].forEach(([lbl,val,sub,col]) => {
-      stats.appendChild(el("div", { class: "mem-stat" }, [
-        el("div", { class: "ms-lbl", text: lbl }),
-        el("div", { class: "ms-val", style: col?{color:col}:{}, text: val }),
-        el("div", { class: "ms-sub", text: sub }),
-      ]));
-    });
-    cardEl.appendChild(stats);
-
-    const layout = el("div", { class: "mem-layout" });
-    const listCol = el("div", { class: "mem-list" });
-    const viewCol = el("div", { class: "mem-view" });
-
-    // Use a flat group for API-sourced files (no groups metadata from backend)
-    const groups = [{ id: "global", label: "Topics" }];
-    const filesWithGroup = memFiles.map(f => Object.assign({ group: "global" }, f));
-
-    async function loadFileContent(file) {
-      if (file.body) return;
-      try {
-        const data = await J.api.get("/api/memory/topics/" + encodeURIComponent(file.name));
-        file.body = {
-          title: file.name,
-          fm: { Fichier: file.name, Taille: file.size },
-          raw: data.content || "",
-        };
-      } catch (_) {
-        file.body = { title: file.name, fm: {}, raw: "_Contenu non disponible._" };
-      }
-    }
-
-    async function openMemEditor(file, viewCol) {
-      if (!file.body) {
-        viewCol.innerHTML = '<div class="j-loading">Chargement…</div>';
-        await loadFileContent(file);
-      }
-      const raw = (file.body && file.body.raw) || "";
-      viewCol.innerHTML = "";
-      const editorWrap = el("div", { style: { display: "flex", flexDirection: "column", height: "100%", padding: "18px 22px", gap: "12px" } });
-      const label = el("div", { style: { fontFamily: "var(--mono)", fontSize: "10px", color: "var(--fg-3)", letterSpacing: "0.12em", textTransform: "uppercase" } });
-      label.textContent = file.name;
-      const textarea = el("textarea", { style: {
-        flex: "1", minHeight: "340px", resize: "vertical",
-        fontFamily: "var(--mono)", fontSize: "12.5px", lineHeight: "1.6",
-        background: "var(--bg-1)", color: "var(--fg-0)",
-        border: "1px solid var(--line-1)", borderRadius: "8px",
-        padding: "14px 16px", outline: "none", width: "100%", boxSizing: "border-box",
-      } });
-      textarea.value = raw;
-      const actions = el("div", { style: { display: "flex", gap: "8px", justifyContent: "flex-end" } });
-      const cancelBtn = el("button", { class: "btn-ghost", text: "Annuler", onclick: () => { file.body = null; rerenderViewer(); } });
-      const saveBtn = el("button", { class: "btn-ghost", style: { color: "var(--accent)" }, text: "Sauvegarder" });
-      saveBtn.onclick = async () => {
-        saveBtn.disabled = true;
-        saveBtn.textContent = "…";
-        try {
-          await J.api.put("/api/memory/topics/" + encodeURIComponent(file.name), { content: textarea.value });
-          file.body.raw = textarea.value;
-          J.notify({ kind: "success", text: "Mémoire · " + file.name + " sauvegardé" });
-          rerenderViewer();
-        } catch (err) {
-          J.notify({ kind: "error", text: "Erreur : " + err.message });
-          saveBtn.disabled = false;
-          saveBtn.textContent = "Sauvegarder";
-        }
-      };
-      actions.appendChild(cancelBtn);
-      actions.appendChild(saveBtn);
-      editorWrap.appendChild(label);
-      editorWrap.appendChild(textarea);
-      editorWrap.appendChild(actions);
-      viewCol.appendChild(editorWrap);
-      textarea.focus();
-    }
-
-    function toggleMemMenu(e, file, viewCol) {
+    btn.addEventListener("click", e => {
       e.stopPropagation();
-      const existing = document.getElementById("mem-ctx-menu");
-      if (existing) { existing.remove(); return; }
-      const menu = el("div", {
-        id: "mem-ctx-menu",
-        style: {
-          position: "absolute", top: "36px", right: "0", zIndex: "200",
-          background: "var(--bg-2)", border: "1px solid var(--line-1)",
-          borderRadius: "8px", padding: "6px", minWidth: "160px",
-          boxShadow: "0 8px 24px rgba(0,0,0,0.4)",
-        },
-      });
-      const mkItem = (label, color, action) => {
-        const btn = el("button", {
-          style: {
-            display: "block", width: "100%", textAlign: "left",
-            padding: "7px 12px", borderRadius: "5px",
-            fontSize: "12.5px", fontFamily: "var(--mono)",
-            color: color || "var(--fg-1)", background: "none", border: "none", cursor: "pointer",
-          },
-          text: label,
-          onclick: () => { menu.remove(); action(); },
-        });
-        btn.onmouseenter = () => { btn.style.background = "var(--bg-3, rgba(255,255,255,0.06))"; };
-        btn.onmouseleave = () => { btn.style.background = "none"; };
-        return btn;
+      if (wrap.classList.contains("open")) { close(); return; }
+      wrap.classList.add("open");
+      setTimeout(() => document.addEventListener("click", handleOutside), 0);
+    });
+
+    const saveBtn = el("button", { class: "m-btn", text: "Sauv." });
+    saveBtn.addEventListener("click", () => saveSetting(key, selected, saveBtn));
+    const ctrl = el("div", { style: { display: "flex", gap: "8px", alignItems: "center" } });
+    ctrl.appendChild(wrap); ctrl.appendChild(saveBtn);
+    return ctrl;
+  }
+
+  async function getSettings() {
+    if (_settings) return _settings;
+    try { _settings = await J.api.get("/api/settings"); } catch (_) { _settings = {}; }
+    return _settings;
+  }
+
+  async function saveSetting(key, value, btn) {
+    if (btn) { btn.textContent = "…"; btn.disabled = true; }
+    try {
+      await J.api.post("/api/settings/update", { key, value });
+      _settings = null; // invalidate cache
+      J.notify({ kind: "success", text: key + " · mis à jour" });
+    } catch (e) {
+      J.notify({ kind: "error", text: e.message });
+    }
+    if (btn) { btn.textContent = "Sauv."; btn.disabled = false; }
+  }
+
+  /* ───────── 01 Préférences ───────── */
+  async function renderPreferences() {
+    const s   = await getSettings();
+    const jarvis = s.jarvis    || {};
+    const music  = s.music     || {};
+    const pro    = s.proactive || {};
+
+    const wrap = el("div", { style: { display:"flex", flexDirection:"column", gap:"40px" } });
+
+    // ── Identité ──
+    const identList = el("div");
+    const fnInput = el("input", { class: "input-mono", style: { width:"220px" }, value: jarvis.user_firstname || "" });
+    const fnSave  = el("button", { class: "m-btn", text: "Sauv." });
+    fnSave.addEventListener("click", () => saveSetting("USER_FIRSTNAME", fnInput.value, fnSave));
+    const fnCtrl  = el("div", { style: { display:"flex", gap:"8px" } });
+    fnCtrl.appendChild(fnInput); fnCtrl.appendChild(fnSave);
+    identList.appendChild(settingRow("Prénom", "USER_FIRSTNAME", fnCtrl));
+    wrap.appendChild(ghostSec("Identité", "comment Jarvis s'adresse à toi", null, identList));
+
+    // ── Langue & style ──
+    const styleList = el("div");
+    const qbTog = el("div", { class: "toggle" + (jarvis.quebec_mode ? " on" : "") });
+    qbTog.addEventListener("click", () => {
+      const next = !qbTog.classList.contains("on");
+      qbTog.classList.toggle("on", next);
+      saveSetting("QUEBEC_MODE", String(next), null);
+    });
+    styleList.appendChild(settingRow("Mode québécois", "Accent et expressions du Québec", qbTog));
+    wrap.appendChild(ghostSec("Langue & style", "dialecte · voix", null, styleList));
+
+    // ── Musique ──
+    const musicList = el("div");
+    musicList.appendChild(settingRow("Fournisseur", "MUSIC_PROVIDER",
+      makeSelect(["—", "spotify", "deezer", "local"], music.music_provider || "—", "MUSIC_PROVIDER")));
+    wrap.appendChild(ghostSec("Musique", "source de lecture active", null, musicList));
+
+    // ── Proactivité ──
+    const proList = el("div");
+
+    const cityInput = el("input", { class: "input-mono", style: { width:"180px" }, value: pro.home_city || "" });
+    const citySave  = el("button", { class: "m-btn", text: "Sauv." });
+    citySave.addEventListener("click", () => saveSetting("HOME_CITY", cityInput.value, citySave));
+    const cityCtrl  = el("div", { style: { display:"flex", gap:"8px" } });
+    cityCtrl.appendChild(cityInput); cityCtrl.appendChild(citySave);
+    proList.appendChild(settingRow("Ville météo", "HOME_CITY", cityCtrl));
+
+    const hourInput = el("input", {
+      type: "number", min: "0", max: "23",
+      class: "input-mono", style: { width:"70px" },
+      value: String(pro.briefing_hour ?? 9),
+    });
+    const hourSave = el("button", { class: "m-btn", text: "Sauv." });
+    hourSave.addEventListener("click", () => saveSetting("BRIEFING_HOUR", hourInput.value, hourSave));
+    const hourCtrl = el("div", { style: { display:"flex", gap:"8px", alignItems:"center" } });
+    hourCtrl.appendChild(hourInput);
+    hourCtrl.appendChild(el("span", { style: { color:"var(--fg-3)", fontFamily:"var(--mono)", fontSize:"11px" }, text:"h00" }));
+    hourCtrl.appendChild(hourSave);
+    proList.appendChild(settingRow("Heure du briefing", "BRIEFING_HOUR", hourCtrl));
+
+    wrap.appendChild(ghostSec("Proactivité", "briefing · rappels · météo", null, proList));
+
+    // ── Wake up ──
+    const wakeList = el("div");
+
+    const wupTog = el("div", { class: "toggle" + (jarvis.wakeup_enabled ? " on" : "") });
+    wupTog.addEventListener("click", () => {
+      const next = !wupTog.classList.contains("on");
+      wupTog.classList.toggle("on", next);
+      saveSetting("WAKEUP_ENABLED", String(next), null);
+    });
+    wakeList.appendChild(settingRow("Séquence wake up", "Veille + scan facial + clap", wupTog));
+
+    const clapTog = el("div", { class: "toggle" + (jarvis.clap_detection_enabled ? " on" : "") });
+    clapTog.addEventListener("click", () => {
+      const next = !clapTog.classList.contains("on");
+      clapTog.classList.toggle("on", next);
+      saveSetting("CLAP_DETECTION_ENABLED", String(next), null);
+    });
+    wakeList.appendChild(settingRow("Détection de clap", "Double clap pour réveiller Jarvis", clapTog));
+
+    wrap.appendChild(ghostSec("Wake up", "déclencheurs de réveil", null, wakeList));
+
+    const page = pageWrapper("preferences", "Tes préférences", null, wrap);
+    root.innerHTML = ""; root.appendChild(page);
+  }
+
+  /* ───────── 02 Modèles & API ───────── */
+  async function renderModeles() {
+    const s = await getSettings();
+    const llm = s.llm || {};
+    const keys = s.api_keys || {};
+
+    const wrap = el("div", { style: { display:"flex", flexDirection:"column", gap:"40px" } });
+
+    const CLAUDE = ["claude-opus-4-7", "claude-sonnet-4-6", "claude-haiku-4-5-20251001"];
+    const VISION = ["gpt-4o", "gpt-4o-mini", "claude-sonnet-4-6", "claude-haiku-4-5-20251001"];
+
+    const modelList = el("div");
+    [
+      { label: "LLM provider",     sub: "LLM_PROVIDER",          options: ["api", "local"],                   val: llm.llm_provider },
+      { label: "Backend API",      sub: "API_BACKEND",            options: ["anthropic", "mistral", "openai"], val: llm.api_backend },
+      { label: "Modèle principal", sub: "ANTHROPIC_MODEL",        options: CLAUDE,                             val: llm.anthropic_model },
+      { label: "Modèle vocal",     sub: "VOICE_ANTHROPIC_MODEL",  options: CLAUDE,                             val: llm.voice_anthropic_model },
+      { label: "Modèle vision",    sub: "VISION_MODEL",           options: VISION,                             val: llm.vision_model },
+    ].forEach(m => modelList.appendChild(settingRow(m.label, m.sub, makeSelect(m.options, m.val, m.sub))));
+    wrap.appendChild(ghostSec("Modèles", "LLM · voix · vision", null, modelList));
+
+    // Clés API — édition inline, sans popup navigateur
+    const keyList = el("div");
+    Object.entries(keys).forEach(([k, masked]) => {
+      const ctrl = el("div", { style: { display:"flex", gap:"8px", alignItems:"center" } });
+      const valEl = el("div", { class: "key-val", text: masked || "— non configurée" });
+      const editBtn = el("button", { class: "m-btn", text: "Éditer" });
+
+      const showDisplay = () => {
+        ctrl.innerHTML = "";
+        ctrl.appendChild(valEl);
+        ctrl.appendChild(editBtn);
       };
-      menu.appendChild(mkItem("Modifier", null, () => openMemEditor(file, viewCol)));
-      menu.appendChild(mkItem("Supprimer", "var(--red, #f55)", async () => {
-        if (!confirm("Supprimer " + file.name + " ?")) return;
-        try {
-          await J.api.delete("/api/memory/topics/" + encodeURIComponent(file.name));
-          const idx = filesWithGroup.indexOf(file);
-          if (idx !== -1) filesWithGroup.splice(idx, 1);
-          selectedId = filesWithGroup.length ? filesWithGroup[0].id : null;
-          J.notify({ kind: "success", text: "Mémoire · " + file.name + " supprimé" });
-          rerender();
-          rerenderViewer();
-        } catch (err) {
-          J.notify({ kind: "error", text: "Erreur : " + err.message });
-        }
-      }));
-      e.currentTarget.parentElement.appendChild(menu);
-      const close = (ev) => { if (!menu.contains(ev.target)) { menu.remove(); document.removeEventListener("click", close); } };
-      setTimeout(() => document.addEventListener("click", close), 0);
-    }
 
-    async function rerenderViewer() {
-      const file = filesWithGroup.find(f => f.id === selectedId) || filesWithGroup[0];
-      if (!file) { viewCol.innerHTML = '<div class="j-empty">Aucun fichier sélectionné.</div>'; return; }
-      if (!file.body) {
-        viewCol.innerHTML = '<div class="j-loading">Chargement…</div>';
-        await loadFileContent(file);
-      }
-      viewCol.innerHTML = "";
-      const vhd = el("div", { class: "mem-view-hd" }, [
-        el("div", { class: "mem-view-hd-l" }, [
-          el("span", { class: "mvh-name", text: file.body.title }),
-          el("span", { class: "mvh-meta" }, [
-            el("span", { text: file.path }),
-            el("span", { text: "·" }),
-            el("span", { text: file.size }),
-            file.pin ? el("span", { text: "·" }) : null,
-            file.pin ? el("span", { style:{color:"var(--gold)"}, text: "● PINNED" }) : null,
-          ]),
-        ]),
-        el("div", { class: "mem-view-hd-r", style: { position: "relative" } }, [
-          el("button", { class: "btn-ghost", text: "⋯", onclick: (e) => toggleMemMenu(e, file, viewCol) }),
-        ]),
-      ]);
-      viewCol.appendChild(vhd);
-      const md = el("div", { class: "mem-md" });
-      if (Object.keys(file.body.fm).length > 0) {
-        const dl = el("dl", { class: "frontmatter" });
-        Object.keys(file.body.fm).forEach(k => {
-          dl.appendChild(el("dt", { text: k }));
-          const v = file.body.fm[k];
-          if (k === "Pinned" && v === "true") dl.appendChild(el("dd", {}, [el("span", { class: "pin", text: "● true" })]));
-          else dl.appendChild(el("dd", { text: v }));
-        });
-        md.appendChild(dl);
-      }
-      const content = el("div", { class: "mem-md-body" });
-      content.innerHTML = mdToHtml(file.body.raw || "");
-      md.appendChild(content);
-      viewCol.appendChild(md);
-    }
-
-    function rerender() {
-      listCol.innerHTML = "";
-      const hd = el("div", { class: "mem-list-hd" }, [
-        el("div", { class: "t-eyebrow" }, [
-          el("span", { text: "memory · topics" }),
-          el("span", { text: filesWithGroup.length }),
-        ]),
-        el("input", { class: "mem-search", placeholder: "⌘ rechercher…", value: query,
-          oninput: (e) => { query = e.target.value; rerender(); } }),
-      ]);
-      listCol.appendChild(hd);
-      const scroll = el("div", { class: "scroll-y", style: { flex:"1" } });
-      groups.forEach(g => {
-        const items = filesWithGroup.filter(f => f.group === g.id && (!query || (f.name+f.path).toLowerCase().indexOf(query.toLowerCase()) >= 0));
-        const grp = el("div", { class: "mem-group" });
-        grp.appendChild(el("div", { class: "mem-group-hd" }, [
-          el("span", { text: g.label }),
-          el("span", { text: items.length }),
-        ]));
-        items.forEach(f => {
-          grp.appendChild(el("div", {
-            class: "mem-file" + (selectedId === f.id ? " is-on" : ""),
-            onclick: () => { selectedId = f.id; rerender(); rerenderViewer(); },
-          }, [
-            el("span", { class: "mf-glyph", text: f.pin ? "●" : "md" }),
-            el("span", { class: "mf-name" }, [
-              el("span", { style:{overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}, text: f.name }),
-              el("span", { class: "mf-path", text: f.path }),
-            ]),
-            el("span", { class: "mf-size", text: f.size }),
-          ]));
-        });
-        scroll.appendChild(grp);
-      });
-      listCol.appendChild(scroll);
-    }
-    rerender();
-    rerenderViewer();
-    layout.appendChild(listCol); layout.appendChild(viewCol);
-    cardEl.appendChild(layout);
-    root.appendChild(cardEl);
-  }
-
-  /* ───────── Tools ───────── */
-  async function renderTools(root) {
-    root.innerHTML = '<div class="surface"><div class="j-loading">Chargement…</div></div>';
-
-    // Fetch installed skills + catalog in parallel
-    let installed = [], catalog = [], offline = false;
-    try {
-      const [instRes, catRes] = await Promise.all([
-        J.api.get("/api/skills/installed"),
-        J.api.get("/api/skills/catalog"),
-      ]);
-      installed = (instRes && instRes.skills) ? instRes.skills : [];
-      catalog   = (catRes  && catRes.skills)  ? catRes.skills  : [];
-      offline   = !!(catRes && catRes.offline);
-    } catch (_) { /* keep empty */ }
-
-    root.innerHTML = "";
-
-    /* ─── Section 1 : Skills actifs ─────────────────────────── */
-    const reloadBtn = el("button", { class: "btn-ghost", text: "↺ Recharger" });
-    root.appendChild(secHd("01", "Skills actifs", "Extensions chargées par Jarvis", installed.length + " actif(s)"));
-
-    const activeList = el("div");
-    const searchInput = el("input", {
-      class: "mem-search",
-      placeholder: "Rechercher un skill…",
-      style: { width: "100%", marginBottom: "12px", boxSizing: "border-box" },
-    });
-
-    const SVG_EYE     = `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>`;
-    const SVG_EYE_OFF = `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>`;
-    const SVG_SAVE    = `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>`;
-
-    function _buildCapsInline(capabilities) {
-      if (!capabilities || !capabilities.length) return null;
-      const wrap = el("div", { style: { marginTop: "6px" } });
-      wrap.appendChild(el("div", { style: { fontSize: "10px", color: "var(--fg-3)", marginBottom: "2px" }, text: "Ce skill :" }));
-      capabilities.forEach(cap => {
-        wrap.appendChild(el("div", { style: { fontSize: "11px", color: "var(--fg-2)", lineHeight: "1.7" }, text: "· " + cap }));
-      });
-      return wrap;
-    }
-
-    function _buildPlatformBadges(platforms) {
-      if (!platforms || !platforms.length) return null;
-      const wrap = el("div", { style: { display: "flex", gap: "4px", flexWrap: "wrap", marginTop: "5px" } });
-      const colors = { mac: "#a78bfa", windows: "#60a5fa", linux: "#fb923c" };
-      platforms.forEach(plat => {
-        const c = colors[plat.toLowerCase()] || "#888";
-        wrap.appendChild(el("span", {
-          style: {
-            background: c + "22",
-            border: "1px solid " + c + "55",
-            color: c,
-            borderRadius: "4px",
-            padding: "1px 7px",
-            fontSize: "10px",
-            fontWeight: "500",
-            letterSpacing: "0.03em",
-          },
-          text: plat,
-        }));
-      });
-      return wrap;
-    }
-
-    function _buildAppsSection(appsStatus) {
-      if (!appsStatus || !appsStatus.length) return null;
-      const wrap = el("div", { style: { marginTop: "8px" } });
-      wrap.appendChild(el("div", {
-        style: { fontSize: "10px", fontWeight: "600", letterSpacing: "0.05em", color: "var(--fg-3)", marginBottom: "4px" },
-        text: "APPLICATIONS REQUISES",
-      }));
-      appsStatus.forEach(app => {
-        let icon, color;
-        if (app.installed) {
-          icon = "✓"; color = "var(--green, #4caf50)";
-        } else if (app.required) {
-          icon = "✗"; color = "var(--red, #f55)";
-        } else {
-          icon = "⚠"; color = "var(--amber, #f90)";
-        }
-        const row = el("div", { style: { display: "flex", gap: "6px", alignItems: "center", fontSize: "11px", lineHeight: "1.8" } });
-        row.appendChild(el("span", { style: { color, fontWeight: "bold" }, text: icon }));
-        row.appendChild(el("span", { style: { color: "var(--fg-1)" }, text: app.name }));
-        if (app.installed) {
-          row.appendChild(el("span", { style: { color: "var(--green, #4caf50)", fontSize: "10px" }, text: "Installé" }));
-        } else {
-          const statusText = app.required ? "Non installé (requis)" : "Non installé (optionnel)";
-          row.appendChild(el("span", { style: { color, fontSize: "10px" }, text: statusText }));
-          if (app.url) {
-            row.appendChild(el("span", { style: { fontSize: "10px", opacity: "0.6" }, text: "— " + app.url }));
-          }
-        }
-        wrap.appendChild(row);
-      });
-      return wrap;
-    }
-
-    function _buildEnvSection(requiresEnvDetail, envStatus, envVals, badge, allEnvKeys) {
-      if (!requiresEnvDetail || !requiresEnvDetail.length) return null;
-      const configSection = el("div", { class: "skill-config" });
-      const statusIcons = {};
-
-      requiresEnvDetail.forEach(envEntry => {
-        const varKey = typeof envEntry === "string" ? envEntry : envEntry.name;
-        const desc = typeof envEntry === "object" ? (envEntry.description || "") : "";
-        const example = typeof envEntry === "object" ? (envEntry.example || "") : "";
-        const sensitive = typeof envEntry === "object" ? (envEntry.sensitive !== false) : true;
-
-        const isSet = envStatus[varKey] === true;
-        const curValue = envVals[varKey] || "";
-
-        const statusIcon = el("span", {
-          class: "skill-config-status " + (isSet ? "ok" : "warn"),
-          text: isSet ? "✓" : "⚠",
-        });
-        statusIcons[varKey] = statusIcon;
-
-        const labelWrap = el("div", { style: { flex: 1, minWidth: 0 } });
-        const labelLine = el("div", { style: { display: "flex", gap: "6px", alignItems: "center" } });
-        labelLine.appendChild(el("span", { class: "skill-config-label", text: varKey }));
-        if (desc) labelLine.appendChild(el("span", { style: { fontSize: "10px", color: "var(--fg-3)", opacity: "0.8" }, text: "· " + desc }));
-        labelWrap.appendChild(labelLine);
-        if (example) {
-          labelWrap.appendChild(el("span", { style: { fontSize: "10px", color: "var(--fg-3)", opacity: "0.55" }, text: "Exemple : " + example }));
-        }
-
-        const inputEl = document.createElement("input");
-        inputEl.className = "skill-config-input";
-        inputEl.type = sensitive ? "password" : "text";
-        inputEl.placeholder = varKey;
-        inputEl.value = curValue;
-
-        const inputWrap = el("div", { class: "skill-config-input-wrap" });
-        inputWrap.appendChild(inputEl);
-
-        if (sensitive) {
-          const revealBtn = document.createElement("button");
-          revealBtn.className = "skill-config-reveal";
-          revealBtn.title = "Afficher / masquer";
-          revealBtn.innerHTML = SVG_EYE;
-          let revealed = false;
-          revealBtn.onclick = () => {
-            revealed = !revealed;
-            inputEl.type = revealed ? "text" : "password";
-            revealBtn.innerHTML = revealed ? SVG_EYE_OFF : SVG_EYE;
-          };
-          inputWrap.appendChild(revealBtn);
-        }
-
-        const saveBtn = document.createElement("button");
-        saveBtn.className = "skill-config-save";
-        saveBtn.title = "Sauvegarder";
-        saveBtn.innerHTML = SVG_SAVE;
-        saveBtn.onclick = async () => {
-          const val = inputEl.value.trim();
-          if (!val) return;
-          saveBtn.disabled = true;
-          try {
-            await J.api.post("/api/settings/update", { key: varKey, value: val });
-            const statusRes = await J.api.get(
-              "/api/settings/env-status?keys=" + allEnvKeys.join(",")
-            );
-            allEnvKeys.forEach(k => {
-              const nowSet = !!statusRes[k];
-              if (statusIcons[k]) {
-                statusIcons[k].className = "skill-config-status " + (nowSet ? "ok" : "warn");
-                statusIcons[k].textContent = nowSet ? "✓" : "⚠";
-              }
-            });
-            if (badge) {
-              const allSet = allEnvKeys.every(k => !!statusRes[k]);
-              badge.className = "skill-status-badge " + (allSet ? "ok" : "warn");
-              badge.textContent = allSet ? "✓ Configuré" : "⚠ Configuration requise";
-            }
-            J.notify({ kind: "success", text: varKey + " sauvegardé" });
-            if (sensitive) { inputEl.type = "password"; }
-          } catch (e) {
-            J.notify({ kind: "error", text: "Erreur : " + e.message });
-          }
-          saveBtn.disabled = false;
-        };
-
-        const row = el("div", { class: "skill-config-row", style: { alignItems: "flex-start" } });
-        row.appendChild(statusIcon);
-        row.appendChild(labelWrap);
-        row.appendChild(inputWrap);
-        row.appendChild(saveBtn);
-        configSection.appendChild(row);
-      });
-
-      return configSection;
-    }
-
-    function renderInstalled() {
-      activeList.innerHTML = "";
-      const skills = installed.filter(s => s.type !== "preset");
-      if (!skills.length) {
-        activeList.appendChild(el("div", {
-          class: "card-sub",
-          style: { padding: "12px 0", opacity: "0.6" },
-          text: "Aucun skill installé. Utilisez la Marketplace ci-dessous.",
-        }));
-        return;
-      }
-      skills.forEach(s => {
-        const requiresEnvDetail = s.requires_env_detail || s.requires_env || [];
-        const envStatus    = s.env_status    || {};
-        const envVals      = s.env_values    || {};
-        const capabilities = s.capabilities  || [];
-        const appsStatus   = s.requires_apps_status || [];
-        const configured   = s.configured !== false;
-
-        const allEnvKeys = requiresEnvDetail.map(e => typeof e === "string" ? e : e.name);
-
-        const confirmWrap = el("div", { style: { display: "none", gap: "8px" } });
-        const confirmBtn  = el("button", { class: "btn-ghost", style: { color: "var(--red, #f55)" }, text: "Confirmer" });
-        const cancelBtn   = el("button", { class: "btn-ghost", text: "Annuler" });
-        confirmWrap.appendChild(confirmBtn);
-        confirmWrap.appendChild(cancelBtn);
-
-        const uninstallBtn = el("button", { class: "btn-ghost", text: "Désinstaller" });
-        uninstallBtn.onclick = () => {
-          uninstallBtn.style.display = "none";
-          confirmWrap.style.display  = "flex";
-        };
-        cancelBtn.onclick = () => {
-          confirmWrap.style.display  = "none";
-          uninstallBtn.style.display = "";
-        };
-        confirmBtn.onclick = async () => {
-          confirmBtn.disabled = true;
-          confirmBtn.textContent = "…";
-          try {
-            const r = await fetch("/api/skills/uninstall/" + encodeURIComponent(s.name), { method: "DELETE" });
-            const data = await r.json();
-            if (data.success) {
-              J.notify({ kind: "info", text: "Skill désinstallé : " + s.name });
-              installed = installed.filter(x => x.name !== s.name);
-              presets = presets.filter(x => x.name !== s.name);
-              catalog = catalog.map(c => c.name === s.name ? Object.assign({}, c, { installed: false }) : c);
-              renderInstalled();
-              renderPresetList();
-              renderMarket(searchInput.value.trim().toLowerCase());
-            } else {
-              J.notify({ kind: "error", text: data.message || "Erreur désinstallation" });
-              confirmBtn.disabled = false;
-              confirmBtn.textContent = "Confirmer";
-              confirmWrap.style.display  = "none";
-              uninstallBtn.style.display = "";
-            }
-          } catch (e) {
-            J.notify({ kind: "error", text: "Erreur réseau : " + e.message });
-          }
-        };
-
-        const tagsWrap = el("div", { style: { display: "flex", gap: "4px", flexWrap: "wrap", marginTop: "4px" } });
-        (s.tags || []).forEach(t => tagsWrap.appendChild(el("span", {
-          style: { background: "var(--surface-2,rgba(255,255,255,.06))", borderRadius: "4px", padding: "1px 6px", fontSize: "10px", color: "var(--fg-3)" },
-          text: t,
-        })));
-
-        const badge = allEnvKeys.length
-          ? el("span", {
-              class: "skill-status-badge " + (configured ? "ok" : "warn"),
-              text: configured ? "✓ Configuré" : "⚠ Configuration requise",
-            })
-          : null;
-
-        const infoCol = el("div", { style: { flex: 1 } });
-        infoCol.appendChild(el("span", { style: { color: "var(--fg-0)" }, text: s.name }));
-        infoCol.appendChild(el("span", { class: "tn-sub", text: " v" + (s.version || "1.0.0") + " · " + (s.author || "—") }));
-        if (s.description) infoCol.appendChild(el("span", { style: { display: "block", fontSize: "12px", color: "var(--fg-1)", marginTop: "3px" }, text: s.description }));
-        infoCol.appendChild(tagsWrap);
-        if (badge) infoCol.appendChild(badge);
-
-        const capsEl = _buildCapsInline(capabilities);
-        if (capsEl) infoCol.appendChild(capsEl);
-
-        const envSection = _buildEnvSection(requiresEnvDetail, envStatus, envVals, badge, allEnvKeys);
-        if (envSection) infoCol.appendChild(envSection);
-
-        const appsSection = _buildAppsSection(appsStatus);
-        if (appsSection) infoCol.appendChild(appsSection);
-
-        activeList.appendChild(el("div", { class: "tool-row", style: { alignItems: "start" } }, [
-          el("div", { class: "tg", text: (s.name || "sk").slice(0, 2).toUpperCase() }),
-          infoCol,
-          el("div", { style: { display: "flex", flexDirection: "column", gap: "4px", alignItems: "flex-end" } }, [
-            uninstallBtn,
-            confirmWrap,
-          ]),
-        ]));
-      });
-    }
-
-    reloadBtn.onclick = async () => {
-      reloadBtn.disabled = true;
-      reloadBtn.textContent = "…";
-      try {
-        const r = await J.api.post("/api/skills/reload", null);
-        J.notify({ kind: "success", text: "Skills rechargés (" + (r.loaded || 0) + " actifs)" });
-        const res = await J.api.get("/api/skills/installed");
-        installed = (res && res.skills) ? res.skills : [];
-        renderInstalled();
-      } catch (e) {
-        J.notify({ kind: "error", text: "Erreur reload : " + e.message });
-      }
-      reloadBtn.disabled = false;
-      reloadBtn.textContent = "↺ Recharger";
-    };
-
-    renderInstalled();
-    root.appendChild(card({
-      title: "Skills actifs",
-      sub:   installed.filter(s => s.type !== "preset").length + " / " + catalog.filter(s => s.type !== "preset").length + " skills disponibles",
-      right: reloadBtn,
-    }, activeList));
-
-    /* ─── Section 1b : Presets installés ────────────────────── */
-    root.appendChild(secHd("02", "Presets installés", "Séquences déclenchables via Jarvis", ""));
-
-    let presets = [];
-    try {
-      const pr = await J.api.get("/api/presets");
-      presets = (pr && pr.presets) ? pr.presets : [];
-    } catch (_) { /* offline */ }
-
-    const presetList = el("div");
-
-    function renderPresetList() {
-      presetList.innerHTML = "";
-      if (!presets.length) {
-        presetList.appendChild(el("div", {
-          class: "card-sub",
-          style: { padding: "12px 0", opacity: "0.6" },
-          text: "Aucun preset installé.",
-        }));
-        return;
-      }
-
-      // Enrichir les presets avec les données de installed (qui contient apps_status etc.)
-      presets.forEach(p => {
-        const enriched = installed.find(i => i.name === p.name) || {};
-        const platformsText = (p.platforms || []).join(", ") || "—";
-        const stepsText = (p.steps_count || 0) + " action" + (p.steps_count !== 1 ? "s" : "");
-        const capabilities = enriched.capabilities || [];
-        const appsStatus   = enriched.requires_apps_status || [];
-        const requiresEnvDetail = enriched.requires_env_detail || [];
-        const envStatus    = enriched.env_status || {};
-        const envVals      = enriched.env_values || {};
-        const allEnvKeys   = requiresEnvDetail.map(e => typeof e === "string" ? e : e.name);
-
-        const confirmWrap = el("div", { style: { display: "none", gap: "8px" } });
-        const confirmBtn  = el("button", { class: "btn-ghost", style: { color: "var(--red, #f55)" }, text: "Confirmer" });
-        const cancelBtn   = el("button", { class: "btn-ghost", text: "Annuler" });
-        confirmWrap.appendChild(confirmBtn);
-        confirmWrap.appendChild(cancelBtn);
-
-        const uninstallBtn = el("button", { class: "btn-ghost", text: "Désinstaller" });
-        uninstallBtn.onclick = () => {
-          uninstallBtn.style.display = "none";
-          confirmWrap.style.display  = "flex";
-        };
-        cancelBtn.onclick = () => {
-          confirmWrap.style.display  = "none";
-          uninstallBtn.style.display = "";
-        };
-        confirmBtn.onclick = async () => {
-          confirmBtn.disabled = true;
-          confirmBtn.textContent = "…";
-          try {
-            const r = await fetch("/api/skills/uninstall/" + encodeURIComponent(p.name), { method: "DELETE" });
-            const data = await r.json();
-            if (data.success) {
-              J.notify({ kind: "info", text: "Preset désinstallé : " + p.name });
-              presets = presets.filter(x => x.name !== p.name);
-              installed = installed.filter(x => x.name !== p.name);
-              catalog = catalog.map(c => c.name === p.name ? Object.assign({}, c, { installed: false }) : c);
-              renderPresetList();
-              renderMarket(searchInput.value.trim().toLowerCase());
-            } else {
-              J.notify({ kind: "error", text: data.message || "Erreur désinstallation" });
-              confirmBtn.disabled = false;
-              confirmBtn.textContent = "Confirmer";
-              confirmWrap.style.display  = "none";
-              uninstallBtn.style.display = "";
-            }
-          } catch (e) {
-            J.notify({ kind: "error", text: "Erreur réseau : " + e.message });
-          }
-        };
-
-        const infoCol = el("div", { style: { flex: 1 } });
-
-        const nameRow = el("div", { style: { display: "flex", alignItems: "center", gap: "6px" } });
-        nameRow.appendChild(el("span", { style: { color: "var(--fg-0)" }, text: p.label || p.name }));
-        nameRow.appendChild(el("span", {
-          class: "badge badge--accent",
-          style: { fontSize: "9px", padding: "1px 5px", verticalAlign: "middle" },
-          text: "PRESET",
-        }));
-        infoCol.appendChild(nameRow);
-        infoCol.appendChild(el("span", { class: "tn-sub", text: `v${enriched.version || p.version || "1.0.0"} · ${enriched.author || p.author || "—"} · ${stepsText}` }));
-
-        const platBadges = _buildPlatformBadges(p.platforms || []);
-        if (platBadges) infoCol.appendChild(platBadges);
-
-        const desc = enriched.description || p.description || "";
-        if (desc) infoCol.appendChild(el("span", { style: { display: "block", fontSize: "12px", color: "var(--fg-1)", marginTop: "4px" }, text: desc }));
-
-        if (p.triggers && p.triggers.length) {
-          const trigText = p.triggers.slice(0, 3).map(t => `"${t}"`).join(", ");
-          infoCol.appendChild(el("span", { style: { fontSize: "11px", color: "var(--fg-3)", fontStyle: "italic", display: "block", marginTop: "2px" }, text: trigText }));
-        }
-
-        const capsEl2 = _buildCapsInline(capabilities);
-        if (capsEl2) infoCol.appendChild(capsEl2);
-
-        const appsSection = _buildAppsSection(appsStatus);
-        if (appsSection) infoCol.appendChild(appsSection);
-
-        if (allEnvKeys.length) {
-          const badge = null;
-          const envSection = _buildEnvSection(requiresEnvDetail, envStatus, envVals, badge, allEnvKeys);
-          if (envSection) {
-            const envWrap = el("div", { style: { marginTop: "8px" } });
-            envWrap.appendChild(el("div", {
-              style: { fontSize: "10px", fontWeight: "600", letterSpacing: "0.05em", color: "var(--fg-3)", marginBottom: "4px" },
-              text: "CONFIGURATION OPTIONNELLE",
-            }));
-            envWrap.appendChild(envSection);
-            infoCol.appendChild(envWrap);
-          }
-        }
-
-        presetList.appendChild(el("div", { class: "tool-row", style: { alignItems: "start" } }, [
-          el("div", { class: "tg", text: "▶" }),
-          infoCol,
-          el("div", { style: { display: "flex", flexDirection: "column", gap: "4px", alignItems: "flex-end" } }, [
-            uninstallBtn,
-            confirmWrap,
-          ]),
-        ]));
-      });
-    }
-
-    renderPresetList();
-    root.appendChild(card({
-      title: "Presets installés",
-      sub:   presets.length + " preset(s) · déclenchables vocalement",
-    }, presetList));
-
-    /* ─── Section 3 : Marketplace ───────────────────────────── */
-    root.appendChild(secHd("03", "Marketplace", "Catalogue jarvis-skills", ""));
-
-    const onlineBadge = el("span", {
-      style: { fontSize: "11px", opacity: "0.7" },
-      text: offline ? "● Hors ligne" : "● En ligne",
-    });
-    if (offline) onlineBadge.title = "Catalogue local — repo GitHub inaccessible";
-
-    const marketList = el("div");
-
-    let marketTypeFilter = "all";
-
-    const filterTabs = el("div", { style: { display: "flex", gap: "6px", marginBottom: "10px" } });
-    ["Tous", "Skills", "Presets"].forEach(label => {
-      const id = label === "Tous" ? "all" : label.toLowerCase();
-      const btn = el("button", {
-        class: "btn-ghost",
-        text: label,
-        style: { fontSize: "11px", opacity: id === "all" ? "1" : "0.5" },
-      });
-      btn.onclick = () => {
-        marketTypeFilter = id;
-        filterTabs.querySelectorAll("button").forEach(b => b.style.opacity = "0.5");
-        btn.style.opacity = "1";
-        renderMarket(searchInput.value.trim().toLowerCase());
-      };
-      filterTabs.appendChild(btn);
-    });
-
-    function renderMarket(filter) {
-      marketList.innerHTML = "";
-      let filtered = catalog;
-      if (marketTypeFilter === "skills") {
-        filtered = filtered.filter(s => (s.type || "conversational") !== "preset");
-      } else if (marketTypeFilter === "presets") {
-        filtered = filtered.filter(s => s.type === "preset");
-      }
-      if (filter) {
-        filtered = filtered.filter(s =>
-          s.name.toLowerCase().includes(filter) ||
-          (s.description || "").toLowerCase().includes(filter) ||
-          (s.tags || []).some(t => t.toLowerCase().includes(filter))
-        );
-      }
-
-      if (!filtered.length) {
-        marketList.appendChild(el("div", {
-          class: "card-sub",
-          style: { padding: "12px 0", opacity: "0.6" },
-          text: filter ? "Aucun skill trouvé." : "Catalogue vide.",
-        }));
-        return;
-      }
-
-      filtered.forEach(s => {
-        const isInst = s.installed || installed.some(i => i.name === s.name);
-        const isPreset = s.type === "preset";
-        const actionBtn = el("button", {
-          class: "btn-ghost",
-          style: isInst ? { opacity: "0.5", cursor: "default" } : {},
-          text: isInst ? "Installé ✓" : "Installer",
-          disabled: isInst,
-        });
-        if (!isInst) {
-          actionBtn.onclick = async () => {
-            actionBtn.disabled = true;
-            actionBtn.textContent = "…";
-            try {
-              const r = await J.api.post("/api/skills/install/" + encodeURIComponent(s.name), null);
-              if (r.success) {
-                J.notify({ kind: "success", text: "Skill installé ✓ : " + s.name });
-                catalog = catalog.map(c => c.name === s.name ? Object.assign({}, c, { installed: true }) : c);
-                const res = await J.api.get("/api/skills/installed");
-                installed = (res && res.skills) ? res.skills : [];
-                const pr2 = await J.api.get("/api/presets");
-                presets = (pr2 && pr2.presets) ? pr2.presets : [];
-                renderInstalled();
-                renderPresetList();
-                renderMarket(searchInput.value.trim().toLowerCase());
-              } else {
-                J.notify({ kind: "error", text: r.message || "Erreur installation" });
-                actionBtn.disabled = false;
-                actionBtn.textContent = "Installer";
-              }
-            } catch (e) {
-              J.notify({ kind: "error", text: "Erreur réseau : " + e.message });
-              actionBtn.disabled = false;
-              actionBtn.textContent = "Installer";
-            }
-          };
-        }
-
-        const tagsWrap = el("div", { style: { display: "flex", gap: "4px", flexWrap: "wrap", marginTop: "4px" } });
-        (s.tags || []).forEach(t => tagsWrap.appendChild(el("span", {
-          style: { background: "var(--surface-2,rgba(255,255,255,.06))", borderRadius: "4px", padding: "1px 6px", fontSize: "10px", color: "var(--fg-3)" },
-          text: t,
-        })));
-
-        const mktInfoCol = el("div", { style: { flex: 1 } });
-
-        const mktNameRow = el("div", { style: { display: "flex", alignItems: "center", gap: "6px" } });
-        mktNameRow.appendChild(el("span", { style: { color: "var(--fg-0)" }, text: s.name }));
-        mktNameRow.appendChild(el("span", { class: "tn-sub", text: " · " + (s.author || "—") }));
-        if (isPreset) {
-          mktNameRow.appendChild(el("span", {
-            class: "badge badge--accent",
-            style: { fontSize: "9px", padding: "1px 5px", verticalAlign: "middle" },
-            text: "PRESET",
-          }));
-        }
-        mktInfoCol.appendChild(mktNameRow);
-        mktInfoCol.appendChild(el("span", { class: "tn-sub", text: s.description || "" }));
-
-        if (isPreset && (s.platforms || []).length) {
-          mktInfoCol.appendChild(el("span", { class: "tn-sub", text: "Plateformes : " + s.platforms.join(", ") }));
-        }
-        if (isPreset && (s.triggers || []).length) {
-          const trigText = s.triggers.slice(0, 2).map(t => `"${t}"`).join(", ");
-          mktInfoCol.appendChild(el("span", { class: "tn-sub", text: trigText }));
-        }
-        mktInfoCol.appendChild(tagsWrap);
-
-        // Capabilities
-        if (s.capabilities && s.capabilities.length) {
-          const capWrap = el("div", { style: { marginTop: "6px" } });
-          capWrap.appendChild(el("div", { style: { fontSize: "10px", color: "var(--fg-3)", marginBottom: "2px" }, text: "Ce skill :" }));
-          s.capabilities.forEach(cap => {
-            capWrap.appendChild(el("div", { style: { fontSize: "11px", color: "var(--fg-2)" }, text: "· " + cap }));
-          });
-          mktInfoCol.appendChild(capWrap);
-        }
-
-        // Requires env + apps résumé
-        const reqLines = [];
-        const envKeys = (s.requires_env || []).map(e => typeof e === "string" ? e : e.name).filter(Boolean);
-        if (envKeys.length) reqLines.push("Requiert : " + envKeys.join(" · "));
-        const appNames = (s.requires_apps || []).map(a => {
-          if (!a) return null;
-          if (typeof a === "string") return a;
-          if (a.name) return a.name + (a.required === false ? " (optionnel)" : "");
-          return null;
-        }).filter(Boolean);
-        if (appNames.length) reqLines.push("Applications : " + appNames.join(" · "));
-        reqLines.forEach(line => {
-          mktInfoCol.appendChild(el("span", { class: "skill-requires", text: line }));
-        });
-
-        const glyphText = isPreset ? "▶" : (s.name || "sk").slice(0, 2).toUpperCase();
-        marketList.appendChild(el("div", { class: "tool-row", style: { alignItems: "start" } }, [
-          el("div", { class: "tg", text: glyphText }),
-          mktInfoCol,
-          actionBtn,
-        ]));
-      });
-    }
-
-    searchInput.oninput = () => renderMarket(searchInput.value.trim().toLowerCase());
-    renderMarket("");
-
-    const refreshBtn = el("button", { class: "btn-ghost", text: "↻ Actualiser" });
-    refreshBtn.onclick = async () => {
-      refreshBtn.disabled = true;
-      refreshBtn.textContent = "…";
-      try {
-        const catRes = await J.api.get("/api/skills/catalog");
-        catalog = (catRes && catRes.skills) ? catRes.skills : [];
-        offline  = !!(catRes && catRes.offline);
-        onlineBadge.textContent = offline ? "● Hors ligne" : "● En ligne";
-        renderMarket(searchInput.value.trim().toLowerCase());
-        J.notify({ kind: "info", text: "Catalogue actualisé — " + catalog.length + " skill(s)" });
-      } catch (e) {
-        J.notify({ kind: "error", text: "Erreur catalogue : " + e.message });
-      }
-      refreshBtn.disabled = false;
-      refreshBtn.textContent = "↻ Actualiser";
-    };
-
-    const mktRight = el("div", { style: { display: "flex", gap: "10px", alignItems: "center" } });
-    mktRight.appendChild(onlineBadge);
-    mktRight.appendChild(refreshBtn);
-
-    root.appendChild(card({
-      title: "Marketplace",
-      sub:   catalog.length + " skills disponibles",
-      right: mktRight,
-    }, [filterTabs, searchInput, marketList]));
-
-    /* ─── Section 3 : Outils runtime ────────────────────────── */
-    let tools = TOOLS.map(t => Object.assign({}, t));
-    try {
-      const raw = await J.api.get("/api/tools");
-      if (raw && raw.length) {
-        tools = raw.map(t => ({
-          glyph: t.name ? t.name.slice(0, 3).toLowerCase() : "?",
-          name:  t.name || "outil",
-          sub:   t.description || "",
-          calls: 0,
-          lat:   "—",
-          on:    true,
-        }));
-      }
-    } catch (_) { /* keep mock */ }
-
-    root.appendChild(secHd("04", "Outils runtime", "Capabilities branchées", tools.filter(t => t.on).length + " actifs"));
-    const toolList = el("div");
-    const toolState = tools;
-    function rerenderTools() {
-      toolList.innerHTML = "";
-      toolState.forEach((t, i) => {
-        toolList.appendChild(el("div", { class: "tool-row" }, [
-          el("div", { class: "tg", text: t.glyph }),
-          el("div", {}, [
-            el("span", { style: { color: "var(--fg-0)" }, text: t.name }),
-            el("span", { class: "tn-sub", text: t.sub }),
-          ]),
-          el("div", { class: "tnum", text: t.calls.toLocaleString() }),
-          el("div", { class: "tlat", text: t.lat }),
-          el("div", {
-            class: "toggle" + (t.on ? " on" : ""),
-            style: { justifySelf: "end" },
-            onclick: () => {
-              toolState[i].on = !toolState[i].on;
-              rerenderTools();
-              J.notify({ kind: toolState[i].on ? "success" : "info", text: t.name + (toolState[i].on ? " · activé" : " · désactivé") });
-            },
-          }),
-        ]));
-      });
-    }
-    rerenderTools();
-    root.appendChild(card({
-      title: "Outils",
-      sub: toolState.filter(t => t.on).length + " / " + toolState.length + " actifs · runtime",
-    }, toolList));
-  }
-
-  /* ───────── Conso ───────── */
-  async function renderConso(root) {
-    // SHAPE EXPECTED: PROVIDERS, CONSO_SERIES (area chart), USAGE_TYPES, HOURLY
-    // Backend:
-    //   GET /api/conso/session → { total_cost_usd, total_tokens, providers: {name: {cost_usd, tokens}} }
-    //   GET /api/conso/daily   → [{ date, cost_usd, tokens }]  (last 7 days)
-    //   GET /api/conso/monthly → { month, cost_usd, tokens }
-    // Transformation: daily → CONSO_SERIES (single provider "Jarvis"), session → hero totals
-    // CONSO_SERIES multi-provider breakdown: TODO no endpoint yet — keeps mock per-provider series
-    root.innerHTML = '<div class="surface"><div class="j-loading">Chargement…</div></div>';
-    let heroTotal = "$0.00", heroBudget = "$500", heroPct = 0;
-    let heroToday = "$0.00", heroTokens = "0M", heroForecast = "$0";
-    let consoSeries = CONSO_SERIES;
-    let providers = PROVIDERS;
-    let usageTypes = USAGE_TYPES;
-    try {
-      const [sessResult, monthResult, dailyResult] = await Promise.allSettled([
-        J.api.get("/api/conso/session"),
-        J.api.get("/api/conso/monthly"),
-        J.api.get("/api/conso/daily"),
-      ]);
-      const sess  = sessResult.status  === "fulfilled" ? sessResult.value  : null;
-      const month = monthResult.status === "fulfilled" ? monthResult.value : null;
-      const daily = dailyResult.status === "fulfilled" ? dailyResult.value : null;
-
-      if (month) {
-        heroTotal  = "$" + (month.cost_usd || 0).toFixed(2);
-        heroTokens = Math.round((month.tokens || 0) / 1e6 * 10) / 10 + "M";
-        // Providers from monthly breakdown (correct field: cost_usd)
-        if (month.providers && month.providers.length > 0) {
-          providers = month.providers.map(p => ({
-            name:  p.name,
-            color: { anthropic: "#D97757", elevenlabs: "#A78BFA", openai: "#10A37F", deepgram: "#4A9EFF" }[p.name] || "#6B7280",
-            cost:  "$" + (p.cost_usd || 0).toFixed(2),
-            tok:   p.tokens > 0 ? Math.round(p.tokens / 1e6 * 10) / 10 + "M"
-                 : p.chars  > 0 ? Math.round(p.chars / 1000) + "K c"
-                 : "—",
-          }));
-        }
-        if (month.by_type && month.by_type.length > 0) {
-          usageTypes = month.by_type.map(t => ({
-            name:  t.label,
-            sub:   t.sub,
-            color: t.color,
-            cost:  "$" + (t.cost_usd || 0).toFixed(2),
-            pct:   t.pct,
-            tok:   Math.round((t.cost_usd || 0) / (month.cost_usd || 1) * (month.tokens || 0) / 1e6 * 10) / 10 + "M",
-          }));
-        }
-        heroPct = Math.min(100, Math.round((month.cost_usd || 0) / 500 * 100));
-      }
-      if (sess) {
-        heroToday = "$" + (sess.total_cost_usd || 0).toFixed(2);
-      }
-      if (daily && daily.length > 0) {
-        // Build single-series area chart from daily data
-        const vals = daily.map(d => Number((d.cost_usd || 0).toFixed(2)));
-        consoSeries = [{ name: "Jarvis", color: "#4A9EFF", data: vals }];
-        // Forecast: linear regression on last 14 days
-        const recent = vals.slice(-14);
-        if (recent.length > 1) {
-          const avg = recent.reduce((a, b) => a + b, 0) / recent.length;
-          const daysLeft = 30 - new Date().getDate();
-          heroForecast = "$" + (parseFloat(heroTotal.replace("$", "")) + avg * daysLeft).toFixed(0);
-        }
-      }
-    } catch (_) { /* keep mocks */ }
-
-    root.innerHTML = "";
-    root.appendChild(secHd("04", "Conso", "Coûts & tokens", heroTotal + " ce mois"));
-
-    // Mini grid
-    const mini = el("div", { class: "conso-mini-grid" });
-    const heroBox = el("div", { class: "conso-mini", style: { padding: "22px" } }, [
-      el("div", { class: "cm-lbl", text: "Total · ce mois" }),
-      el("div", { style: { display:"flex", alignItems:"baseline", gap:"14px" } }, [
-        el("span", { class: "num-hero", text: heroTotal }),
-        el("span", { class: "kpi-delta up", text: "ce mois" }),
-      ]),
-      el("div", { class: "cm-sub", text: "budget mensuel · " + heroBudget + " · " + heroPct + "% consommé" }),
-      el("div", { class: "src-bar", style: { marginTop: "6px" } }, [
-        el("div", { style: { width: heroPct + "%", background: "var(--accent)" } }),
-      ]),
-    ]);
-    mini.appendChild(heroBox);
-
-    function miniBox(lbl, val, valStyle, spark, sub, subStyle, inspect) {
-      const box = el("div", { class: "conso-mini" }, [
-        el("div", { class: "cm-lbl", text: lbl }),
-        el("div", { class: "cm-val", style: valStyle || {}, dataset: inspect ? { inspect } : null }, val),
-      ]);
-      if (spark) box.appendChild(spark);
-      if (sub) box.appendChild(el("div", { class: "cm-sub", style: subStyle || {}, text: sub }));
-      return box;
-    }
-    mini.appendChild(miniBox("Aujourd'hui", heroToday, null,
-      J.sparkline(consoSeries[0] ? consoSeries[0].data.slice(-7) : [0],{width:140,height:24,color:"var(--accent)"}),
-      "session courante", null, "Cumul UTC · reset à 00:00"));
-    const tokParts = heroTokens.replace("M","").replace("K","");
-    mini.appendChild(miniBox("Tokens · mois",
-      [document.createTextNode(tokParts), el("span",{class:"u",text: heroTokens.includes("M") ? "M" : "K"})],
-      null,
-      J.sparkline(consoSeries[0] ? consoSeries[0].data.slice(-7) : [0],{width:140,height:24,color:"var(--green)"}),
-      "input + output · tous providers", null, "Input + output · tous providers"));
-    const fbox = miniBox("Forecast fin de mois", heroForecast, { color: "var(--gold)" }, null,
-      "extrapolation linéaire", null, "Régression linéaire sur 14j · IC 95%");
-    fbox.appendChild(el("div", { class: "cm-sub", style: { color: "var(--gold)" }, text: "● extrapolé" }));
-    mini.appendChild(fbox);
-
-    root.appendChild(mini);
-
-    // Evolution chart
-    const chartCard = card({}, []);
-    chartCard.classList.add("conso-area-card");
-    chartCard.appendChild(el("div", { class: "card-hd" }, [
-      el("div", {}, [
-        el("div", { class: "card-title", text: "Évolution · 30 derniers jours" }),
-        el("div", { class: "card-sub", style: { marginTop: "6px" }, text: "stack par provider · USD / jour" }),
-      ]),
-      el("div", { style: { display: "flex", gap: "6px" } }, [
-        el("span", { class: "badge badge--solid", text: "USD" }),
-        el("button", { class: "btn-ghost", text: "7j" }),
-        el("button", { class: "btn-ghost", style: { color: "var(--fg-0)", background: "rgba(220,232,255,0.06)" }, text: "30j" }),
-        el("button", { class: "btn-ghost", text: "90j" }),
-      ]),
-    ]));
-    chartCard.appendChild(Charts.areaStack(consoSeries, { width: 900, height: 220 }));
-    const legend = el("div", { class: "conso-legend" });
-    consoSeries.forEach(s => {
-      const sum = s.data.reduce((a,b) => a+b, 0);
-      legend.appendChild(el("span", { class: "lg" }, [
-        el("span", { class: "sw", style: { background: s.color } }),
-        el("span", { text: s.name }),
-        el("span", { class: "v", text: "$" + sum.toFixed(0) }),
-      ]));
-    });
-    chartCard.appendChild(legend);
-    root.appendChild(chartCard);
-
-    // Donut + usage
-    const grid = el("div", { class: "conso-grid" });
-    const usageCard = card({ title: "Répartition par type d'usage", sub: "où part vraiment l'argent" });
-    const ut = el("div", { class: "usage-types" });
-    usageTypes.forEach(u => {
-      ut.appendChild(el("div", { class: "utype" }, [
-        el("span", { class: "ut-sw", style: { background: u.color } }),
-        el("div", {}, [
-          el("div", { class: "ut-name", text: u.name }),
-          el("span", { class: "ut-sub", text: u.sub }),
-          el("div", { class: "src-bar", style: { marginTop: "8px" } }, [
-            el("div", { style: { width: (u.pct*100)+"%", background: u.color, opacity: ".85" } }),
-          ]),
-        ]),
-        el("div", {}, [
-          el("div", { class: "ut-num", text: u.cost }),
-          el("span", { class: "ut-sub", style: { textAlign: "right", display: "block" }, text: (u.pct*100).toFixed(0) + "% · " + u.tok }),
-        ]),
-      ]));
-    });
-    usageCard.appendChild(ut);
-    grid.appendChild(usageCard);
-
-    const provCard = card({ title: "Par provider", sub: "part du total" });
-    provCard.style.display = "flex"; provCard.style.flexDirection = "column"; provCard.style.gap = "18px";
-    const provRow = el("div", { style: { display: "flex", alignItems: "center", gap: "22px" } });
-    provRow.appendChild(Charts.donut(providers.map(p => ({ value: parseFloat(p.cost.replace("$","")), color: p.color })), { size: 140, thickness: 20 }));
-    const legendBlock = el("div", { style: { display: "flex", flexDirection: "column", gap: "8px", flex: "1", minWidth: "0" } });
-    providers.forEach(p => {
-      legendBlock.appendChild(el("div", {
-        style: { display: "grid", gridTemplateColumns: "12px 1fr auto", gap: "10px", alignItems: "center", fontSize: "12px" },
-      }, [
-        el("span", { style: { width: "10px", height: "10px", borderRadius: "2px", background: p.color } }),
-        el("span", { style: { color: "var(--fg-1)" }, text: p.name }),
-        el("span", { class: "t-mono", style: { color: "var(--fg-0)", fontSize: "11.5px" }, text: p.cost }),
-      ]));
-    });
-    provRow.appendChild(legendBlock);
-    provCard.appendChild(provRow);
-
-    const heat = el("div", { class: "heat-block" }, [
-      el("div", { class: "hb-lbl" }, [
-        el("span", { text: "USAGE · 24h · $/heure" }),
-        el("span", { style: { color: "var(--fg-1)" }, text: "peak 14:00 · $1.42" }),
-      ]),
-    ]);
-    heat.appendChild(Charts.heatRow(HOURLY, { height: 20 }));
-    heat.appendChild(el("div", { class: "hb-lbl" }, [
-      el("span", { text: "00:00" }), el("span", { text: "06:00" }), el("span", { text: "12:00" }), el("span", { text: "18:00" }), el("span", { text: "23:59" }),
-    ]));
-    provCard.appendChild(heat);
-    grid.appendChild(provCard);
-
-    root.appendChild(grid);
-  }
-
-  /* ───────── Settings (sub-pages) ───────── */
-  const SETTINGS_NAV = [
-    { id: "keys",       label: "API Keys",    meta: "",  eyebrow: "clefs d'accès",   title: "API Keys" },
-    { id: "audio",      label: "Audio & Vidéo", meta: "", eyebrow: "input / output", title: "Audio & Vidéo" },
-    { id: "modeles",    label: "Modèles",     meta: "",  eyebrow: "IA & voix",       title: "Modèles" },
-    { id: "connectors", label: "Connecteurs", meta: "",  eyebrow: "intégrations",    title: "Connecteurs" },
-    { id: "musique",    label: "Musique",     meta: "",  eyebrow: "fournisseur",     title: "Musique" },
-    { id: "autonomy",   label: "Autonomie",   meta: "",  eyebrow: "comportement",    title: "Autonomie" },
-    { id: "appearance", label: "Apparence",   meta: "",  eyebrow: "interface",       title: "Apparence" },
-  ];
-
-  function setRow(title, sub, control, status) {
-    return el("div", { class: "set-row" }, [
-      el("div", { class: "set-l" }, [
-        el("span", { class: "set-l-title", text: title }),
-        el("span", { class: "set-l-sub", text: sub }),
-      ]),
-      control || el("span"),
-      status || el("span"),
-    ]);
-  }
-
-  function comingSoon(c) {
-    c.appendChild(el("div", { class: "j-empty", style: { margin: "32px 0" }, text: "À venir — pas encore développé." }));
-  }
-
-  function saveSetting(key, value) {
-    return fetch("/api/settings/update", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ key, value: String(value) }),
-    }).catch(() => {});
-  }
-
-  function renderSettingsKeys(c) {
-    const KEY_META = {
-      ANTHROPIC_API_KEY:    { name: "Anthropic",        sub: "Claude — LLM principal" },
-      OPENAI_API_KEY:       { name: "OpenAI",           sub: "Whisper STT / fallback LLM" },
-      ELEVENLABS_API_KEY:   { name: "ElevenLabs",       sub: "TTS — voix de Jarvis" },
-      ELEVENLABS_VOICE_ID:  { name: "ElevenLabs Voice ID", sub: "ID de voix par défaut" },
-      GOOGLE_API_KEY:       { name: "Google",           sub: "Gemini · Calendar · Drive" },
-      LIVEKIT_URL:          { name: "LiveKit URL",      sub: "serveur agent vocal temps réel" },
-      LIVEKIT_API_KEY:      { name: "LiveKit API Key",  sub: "auth LiveKit" },
-      LIVEKIT_API_SECRET:   { name: "LiveKit Secret",   sub: "auth LiveKit" },
-      NOTION_TOKEN:         { name: "Notion",           sub: "intégration workspace" },
-      SPOTIFY_CLIENT_ID:    { name: "Spotify Client ID",sub: "OAuth Spotify" },
-      DEEPGRAM_API_KEY:     { name: "Deepgram",         sub: "STT alternatif" },
-      MISTRAL_API_KEY:      { name: "Mistral",          sub: "LLM alternatif" },
-    };
-    c.appendChild(el("div", { class: "j-loading", text: "Chargement…" }));
-    J.api.get("/api/settings").then(data => {
-      c.innerHTML = "";
-      const keys = data.api_keys || {};
-      Object.keys(KEY_META).forEach(envKey => {
-        const meta = KEY_META[envKey];
-        const masked = keys[envKey] || "";
-        const isSet = masked.length > 0;
+      editBtn.addEventListener("click", () => {
+        ctrl.innerHTML = "";
         const inp = el("input", {
-          class: "input-mono", type: "password",
-          value: masked, placeholder: isSet ? "" : "non configuré",
-          style: { opacity: isSet ? "1" : "0.4" },
+          type: "password",
+          class: "input-mono",
+          style: { width: "220px" },
+          placeholder: "Nouvelle valeur…",
         });
-        inp.addEventListener("blur", () => {
-          const v = inp.value.trim();
-          if (v && !v.includes("•")) saveSetting(envKey, v);
+        const saveBtn  = el("button", { class: "m-btn",        text: "Sauvegarder" });
+        const cancelBtn = el("button", { class: "m-btn ghost",  text: "✕" });
+
+        saveBtn.addEventListener("click", async () => {
+          if (!inp.value.trim()) return;
+          await saveSetting(k, inp.value.trim(), saveBtn);
+          valEl.textContent = "••••••••";
+          showDisplay();
         });
-        const showBtn = el("button", { class: "btn-ghost", text: "Afficher" });
-        showBtn.addEventListener("click", () => {
-          inp.type = inp.type === "password" ? "text" : "password";
-          showBtn.textContent = inp.type === "password" ? "Afficher" : "Masquer";
+        cancelBtn.addEventListener("click", showDisplay);
+
+        inp.addEventListener("keydown", e => {
+          if (e.key === "Enter") saveBtn.click();
+          if (e.key === "Escape") cancelBtn.click();
         });
-        c.appendChild(setRow(meta.name, meta.sub, inp,
-          el("div", { style: { display: "flex", gap: "6px", alignItems: "center" } }, [
-            el("span", { class: "t-mono", style: { fontSize: "10px", color: isSet ? "var(--green)" : "var(--fg-3)" }, text: isSet ? "● OK" : "○ vide" }),
-            showBtn,
-          ])
-        ));
+
+        ctrl.appendChild(inp);
+        ctrl.appendChild(saveBtn);
+        ctrl.appendChild(cancelBtn);
+        inp.focus();
       });
-    }).catch(() => { c.innerHTML = ""; c.appendChild(el("div", { class: "j-empty", text: "Impossible de charger les clés." })); });
+
+      showDisplay();
+      keyList.appendChild(settingRow(k, "clé secrète", ctrl));
+    });
+    wrap.appendChild(ghostSec("Clés API", "champs masqués", null, keyList));
+
+    const page = pageWrapper("modeles", "Modèles & clés API", null, wrap);
+    root.innerHTML = ""; root.appendChild(page);
   }
 
-  function renderSettingsAudio(c) {
-    // Devices from browser
-    function buildDeviceSel(kind, savedKey) {
-      const sel = el("select", { class: "select-mono" });
-      el("option", { text: "Détection…" });
-      if (navigator.mediaDevices && navigator.mediaDevices.enumerateDevices) {
-        navigator.mediaDevices.enumerateDevices().then(devs => {
-          sel.innerHTML = "";
-          devs.filter(d => d.kind === kind).forEach(d => {
-            sel.appendChild(el("option", { value: d.deviceId, text: d.label || d.deviceId.slice(0, 20) }));
-          });
-          if (!sel.options.length) sel.appendChild(el("option", { text: "Aucun détecté" }));
-        }).catch(() => { sel.innerHTML = ""; sel.appendChild(el("option", { text: "Non disponible" })); });
-      }
-      return sel;
+  /* ───────── 03 Audio & voix ───────── */
+  async function renderAudio() {
+    const s = await getSettings();
+    const audio = s.audio || {};
+
+    const list = el("div");
+    [
+      { label: "TTS Provider",     sub: "TTS_PROVIDER",     options: ["piper", "elevenlabs"],                            val: audio.tts_provider },
+      { label: "ElevenLabs model", sub: "ELEVENLABS_MODEL",  options: ["eleven_flash_v2_5", "eleven_turbo_v2_5"],         val: audio.elevenlabs_model },
+      { label: "Whisper model",    sub: "WHISPER_MODEL",     options: ["tiny", "base", "small", "medium", "large"],       val: audio.whisper_model },
+    ].forEach(f => list.appendChild(settingRow(f.label, f.sub, makeSelect(f.options, f.val, f.sub))));
+
+    // Voix ElevenLabs — liste dynamique depuis l'API
+    let voices = [];
+    try { voices = await J.api.get("/api/settings/voices"); } catch (_) {}
+    if (voices.length) {
+      const vSelect = el("select", { class: "select-mono", style: { minWidth: "200px" } });
+      voices.forEach(v => {
+        const opt = el("option", { value: v.id, text: v.name });
+        if (v.id === audio.elevenlabs_voice_id) opt.selected = true;
+        vSelect.appendChild(opt);
+      });
+      const saveBtn = el("button", { class: "m-btn", text: "Sauv." });
+      saveBtn.addEventListener("click", () => saveSetting("ELEVENLABS_VOICE_ID", vSelect.value, saveBtn));
+      const ctrl = el("div", { style: { display:"flex", gap:"8px", alignItems:"center" } });
+      ctrl.appendChild(vSelect); ctrl.appendChild(saveBtn);
+      list.appendChild(settingRow("Voix ElevenLabs", "ELEVENLABS_VOICE_ID", ctrl));
     }
 
-    c.appendChild(setRow("Microphone", "capture par défaut", buildDeviceSel("audioinput"),
-      el("span", { class: "t-mono", style: { fontSize: "10px", color: "var(--fg-3)" }, text: "audio input" })));
-    c.appendChild(setRow("Sortie audio", "où Jarvis parle", buildDeviceSel("audiooutput"),
-      el("span", { class: "t-mono", style: { fontSize: "10px", color: "var(--fg-3)" }, text: "audio output" })));
-    c.appendChild(setRow("Caméra", "video input", buildDeviceSel("videoinput"),
-      el("span", { class: "t-mono", style: { fontSize: "10px", color: "var(--fg-3)" }, text: "video" })));
-
-    // Wake session (facial control)
-    const wakeToggle = el("div", { class: "toggle" });
-    fetch("/api/wakeup/status").then(r => r.json()).then(d => {
-      if (d.enabled) wakeToggle.classList.add("on");
-    }).catch(() => {});
-    wakeToggle.addEventListener("click", () => {
-      const isOn = wakeToggle.classList.toggle("on");
-      saveSetting("WAKEUP_ENABLED", isOn ? "true" : "false");
-    });
-    c.appendChild(setRow("Séance Wake", "activation + contrôle facial au démarrage", el("span"), wakeToggle));
-
-    // Quebec mode
-    const quebecToggle = el("div", { class: "toggle" });
-    J.api.get("/api/settings").then(d => {
-      if (d.jarvis?.quebec_mode) quebecToggle.classList.add("on");
-    }).catch(() => {});
-    quebecToggle.addEventListener("click", () => {
-      const isOn = quebecToggle.classList.toggle("on");
-      saveSetting("QUEBEC_MODE", isOn ? "true" : "false");
-    });
-    c.appendChild(setRow("Mode Québécois", "accent + dialecte québécois · voix dédiée ElevenLabs", el("span"), quebecToggle));
+    const wrap = el("div");
+    wrap.appendChild(ghostSec("Audio & voix", "TTS · STT · voix", null, list));
+    const page = pageWrapper("audio", "Audio & voix", null, wrap);
+    root.innerHTML = ""; root.appendChild(page);
   }
 
-  function renderSettingsModeles(c) {
-    c.appendChild(el("div", { class: "j-loading", text: "Chargement…" }));
-    J.api.get("/api/settings").then(data => {
-      c.innerHTML = "";
-      const llm = data.llm || {};
-      const audio = data.audio || {};
+  /* ───────── 04 Conso ───────── */
+  async function renderConso() {
+    const C = window.JarvisCharts;
 
-      function sel(opts, current, key) {
-        const s = el("select", { class: "select-mono" });
-        opts.forEach(o => s.appendChild(el("option", { value: o, text: o, selected: o === current ? "" : null })));
-        s.addEventListener("change", () => saveSetting(key, s.value));
-        return s;
-      }
-
-      const ANTHROPIC_MODELS = ["claude-opus-4-7", "claude-sonnet-4-6", "claude-haiku-4-5-20251001"];
-      const LLM_PROVIDERS    = ["anthropic", "openai", "gemini"];
-      const TTS_PROVIDERS    = ["elevenlabs", "local", "deepgram"];
-      const WHISPER_MODELS   = ["tiny", "base", "small", "medium", "large"];
-
-      c.appendChild(setRow("LLM Provider", "moteur de raisonnement principal",
-        sel(LLM_PROVIDERS, llm.llm_provider, "LLM_PROVIDER"),
-        el("span", { class: "t-mono", style: { fontSize: "10px", color: "var(--fg-3)" }, text: "LLM_PROVIDER" })));
-
-      c.appendChild(setRow("Modèle Anthropic", "utilisé pour le chat et les missions",
-        sel(ANTHROPIC_MODELS, llm.anthropic_model, "ANTHROPIC_MODEL"),
-        el("span", { class: "t-mono", style: { fontSize: "10px", color: "var(--fg-3)" }, text: "ANTHROPIC_MODEL" })));
-
-      c.appendChild(setRow("Modèle vocal", "Claude utilisé dans le pipeline voix",
-        sel(ANTHROPIC_MODELS, llm.voice_anthropic_model, "VOICE_ANTHROPIC_MODEL"),
-        el("span", { class: "t-mono", style: { fontSize: "10px", color: "var(--fg-3)" }, text: "VOICE_ANTHROPIC_MODEL" })));
-
-      c.appendChild(setRow("TTS Provider", "moteur de synthèse vocale",
-        sel(TTS_PROVIDERS, audio.tts_provider, "TTS_PROVIDER"),
-        el("span", { class: "t-mono", style: { fontSize: "10px", color: "var(--fg-3)" }, text: "TTS_PROVIDER" })));
-
-      const elevInp = el("input", { class: "input-mono", value: audio.elevenlabs_model || "", placeholder: "ex: eleven_turbo_v2_5" });
-      elevInp.addEventListener("blur", () => saveSetting("ELEVENLABS_MODEL", elevInp.value.trim()));
-      c.appendChild(setRow("ElevenLabs Model", "modèle ElevenLabs utilisé pour la synthèse",
-        elevInp,
-        el("span", { class: "t-mono", style: { fontSize: "10px", color: "var(--fg-3)" }, text: "ELEVENLABS_MODEL" })));
-
-      c.appendChild(setRow("Whisper Model", "taille du modèle STT local",
-        sel(WHISPER_MODELS, audio.whisper_model, "WHISPER_MODEL"),
-        el("span", { class: "t-mono", style: { fontSize: "10px", color: "var(--fg-3)" }, text: "WHISPER_MODEL" })));
-
-    }).catch(() => { c.innerHTML = ""; c.appendChild(el("div", { class: "j-empty", text: "Impossible de charger les paramètres." })); });
-  }
-
-  function renderSettingsMusique(c) {
-    const PROVIDERS = [
-      { id: "spotify", label: "Spotify",       sub: "Premium · Web Playback SDK" },
-      { id: "deezer",  label: "Deezer",         sub: "Premium · OAuth" },
-      { id: "local",   label: "Lecture locale", sub: "macOS · nowplaying-cli · toutes applications" },
-    ];
-
-    function keyInp(envKey, placeholder, type) {
-      const inp = el("input", { class: "input-mono", type: type || "text", placeholder });
-      fetch("/api/settings").then(r => r.json()).then(d => {
-        const v = (d.api_keys || {})[envKey] || "";
-        inp.value = v;
-        inp.style.opacity = v ? "1" : "0.4";
-      }).catch(() => {});
-      inp.addEventListener("blur", () => {
-        const v = inp.value.trim();
-        if (v && !v.includes("•")) { saveSetting(envKey, v); inp.style.opacity = "1"; }
-      });
-      return inp;
-    }
-
-    function orSep() {
-      return el("div", { style: { display: "flex", alignItems: "center", gap: "10px", margin: "6px 16px" } }, [
-        el("div", { style: { flex: "1", height: "1px", background: "var(--border)" } }),
-        el("span", { class: "t-mono", style: { fontSize: "10px", color: "var(--fg-3)", flexShrink: "0" }, text: "OU" }),
-        el("div", { style: { flex: "1", height: "1px", background: "var(--border)" } }),
+    let session = {}, daily = [], monthly = {}, byModel = [], hourly = Array(24).fill(0);
+    try {
+      [session, daily, monthly, byModel, hourly] = await Promise.all([
+        J.api.get("/api/conso/session"),
+        J.api.get("/api/conso/daily?days=30"),
+        J.api.get("/api/conso/monthly"),
+        J.api.get("/api/conso/by_model"),
+        J.api.get("/api/conso/hourly"),
       ]);
+    } catch (_) {}
+
+    const BUDGET = 500;
+    const monthlyCost = monthly.cost_usd || 0;
+    const monthlyTokens = monthly.tokens || 0;
+    const todayCost = session.total_cost_usd || 0;
+    const budgetPct = Math.min(100, (monthlyCost / BUDGET) * 100);
+    // Forecast: linear extrapolation from elapsed days
+    const now = new Date();
+    const dayOfMonth = now.getDate();
+    const daysInMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
+    const forecast = dayOfMonth > 0 ? monthlyCost / dayOfMonth * daysInMonth : monthlyCost;
+
+    // Helper: format tokens
+    function fmtTokens(n) {
+      if (n >= 1e9) return (n / 1e9).toFixed(1) + "B";
+      if (n >= 1e6) return (n / 1e6).toFixed(1) + "M";
+      if (n >= 1e3) return (n / 1e3).toFixed(0) + "K";
+      return String(n);
     }
 
-    c.appendChild(el("div", { class: "j-loading", text: "Chargement…" }));
+    const wrap = el("div", { style: { display:"flex", flexDirection:"column" } });
 
-    J.api.get("/api/settings").then(data => {
-      c.innerHTML = "";
-      const current = (data.music || {}).music_provider || "";
+    /* ── Hero 4 tiles ── */
+    const hero = el("div", { class: "conso-hero" });
 
-      const sel = el("select", { class: "select-mono" });
-      sel.appendChild(el("option", { value: "", text: "— Aucun —", selected: !current ? "" : null }));
-      PROVIDERS.forEach(p => sel.appendChild(el("option", { value: p.id, text: p.label, selected: p.id === current ? "" : null })));
-      sel.addEventListener("change", () => { saveSetting("MUSIC_PROVIDER", sel.value); renderDetails(); });
-      c.appendChild(setRow("Fournisseur de musique", "source affichée dans le widget de la page d'accueil", sel));
+    // Tile 1: Total mois
+    const t1 = el("div", { class: "conso-tile primary" });
+    t1.appendChild(el("div", { class: "l", text: "Total · ce mois" }));
+    const v1 = el("div", { class: "v" });
+    const whole1 = Math.floor(monthlyCost);
+    const dec1 = (monthlyCost % 1).toFixed(2).slice(1);
+    v1.innerHTML = `$${whole1}<span class="dec">${dec1}</span> <span class="rel">ce mois</span>`;
+    t1.appendChild(v1);
+    t1.appendChild(el("div", { class: "d", text: `budget mensuel · $${BUDGET} · ${budgetPct.toFixed(0)}% consommé` }));
+    const budgetBar = el("div", { class: "conso-budget-bar" });
+    const budgetFill = el("i"); budgetFill.style.width = budgetPct.toFixed(1) + "%";
+    budgetBar.appendChild(budgetFill); t1.appendChild(budgetBar);
+    hero.appendChild(t1);
 
-      const detailsDiv = el("div", { style: { marginTop: "4px" } });
-      c.appendChild(detailsDiv);
+    // Tile 2: Aujourd'hui
+    const t2 = el("div", { class: "conso-tile" });
+    t2.appendChild(el("div", { class: "l", text: "Aujourd'hui" }));
+    const v2 = el("div", { class: "v" });
+    v2.innerHTML = `$${Math.floor(todayCost)}<span class="dec">${(todayCost % 1).toFixed(2).slice(1)}</span>`;
+    t2.appendChild(v2);
+    t2.appendChild(el("div", { class: "d sub", text: "session courante" }));
+    const spark2 = C.sparkline(daily.slice(-7).map(d => d.cost_usd || 0), { color: "#4A9EFF" });
+    spark2.setAttribute("class", "conso-spark");
+    t2.appendChild(spark2);
+    hero.appendChild(t2);
 
-      function renderDetails() {
-        detailsDiv.innerHTML = "";
-        const provId = sel.value;
+    // Tile 3: Tokens
+    const t3 = el("div", { class: "conso-tile" });
+    t3.appendChild(el("div", { class: "l", text: "Tokens · mois" }));
+    const v3 = el("div", { class: "v" });
+    const fmtTok = fmtTokens(monthlyTokens);
+    const tokNum = fmtTok.slice(0, -1), tokUnit = fmtTok.slice(-1);
+    v3.innerHTML = `${tokNum}<span class="unit">${tokUnit}</span>`;
+    t3.appendChild(v3);
+    t3.appendChild(el("div", { class: "d sub", text: "input + output · tous providers" }));
+    const spark3 = C.sparkline(daily.slice(-7).map(d => d.cost_usd || 0), { color: "#36D399" });
+    spark3.setAttribute("class", "conso-spark");
+    t3.appendChild(spark3);
+    hero.appendChild(t3);
 
-        if (provId === "spotify") {
-          fetch("/api/music/provider-status").then(r => r.json()).then(s => {
-            const connected = s.connected;
-            const statusEl = el("span", { class: "t-mono", style: { fontSize: "10.5px", color: connected ? "var(--green)" : "var(--fg-3)" }, text: connected ? "● CONNECTÉ" : "○ NON LIÉ" });
-            const connectBtn = el("a", { href: "/api/spotify/auth", class: "btn-ghost", text: "Se connecter avec son compte →", style: { fontSize: "12px" } });
-            detailsDiv.appendChild(setRow("Spotify", "si abonnement Spotify Premium", connectBtn, statusEl));
-            detailsDiv.appendChild(orSep());
-            detailsDiv.appendChild(setRow("Spotify Client ID", "depuis developer.spotify.com",
-              keyInp("SPOTIFY_CLIENT_ID", "ex: d70b227e6e8d402e…")));
-            detailsDiv.appendChild(setRow("Spotify Client Secret", "",
-              keyInp("SPOTIFY_CLIENT_SECRET", "ex: bad37c5e5d634206…", "password")));
-          }).catch(() => {});
+    // Tile 4: Forecast
+    const t4 = el("div", { class: "conso-tile" });
+    t4.appendChild(el("div", { class: "l", text: "Forecast fin de mois" }));
+    const v4 = el("div", { class: "v gold", text: "$" + Math.round(forecast) });
+    t4.appendChild(v4);
+    t4.appendChild(el("div", { class: "d sub", text: "extrapolation linéaire" }));
+    const flag = el("div", { class: "conso-tile-flag" });
+    flag.innerHTML = `<span class="dot"></span> extrapolé`;
+    t4.appendChild(flag);
+    hero.appendChild(t4);
+    wrap.appendChild(hero);
 
-        } else if (provId === "deezer") {
-          fetch("/api/music/provider-status").then(r => r.json()).then(s => {
-            const connected = s.connected;
-            const statusEl = el("span", { class: "t-mono", style: { fontSize: "10.5px", color: connected ? "var(--green)" : "var(--fg-3)" }, text: connected ? "● CONNECTÉ" : "○ NON LIÉ" });
-            const connectBtn = el("a", { href: "/api/deezer/auth", class: "btn-ghost", text: "Se connecter avec son compte →", style: { fontSize: "12px" } });
-            detailsDiv.appendChild(setRow("Deezer", "si abonnement Deezer Premium", connectBtn, statusEl));
-            detailsDiv.appendChild(orSep());
-            detailsDiv.appendChild(setRow("Deezer App ID", "depuis developers.deezer.com",
-              keyInp("DEEZER_APP_ID", "ex: 123456")));
-            detailsDiv.appendChild(setRow("Deezer App Secret", "",
-              keyInp("DEEZER_APP_SECRET", "ex: abc123…", "password")));
-          }).catch(() => {});
+    /* ── Evolution area chart ── */
+    const evol = el("div", { class: "card conso-evolution" });
+    const evolHd = el("div", { class: "card-hd" });
+    const evolTtl = el("div");
+    evolTtl.appendChild(el("h2", { text: "Évolution · 30 derniers jours" }));
+    evolTtl.appendChild(el("span", { class: "sub", text: "coût USD / jour" }));
+    evolHd.appendChild(evolTtl);
 
-        } else if (provId === "local") {
-          fetch("/api/local-music/player").then(r => r.json()).then(d => {
-            const ok = d.connected !== false;
-            const statusEl = el("span", { class: "t-mono", style: { fontSize: "10.5px", color: ok ? "var(--green)" : "var(--gold)" }, text: ok ? "● DISPONIBLE" : "○ NON TROUVÉ" });
-            const hint = ok
-              ? el("span", { class: "t-mono", style: { fontSize: "10px", color: "var(--fg-3)" }, text: "lit le Now Playing macOS" })
-              : el("code", { text: "brew install nowplaying-cli", style: { fontSize: "11px", color: "var(--fg-3)" } });
-            detailsDiv.appendChild(setRow("nowplaying-cli", "contrôle système · toutes applications audio", hint, statusEl));
-          }).catch(() => {
-            detailsDiv.appendChild(el("div", { class: "set-section-hint", text: "Installer : brew install nowplaying-cli" }));
-          });
-        }
-      }
-
-      renderDetails();
-    }).catch(() => { c.innerHTML = ""; c.appendChild(el("div", { class: "j-empty", text: "Erreur de chargement." })); });
-  }
-
-  function renderSettingsConnectors(c) {
-    c.appendChild(el("div", { class: "j-loading", text: "Chargement…" }));
-    J.api.get("/api/settings/connectors").then(conns => {
-      c.innerHTML = "";
-      const STATUS = {
-        on:      { col: "var(--green)", lbl: "CONNECTÉ" },
-        expired: { col: "var(--gold)",  lbl: "EXPIRÉ" },
-        off:     { col: "var(--fg-3)",  lbl: "NON LIÉ" },
-      };
-      conns.forEach(conn => {
-        const s = STATUS[conn.status] || STATUS.off;
-        c.appendChild(setRow(conn.name, conn.sub,
-          conn.status === "expired" ? el("span", { class: "t-mono", style: { fontSize: "10px", color: "var(--fg-3)" }, text: "renouveler" }) : el("span"),
-          el("span", { class: "t-mono", style: { color: s.col, fontSize: "10.5px" }, text: "● " + s.lbl })
-        ));
+    // Range toggles
+    const rangeWrap = el("div", { class: "conso-range" });
+    const rg1 = el("div", { class: "conso-range-group" });
+    const btnUSD = el("button", { text: "USD", class: "on" });
+    rg1.appendChild(btnUSD);
+    const rg2 = el("div", { class: "conso-range-group" });
+    let activeRange = "30j";
+    ["7j", "30j", "90j"].forEach(r => {
+      const btn = el("button", { text: r });
+      if (r === activeRange) btn.classList.add("on");
+      btn.addEventListener("click", () => {
+        rg2.querySelectorAll("button").forEach(b => b.classList.remove("on"));
+        btn.classList.add("on");
+        activeRange = r;
+        const days = parseInt(r);
+        const sliced = daily.slice(-days);
+        areaWrap.innerHTML = "";
+        areaWrap.appendChild(C.areaChart(sliced.map(d => d.cost_usd || 0), { color: "#4A9EFF" }));
       });
-    }).catch(() => { c.innerHTML = ""; c.appendChild(el("div", { class: "j-empty", text: "Impossible de charger." })); });
-  }
-
-  const SETTINGS_RENDERERS = {
-    keys: renderSettingsKeys,
-    audio: renderSettingsAudio,
-    modeles: renderSettingsModeles,
-    connectors: renderSettingsConnectors,
-    musique: renderSettingsMusique,
-    autonomy: comingSoon,
-    appearance: comingSoon,
-  };
-
-  function renderSettings(root) {
-    root.innerHTML = "";
-    root.appendChild(secHd("05", "Paramètres", "Configuration", SETTINGS_NAV.length + " sections"));
-
-    let page = window._pendingSettingsSection || "keys";
-    window._pendingSettingsSection = null;
-    const shell = el("div", { class: "settings-shell" });
-    const nav = el("div", { class: "settings-nav" });
-    const content = el("div", { class: "settings-content" });
-
-    function rerender() {
-      nav.innerHTML = "";
-      nav.appendChild(el("div", { class: "sn-eyebrow", text: "configuration" }));
-      SETTINGS_NAV.forEach(s => {
-        nav.appendChild(el("div", {
-          class: "sn-item" + (page === s.id ? " is-on" : ""),
-          onclick: () => { page = s.id; rerender(); },
-        }, [
-          el("span", { text: s.label }),
-          el("span", { class: "sn-meta", text: s.meta }),
-        ]));
-      });
-
-      const cur = SETTINGS_NAV.find(s => s.id === page);
-      content.innerHTML = "";
-      content.appendChild(el("div", { class: "sc-hd" }, [
-        el("div", { class: "sc-hd-l" }, [
-          el("span", { class: "sc-hd-eyebrow", text: cur.eyebrow }),
-          el("span", { class: "sc-hd-title", text: cur.title }),
-        ]),
-        el("button", { class: "btn-ghost", text: "Sauvegarder", onclick: () => J.notify({ kind: "success", text: "Paramètres · sauvegardés" }) }),
-      ]));
-      const inner = el("div", { style: { marginTop: "8px" } });
-      SETTINGS_RENDERERS[page](inner);
-      content.appendChild(inner);
-    }
-    rerender();
-    shell.appendChild(nav); shell.appendChild(content);
-    root.appendChild(shell);
-  }
-
-  /* ───────── Système (logs + actions) ───────── */
-  function renderSysteme(root) {
-    root.innerHTML = "";
-    root.appendChild(secHd("06", "Système", "Stream & actions", "live"));
-
-    // ── Jarvis Doctor ─────────────────────────────────────────────────────────
-    const DOCTOR_LABELS = {
-      fastapi:   "FastAPI",
-      anthropic: "Anthropic",
-      elevenlabs:"ElevenLabs",
-      deepgram:  "Deepgram",
-      mapbox:    "Mapbox",
-      docker:    "Docker",
-      memory:    "Mémoire",
-      skills:    "Skills",
-      proactive: "ProactiveEngine",
-    };
-
-    const doctorCard = card({ title: "Jarvis Doctor", sub: "diagnostic des composants" });
-    const doctorHd = el("div", { class: "doctor-hd" }, [
-      el("span", { class: "doctor-title", text: "État des composants" }),
-    ]);
-    const refreshBtn = el("button", { class: "doctor-refresh", text: "↻ Vérifier" });
-    doctorHd.appendChild(refreshBtn);
-    const doctorList = el("div", { class: "doctor-list" });
-    const doctorOverall = el("div", { class: "doctor-overall loading", text: "Chargement…" });
-
-    let doctorRows = {};
-
-    function buildSkeleton() {
-      doctorList.innerHTML = "";
-      doctorRows = {};
-      Object.entries(DOCTOR_LABELS).forEach(([key, label]) => {
-        const dot    = el("div", { class: "dr-dot loading" });
-        const name   = el("span", { class: "dr-name", text: label });
-        const detail = el("span", { class: "dr-detail", text: "…" });
-        const row    = el("div", { class: "doctor-row" }, [dot, name, detail]);
-        doctorList.appendChild(row);
-        doctorRows[key] = { dot, detail };
-      });
-    }
-
-    async function runDoctor() {
-      refreshBtn.classList.add("spinning");
-      doctorOverall.className = "doctor-overall loading";
-      doctorOverall.textContent = "Diagnostic en cours…";
-      if (Object.keys(doctorRows).length === 0) buildSkeleton();
-      else Object.values(doctorRows).forEach(r => { r.dot.className = "dr-dot loading"; r.detail.textContent = "…"; });
-      try {
-        const d = await J.api.get("/api/health");
-        Object.entries(d.checks || {}).forEach(([key, check]) => {
-          if (!doctorRows[key]) return;
-          const { dot, detail } = doctorRows[key];
-          dot.className = "dr-dot " + (check.status || "error");
-          detail.textContent = check.detail || "—";
-        });
-        doctorOverall.className = "doctor-overall " + (d.status === "ok" ? "ok" : "degraded");
-        doctorOverall.textContent = d.status === "ok" ? "Tous les composants sont opérationnels" : "Dégradé — voir détails ci-dessus";
-      } catch (_) {
-        Object.values(doctorRows).forEach(r => { r.dot.className = "dr-dot error"; r.detail.textContent = "Erreur"; });
-        doctorOverall.className = "doctor-overall degraded";
-        doctorOverall.textContent = "Impossible de contacter l'API";
-      }
-      refreshBtn.classList.remove("spinning");
-    }
-
-    refreshBtn.addEventListener("click", runDoctor);
-    buildSkeleton();
-    doctorCard.appendChild(doctorHd);
-    doctorCard.appendChild(doctorList);
-    doctorCard.appendChild(doctorOverall);
-    root.appendChild(doctorCard);
-    runDoctor();
-
-    // ── Performances ──────────────────────────────────────────────────────────
-    function fmtUptime(s) {
-      const d = Math.floor(s / 86400), h = Math.floor((s % 86400) / 3600), m = Math.floor((s % 3600) / 60);
-      return d ? d + "j " + h + "h" : h ? h + "h " + m + "m" : m + "m";
-    }
-    function mkGauge(label, pct, valStr, color) {
-      const w = el("div", { class: "perf-gauge" });
-      w.appendChild(el("div", { class: "perf-gauge-hd" }, [
-        el("span", { class: "perf-gauge-lbl", text: label }),
-        el("span", { class: "perf-gauge-val", text: valStr }),
-      ]));
-      const track = el("div", { class: "perf-gauge-track" });
-      const fill  = el("div", { class: "perf-gauge-fill", style: { width: Math.min(pct, 100) + "%", background: color } });
-      track.appendChild(fill);
-      w.appendChild(track);
-      return { node: w, fill, valEl: w.querySelector(".perf-gauge-val") };
-    }
-    function gaugeColor(pct) {
-      if (pct > 85) return "var(--red, #e05050)";
-      if (pct > 60) return "var(--gold, #d4a017)";
-      return "var(--accent)";
-    }
-
-    const perfCard = card({ title: "Performances", sub: "temps réel · màj 3s" });
-    const perfGrid = el("div", { class: "perf-grid" });
-    perfCard.appendChild(perfGrid);
-    root.appendChild(perfCard);
-
-    let gauges = null;
-    let perfTimer = null;
-
-    async function refreshPerf() {
-      try {
-        const d = await J.api.get("/api/system/perf");
-        if (!gauges) {
-          perfGrid.innerHTML = "";
-          const cpuColor  = gaugeColor(d.cpu_pct);
-          const ramColor  = gaugeColor(d.ram_pct);
-          const diskColor = gaugeColor(d.disk_pct);
-
-          const gCpu  = mkGauge("CPU",    d.cpu_pct,  d.cpu_pct + "% · " + d.cpu_cores + "c / " + d.cpu_threads + "t", cpuColor);
-          const gRam  = mkGauge("RAM",    d.ram_pct,  d.ram_used_gb + " / " + d.ram_total_gb + " GB", ramColor);
-          const gDisk = mkGauge("Disque", d.disk_pct, d.disk_used_gb + " / " + d.disk_total_gb + " GB", diskColor);
-
-          const statsRow = el("div", { class: "perf-stats-row" });
-          const uptimeEl = el("span", { class: "perf-stat", text: "uptime · " + fmtUptime(d.uptime_s) });
-          const platEl   = el("span", { class: "perf-stat", text: d.platform });
-          const procEl   = el("span", { class: "perf-stat" });
-          statsRow.append(uptimeEl, platEl, procEl);
-
-          perfGrid.appendChild(gCpu.node);
-          perfGrid.appendChild(gRam.node);
-          perfGrid.appendChild(gDisk.node);
-          if (d.battery_pct !== null) {
-            const bat = d.battery_pct + "%" + (d.battery_charging ? " ⚡" : "");
-            perfGrid.appendChild(mkGauge("Batterie", d.battery_pct, bat, gaugeColor(100 - d.battery_pct)).node);
-          }
-          perfGrid.appendChild(statsRow);
-          gauges = { gCpu, gRam, gDisk, uptimeEl, platEl, procEl };
-        } else {
-          const { gCpu, gRam, gDisk, uptimeEl, procEl } = gauges;
-          const cc = gaugeColor(d.cpu_pct);
-          gCpu.fill.style.width  = Math.min(d.cpu_pct, 100) + "%";
-          gCpu.fill.style.background = cc;
-          gCpu.valEl.textContent = d.cpu_pct + "% · " + d.cpu_cores + "c / " + d.cpu_threads + "t";
-          gRam.fill.style.width  = Math.min(d.ram_pct, 100) + "%";
-          gRam.fill.style.background = gaugeColor(d.ram_pct);
-          gRam.valEl.textContent = d.ram_used_gb + " / " + d.ram_total_gb + " GB";
-          gDisk.fill.style.width = Math.min(d.disk_pct, 100) + "%";
-          gDisk.valEl.textContent = d.disk_used_gb + " / " + d.disk_total_gb + " GB";
-          uptimeEl.textContent = "uptime · " + fmtUptime(d.uptime_s);
-          if (d.process && d.process.ram_mb) {
-            procEl.textContent = "jarvis · " + d.process.ram_mb + " MB · " + d.process.cpu_pct + "% cpu";
-          }
-        }
-      } catch (_) {
-        if (!gauges) perfGrid.innerHTML = "<span style='color:var(--fg-3);font-size:11px'>Métriques indisponibles</span>";
-      }
-    }
-
-    refreshPerf();
-    perfTimer = setInterval(refreshPerf, 3000);
-
-    // Nettoyage quand la section est démontée
-    const obs = new MutationObserver(() => {
-      if (!document.contains(perfCard)) { clearInterval(perfTimer); obs.disconnect(); }
+      rg2.appendChild(btn);
     });
-    obs.observe(document.body, { childList: true, subtree: true });
+    rangeWrap.appendChild(rg1); rangeWrap.appendChild(rg2);
+    evolHd.appendChild(rangeWrap);
+    evol.appendChild(evolHd);
 
-    const grid = el("div", { class: "sys-grid" });
+    const areaWrap = el("div", { class: "conso-area-wrap" });
+    areaWrap.appendChild(C.areaChart(daily.map(d => d.cost_usd || 0), { color: "#4A9EFF" }));
+    evol.appendChild(areaWrap);
+
+    const axis = el("div", { class: "conso-axis" });
+    axis.appendChild(el("span", { text: "J-29" }));
+    axis.appendChild(el("span", { text: "J-15" }));
+    axis.appendChild(el("span", { text: "J-1" }));
+    evol.appendChild(axis);
+
+    const legend = el("div", { class: "conso-legend" });
+    const li = el("span", { class: "conso-legend-item" });
+    const sw = el("span", { class: "sw" }); sw.style.background = "#4A9EFF";
+    li.appendChild(sw);
+    li.appendChild(document.createTextNode(" Jarvis "));
+    li.appendChild(el("span", { class: "val", text: "$" + monthlyCost.toFixed(2) }));
+    legend.appendChild(li);
+    evol.appendChild(legend);
+    wrap.appendChild(evol);
+
+    /* ── Row 2: Usage + Providers ── */
+    const row2 = el("div", { class: "conso-row-2" });
+
+    // Usage by type card
+    const usageCard = el("div", { class: "card conso-usage" });
+    const usageHd = el("div", { class: "card-hd" });
+    const usageTtl = el("div");
+    usageTtl.appendChild(el("h2", { text: "Répartition par type d'usage" }));
+    usageTtl.appendChild(el("span", { class: "sub", text: "où part vraiment l'argent" }));
+    usageHd.appendChild(usageTtl); usageCard.appendChild(usageHd);
+
+    const byType = (monthly.by_type || []).slice(0, 6);
+    if (byType.length) {
+      byType.forEach(u => {
+        const row = el("div", { class: "conso-usage-row" });
+        const sw = el("span", { class: "conso-usage-sw" }); sw.style.background = u.color || "var(--accent)";
+        row.appendChild(sw);
+        const body = el("div", { class: "conso-usage-body" });
+        body.appendChild(el("div", { class: "nm", text: u.label }));
+        body.appendChild(el("div", { class: "ctx", text: u.sub }));
+        const bar = el("div", { class: "conso-usage-bar" });
+        const fill = el("i"); fill.style.width = Math.round((u.pct || 0) * 100) + "%";
+        fill.style.background = u.color || "var(--accent)";
+        bar.appendChild(fill); body.appendChild(bar);
+        row.appendChild(body);
+        const vals = el("div", { class: "conso-usage-vals" });
+        vals.appendChild(el("div", { class: "val", text: "$" + (u.cost_usd || 0).toFixed(2) }));
+        vals.appendChild(el("div", { class: "pct", text: Math.round((u.pct || 0) * 100) + "%" }));
+        row.appendChild(vals);
+        usageCard.appendChild(row);
+      });
+    } else {
+      usageCard.appendChild(el("div", { class: "conso-empty", text: "— données insuffisantes" }));
+    }
+    row2.appendChild(usageCard);
+
+    // Providers card (donut + heatmap)
+    const provCard = el("div", { class: "card conso-providers" });
+    const provHd = el("div", { class: "card-hd" });
+    const provTtl = el("div");
+    provTtl.appendChild(el("h2", { text: "Par provider" }));
+    provTtl.appendChild(el("span", { class: "sub", text: "part du total" }));
+    provHd.appendChild(provTtl); provCard.appendChild(provHd);
+
+    const provList = monthly.providers || [];
+    const PROV_COLORS = { anthropic: "#E5A23E", elevenlabs: "#A78BFA", openai: "#36D399", deepgram: "#4A9EFF" };
+    const donutSlices = provList.map(p => ({
+      value: p.cost_usd || 0,
+      color: PROV_COLORS[p.name] || "var(--fg-3)",
+    }));
+    const donutTotal = "$" + Math.round(monthlyCost);
+
+    const provGrid = el("div", { class: "conso-providers-grid" });
+    const donutEl = C.donut(donutSlices, donutTotal);
+    donutEl.setAttribute("class", "conso-donut");
+    provGrid.appendChild(donutEl);
+    const provLeg = el("div", { class: "conso-providers-legend" });
+    provList.forEach(p => {
+      const row = el("div", { class: "conso-providers-row" });
+      const sw = el("span", { class: "sw" }); sw.style.background = PROV_COLORS[p.name] || "var(--fg-3)";
+      row.appendChild(sw);
+      row.appendChild(el("span", { class: "nm", text: p.name }));
+      row.appendChild(el("span", { class: "val", text: "$" + (p.cost_usd || 0).toFixed(2) }));
+      provLeg.appendChild(row);
+    });
+    provGrid.appendChild(provLeg);
+    provCard.appendChild(provGrid);
+
+    // Heatmap
+    const peakHour = hourly.indexOf(Math.max(...hourly));
+    const peakVal = Math.max(...hourly);
+    const heat = el("div", { class: "conso-heat" });
+    const heatHd = el("div", { class: "conso-heat-head" });
+    heatHd.appendChild(el("span", { text: "Usage · 24h · $/heure" }));
+    heatHd.appendChild(el("span", { text: `peak ${String(peakHour).padStart(2,"0")}:00 · $${peakVal.toFixed(3)}` }));
+    heat.appendChild(heatHd);
+    heat.appendChild(C.heatRow(hourly));
+    const heatFt = el("div", { class: "conso-heat-foot" });
+    ["00:00", "06:00", "12:00", "18:00", "23:59"].forEach(t => heatFt.appendChild(el("span", { text: t })));
+    heat.appendChild(heatFt);
+    provCard.appendChild(heat);
+    row2.appendChild(provCard);
+    wrap.appendChild(row2);
+
+    /* ── Row 3: Par modèle + Par skill ── */
+    const row3 = el("div", { class: "conso-row-2" });
+
+    // Par modèle
+    const modCard = el("div", { class: "card" });
+    const modHd = el("div", { class: "card-hd" });
+    const modTtl = el("div");
+    modTtl.appendChild(el("h2", { text: "Par modèle" }));
+    modTtl.appendChild(el("span", { class: "sub", text: "tokens consommés · part" }));
+    modHd.appendChild(modTtl); modCard.appendChild(modHd);
+    if (byModel.length) {
+      byModel.slice(0, 5).forEach(m => {
+        const row = el("div", { class: "conso-mod-row" });
+        row.appendChild(el("div", { class: "nm", text: m.model }));
+        const bar = el("div", { class: "conso-mod-bar" });
+        const fill = el("i"); fill.style.width = (m.pct || 0) + "%";
+        bar.appendChild(fill); row.appendChild(bar);
+        const vals = el("div", { class: "conso-mod-vals" });
+        vals.appendChild(el("span", { class: "meta", text: fmtTokens(m.tokens || 0) }));
+        vals.appendChild(el("span", { class: "meta accent", text: "$" + (m.cost_usd || 0).toFixed(2) }));
+        row.appendChild(vals);
+        modCard.appendChild(row);
+      });
+    } else {
+      modCard.appendChild(el("div", { class: "conso-empty", text: "— aucune donnée ce mois" }));
+    }
+    row3.appendChild(modCard);
+
+    // Par skill (placeholder — pas de données backend pour l'instant)
+    const skillCard = el("div", { class: "card" });
+    const skillHd = el("div", { class: "card-hd" });
+    const skillTtl = el("div");
+    skillTtl.appendChild(el("h2", { text: "Par skill" }));
+    skillTtl.appendChild(el("span", { class: "sub", text: "skills qui consomment le plus" }));
+    skillHd.appendChild(skillTtl); skillCard.appendChild(skillHd);
+    skillCard.appendChild(el("div", { class: "conso-empty", text: "— bientôt disponible" }));
+    row3.appendChild(skillCard);
+    wrap.appendChild(row3);
+
+    const page = pageWrapper("conso", "Ce que Jarvis consomme pour fonctionner", null, wrap);
+    root.innerHTML = ""; root.appendChild(page);
+  }
+
+  /* ───────── 05 Système ───────── */
+  async function renderSysteme() {
+    let perf = {};
+    try { perf = await J.api.get("/api/system/perf"); } catch (_) {}
+
+    const wrap = el("div", { style: { display:"flex", flexDirection:"column", gap:"40px" } });
+
+    // Perf tiles
+    const perfGrid = el("div", { class: "perf-grid" });
+    const tiles = [
+      { label: "CPU",     val: (perf.cpu_pct||0).toFixed(0), unit: "%", bar: perf.cpu_pct },
+      { label: "RAM",     val: (perf.ram_used_gb||0).toFixed(1), unit: " GB", bar: perf.ram_pct },
+      { label: "Disque",  val: (perf.disk_used_gb||0).toFixed(0), unit: " GB", bar: perf.disk_pct },
+      perf.battery_pct != null
+        ? { label: "Batterie", val: perf.battery_pct, unit: "%", bar: perf.battery_pct }
+        : { label: "Uptime", val: perf.uptime_s ? Math.floor(perf.uptime_s/3600)+"h" : "—", unit: "", bar: null },
+    ];
+    tiles.forEach(t => {
+      const tile = el("div", { class: "perf-tile" });
+      tile.appendChild(el("div", { class: "perf-label", text: t.label }));
+      const valEl = el("div", { class: "perf-val" });
+      valEl.textContent = t.val;
+      valEl.appendChild(el("span", { class: "perf-unit", text: t.unit }));
+      tile.appendChild(valEl);
+      if (t.bar != null) {
+        const bw = el("div", { class: "perf-bar-wrap" });
+        bw.appendChild(el("div", { class: "perf-bar-fill", style: { width: Math.min(100, t.bar||0)+"%", background: t.bar > 80 ? "var(--red)" : "var(--accent)" } }));
+        tile.appendChild(bw);
+      }
+      perfGrid.appendChild(tile);
+    });
+    wrap.appendChild(ghostSec("Performances", perf.platform || "système", null, perfGrid));
+
+    // Stats Jarvis
+    let stats = {};
+    try { stats = await J.api.get("/api/system/stats"); } catch (_) {}
+    if (Object.keys(stats).length) {
+      const statGrid = el("div", { class: "perf-grid" });
+      const stiles = [
+        { label: "Projets",  val: (stats.projects||{}).total||0, unit: "" },
+        { label: "En cours", val: (stats.projects||{}).running||0, unit: "" },
+        { label: "Topics",   val: (stats.memory||{}).topics||0, unit: "" },
+        { label: "Sessions", val: (stats.sessions||{}).total||0, unit: "" },
+      ];
+      stiles.forEach(t => {
+        const tile = el("div", { class: "perf-tile" });
+        tile.appendChild(el("div", { class: "perf-label", text: t.label }));
+        tile.appendChild(el("div", { class: "perf-val", text: String(t.val) }));
+        statGrid.appendChild(tile);
+      });
+      wrap.appendChild(ghostSec("Statistiques Jarvis", "projets · mémoire · sessions", null, statGrid));
+    }
 
     // Logs
-    const logsCard = card({
-      title: "Système", sub: "event stream · live",
-      right: el("div", { style: { display: "flex", gap: "6px" } }, [
-        el("span", { class: "badge", text: "all" }),
-        el("span", { class: "badge badge--accent" }, [el("span",{class:"pri-dot"}), document.createTextNode("info")]),
-        el("span", { class: "badge badge--gold", text: "warn" }),
-        el("span", { class: "badge badge--red",  text: "err" }),
-      ]),
+    let logs = [];
+    try { logs = await J.api.get("/api/system/logs"); } catch (_) {}
+    const logView = el("div", { class: "log-viewer" });
+    (logs.length ? logs : ["Aucun log récent"]).forEach(line => {
+      const entry = el("span", { class: "log-entry" + (line.includes("ERROR")?" error":line.includes("WARN")?" warn":""), text: line });
+      logView.appendChild(entry);
+      logView.appendChild(document.createTextNode("\n"));
     });
-    const logScroll = el("div", { class: "scroll-y", style: { maxHeight: "280px" } });
-    function rebuildLogs() {
-      logScroll.innerHTML = "";
-      const now = new Date();
-      LOG_SEED.forEach((l, i) => {
-        const t = new Date(now.getTime() - i * 14000);
-        const pad = (n) => String(n).padStart(2, "0");
-        const tStr = pad(t.getHours()) + ":" + pad(t.getMinutes()) + ":" + pad(t.getSeconds());
-        const lm = el("span", { class: "lm" });
-        l.parts.forEach(p => {
-          if (p.cls) lm.appendChild(el("span", { class: p.cls, text: p.t }));
-          else lm.appendChild(document.createTextNode(p.t));
-        });
-        logScroll.appendChild(el("div", { class: "log-line" }, [
-          el("span", { class: "lt", text: tStr }),
-          el("span", { class: "lv " + l.lv, text: l.lv }),
-          lm,
-        ]));
-      });
-    }
-    rebuildLogs();
-    // Replace setInterval stub with real WebSocket /ws/logs
-    // Format: { lv: "ok"|"info"|"warn"|"err", parts: [{t: string, cls?: "accent"|"dim"}] }
-    try {
-      const wsProto = location.protocol === "https:" ? "wss:" : "ws:";
-      const wsLogs = new WebSocket(wsProto + "//" + location.host + "/ws/logs");
-      wsLogs.onmessage = (ev) => {
-        try {
-          const log = JSON.parse(ev.data);
-          LOG_SEED.unshift(log);
-          if (LOG_SEED.length > 50) LOG_SEED.pop();
-          rebuildLogs();
-        } catch (_) {}
-      };
-      wsLogs.onerror = () => setInterval(rebuildLogs, 2400);  // fallback si WS échoue
-    } catch (_) {
-      setInterval(rebuildLogs, 2400);
-    }
-    logsCard.appendChild(logScroll);
-    grid.appendChild(logsCard);
+    logView.scrollTop = logView.scrollHeight;
+    wrap.appendChild(ghostSec("Logs récents", logs.length + " lignes", null, logView));
 
-    // Actions
-    const actionsCard = card({ title: "Actions système", sub: "opérations runtime" });
-    const actGrid = el("div", { class: "action-grid" });
+    // Danger zone
+    const danger = el("div", { class: "danger-zone" });
+    danger.appendChild(el("div", { class: "danger-title", text: "ZONE DANGER" }));
+
+    const cleanRow = el("div", { class: "danger-row" });
+    const cleanTxt = el("div");
+    cleanTxt.appendChild(el("div", { class: "danger-label", text: "Nettoyer les projets terminés" }));
+    cleanTxt.appendChild(el("div", { class: "danger-sub", text: "Supprime les workspaces done/failed/killed" }));
+    cleanRow.appendChild(cleanTxt);
+    const cleanBtn = el("button", { class: "btn-danger", text: "Nettoyer" });
+    cleanBtn.addEventListener("click", async () => {
+      if (!confirm("Nettoyer tous les projets terminés ?")) return;
+      cleanBtn.textContent = "…"; cleanBtn.disabled = true;
+      try {
+        const r = await J.api.delete("/api/system/projects/done");
+        J.notify({ kind: "success", text: r.removed + " projets supprimés" });
+      } catch (e) { J.notify({ kind: "error", text: e.message }); }
+      cleanBtn.textContent = "Nettoyer"; cleanBtn.disabled = false;
+    });
+    cleanRow.appendChild(cleanBtn);
+    danger.appendChild(cleanRow);
+
+    const restartRow = el("div", { class: "danger-row" });
+    const restartTxt = el("div");
+    restartTxt.appendChild(el("div", { class: "danger-label", text: "Redémarrer Jarvis" }));
+    restartTxt.appendChild(el("div", { class: "danger-sub", text: "Relance le processus FastAPI" }));
+    restartRow.appendChild(restartTxt);
+    const restartBtn = el("button", { class: "btn-danger", text: "Redémarrer" });
+    restartBtn.addEventListener("click", async () => {
+      if (!confirm("Redémarrer Jarvis ?")) return;
+      restartBtn.textContent = "…"; restartBtn.disabled = true;
+      try { await J.api.post("/api/system/restart"); }
+      catch (_) { setTimeout(() => window.location.reload(), 3000); }
+    });
+    restartRow.appendChild(restartBtn);
+    danger.appendChild(restartRow);
+
+    wrap.appendChild(danger);
+
+    const page = pageWrapper("systeme", "Système & processus", null, wrap);
+    root.innerHTML = ""; root.appendChild(page);
+  }
+
+  /* ───────── 06 À propos ───────── */
+  async function renderApropos() {
+    let health = {};
+    try { health = await J.api.get("/api/health"); } catch (_) {}
+
+    const version = health.version || "—";
+    const year = new Date().getFullYear();
+
+    const about = el("div", { class: "about-block" });
+    about.appendChild(el("div", { class: "about-version", text: "JARVIS · v" + version + " · " + year }));
+    about.appendChild(el("div", { class: "about-title",   text: "Jarvis" }));
+    about.appendChild(el("div", { class: "about-desc",
+      text: "Assistant personnel intelligent · vocal · proactif." }));
+
+    const links = el("div", { class: "about-links" });
     [
-      { t: "Recharger config",    s: "soft-reload · 0 downtime", cls: "" },
-      { t: "Vider cache",          s: "~ 124 MB · libère mémoire", cls: "" },
-      { t: "Reindex mémoire",      s: "~ 9.8 s · vector store",    cls: "" },
-      { t: "Restart agents",       s: "interrompt 6 sessions",     cls: "is-warn" },
-      { t: "Snapshot complet",     s: "backup · ~ 480 MB",         cls: "is-warn" },
-      { t: "Wipe sessions",        s: "destructif · confirm requis", cls: "is-danger" },
-    ].forEach(a => {
-      actGrid.appendChild(el("div", {
-        class: "act " + a.cls,
-        onclick: () => {
-          const kind = a.cls === "is-danger" ? "error" : a.cls === "is-warn" ? "warn" : "success";
-          J.notify({ kind, text: a.t + " · exécuté" });
-        },
-      }, [
-        el("span", { class: "a-title", text: a.t }),
-        el("span", { class: "a-sub",   text: a.s }),
-      ]));
+      { label: "Health", href: "/health" },
+    ].forEach(l => {
+      const a = el("a", { class: "about-link", text: l.label });
+      a.href = l.href;
+      links.appendChild(a);
     });
-    actionsCard.appendChild(actGrid);
-    grid.appendChild(actionsCard);
+    about.appendChild(links);
 
-    root.appendChild(grid);
+    const wrap = el("div");
+    wrap.appendChild(ghostSec("À propos", "Jarvis · v" + version, null, about));
+    const page = pageWrapper("apropos", "À propos de Jarvis", null, wrap);
+    root.innerHTML = ""; root.appendChild(page);
   }
 
-  /* ───────── Routing ───────── */
-  const SECTIONS = [
-    { id: "sessions",  label: "Sessions",    meta: "6"      },
-    { id: "memoire",   label: "Mémoire",     meta: "10"     },
-    { id: "outils",    label: "Outils",      meta: "skills" },
-    { id: "conso",     label: "Conso",       meta: "…"      },
-    { id: "settings",  label: "Paramètres",  meta: "6"      },
-    { id: "systeme",   label: "Système",     meta: "live"   },
-  ];
+  /* ───────── Router ───────── */
   const RENDERERS = {
-    sessions: renderSessions, memoire: renderMemory, outils: renderTools,
-    conso: renderConso, settings: renderSettings, systeme: renderSysteme,
+    preferences: renderPreferences,
+    modeles:     renderModeles,
+    audio:   renderAudio,
+    conso:   renderConso,
+    systeme: renderSysteme,
+    apropos: renderApropos,
   };
-  const state = { active: "sessions" };
 
-  function refreshSidebar() {
-    document.querySelectorAll(".sb-item").forEach(b => {
-      b.classList.toggle("is-on", b.dataset.id === state.active);
-    });
-  }
-  function mountSidebar() {
-    J.mountSidebar({
-      activeId: state.active,
-      onNav: (id) => { state.active = id; renderActive(); refreshSidebar(); },
-      sections: [{ label: "Système", items: SECTIONS }],
-      footer: { spend: "$3.42", cpu: "14%", ramPct: 0.65 },
-    });
-  }
-  function renderActive() {
-    const root = document.getElementById("page-root");
-    root.innerHTML = '<div class="surface"><div class="j-loading">Chargement…</div></div>';
-    const surface = el("section", { class: "surface page-in", dataset: { screenLabel: "system-" + state.active } });
-    try { RENDERERS[state.active](surface); }
-    catch (err) { surface.appendChild(el("div", { class: "j-empty", text: "Erreur : " + err.message })); }
-    root.innerHTML = ""; root.appendChild(surface);
-  }
-  function registerCommands() {
-    J.registerCommands([
-      { kind: "nav", group: "Aller à", title: "Sessions",   glyph: "01", run: () => { state.active = "sessions";  renderActive(); refreshSidebar(); } },
-      { kind: "nav", group: "Aller à", title: "Mémoire",    glyph: "02", run: () => { state.active = "memoire";   renderActive(); refreshSidebar(); } },
-      { kind: "nav", group: "Aller à", title: "Outils",     glyph: "03", run: () => { state.active = "outils";    renderActive(); refreshSidebar(); } },
-      { kind: "nav", group: "Aller à", title: "Conso",      glyph: "04", run: () => { state.active = "conso";     renderActive(); refreshSidebar(); } },
-      { kind: "nav", group: "Aller à", title: "Paramètres", glyph: "05", run: () => { state.active = "settings";  renderActive(); refreshSidebar(); } },
-      { kind: "nav", group: "Aller à", title: "Système",    glyph: "06", run: () => { state.active = "systeme";   renderActive(); refreshSidebar(); } },
-      { kind: "nav", group: "Pages",   title: "Keypad Studio", glyph: "⌨", sub: "/keypad", run: () => { window.location.href = "/keypad"; } },
-      { kind: "nav", group: "Pages",   title: "Dashboard",  glyph: "→",  sub: "control", run: () => { window.handleDashboardClick && window.handleDashboardClick(); } },
-      { kind: "slash", group: "Commandes", title: "restart", glyph: ">", sub: "redémarre le runtime", run: () => J.notify({ kind: "warn", text: "Runtime · restart envoyé" }) },
-      { kind: "slash", group: "Commandes", title: "logs",    glyph: ">", sub: "saute aux logs",       run: () => { state.active = "systeme"; renderActive(); refreshSidebar(); } },
-      { kind: "slash", group: "Commandes", title: "spend",   glyph: ">", sub: "saute à conso",        run: () => { state.active = "conso";   renderActive(); refreshSidebar(); } },
-    ]);
+  function navigate(pageId) {
+    _activePage = pageId;
+    const nav = document.getElementById("j-rooms-pages");
+    if (nav) {
+      const btns = Array.from(nav.querySelectorAll("button"));
+      const idx = PAGES.findIndex(p => p.id === pageId);
+      btns.forEach((b, i) => b.dataset.active = i === idx ? "true" : "false");
+    }
+    const fn = RENDERERS[pageId];
+    if (fn) { root.innerHTML = ""; fn(); }
   }
 
-  function boot() {
-    J.mountAtmosphere();
-    mountSidebar();
-    J.mountTopbar({ pageTitle: "Système", crumb: "/ system" });
-    J.mountBottomNav({ active: "system" });
-    registerCommands();
-    renderActive();
-    // Update conso meta in sidebar with real monthly total
-    J.api.get("/api/conso/monthly").then(m => {
-      const sec = SECTIONS.find(s => s.id === "conso");
-      if (sec && m && m.cost_usd != null) {
-        sec.meta = "$" + m.cost_usd.toFixed(0);
-        document.querySelectorAll(".sb-item[data-id='conso'] .sb-meta").forEach(el => {
-          el.textContent = sec.meta;
-        });
-      }
-    }).catch(() => {});
-  }
-  window.Settings = { boot };
+  /* ───────── Init ───────── */
+  J.mountAtmosphere();
+
+  J.mountRooms({
+    mode: "config",
+    pages: PAGES,
+    activePage: _activePage,
+    onNav: (id) => navigate(id),
+  });
+
+  J.registerCommands(PAGES.map(p => ({
+    kind: "nav", id: "cfg-" + p.id, group: "Réglages",
+    title: p.label, glyph: "→",
+    run: () => navigate(p.id),
+  })));
+
+  renderPreferences();
 })();

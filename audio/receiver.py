@@ -9,6 +9,14 @@ from numpy.typing import NDArray
 
 from config.settings import settings
 
+# Modèles faster-whisper valides — nova-2 (Deepgram) et autres cloud STT ne sont pas valides ici
+_VALID_WHISPER = frozenset({
+    "tiny.en", "tiny", "base.en", "base", "small.en", "small",
+    "medium.en", "medium", "large-v1", "large-v2", "large-v3", "large",
+    "distil-large-v2", "distil-medium.en", "distil-small.en", "distil-large-v3",
+    "large-v3-turbo", "turbo",
+})
+
 
 class VoiceReceiver:
     """Transcription temps réel via RealtimeSTT (VAD Silero/WebRTC + Whisper).
@@ -34,9 +42,23 @@ class VoiceReceiver:
         self._running = True
         self._transcript_queue = asyncio.Queue()
 
+        whisper_model = settings.whisper_model
+        if whisper_model not in _VALID_WHISPER:
+            logger.warning(
+                "Modèle Whisper invalide '{}' — fallback sur 'tiny'. "
+                "Vérifier WHISPER_MODEL dans .env (valeurs valides: tiny, small, medium, large-v3-turbo…)",
+                whisper_model,
+            )
+            whisper_model = "tiny"
+
+        logger.info(
+            "Initialisation Whisper '{}' — premier lancement = téléchargement du modèle (~74 MB pour tiny, ~244 MB pour small). Patience…",
+            whisper_model,
+        )
+
         self._recorder = AudioToTextRecorder(
             language="fr",
-            model=settings.whisper_model,
+            model=whisper_model,
             compute_type="int8",
             use_microphone=False,
             silero_sensitivity=0.6,         # plus sensible (0 = muet, 1 = maximal)
@@ -66,7 +88,7 @@ class VoiceReceiver:
             target=_reader_loop, daemon=True, name="realtimestt-reader"
         )
         self._reader.start()
-        logger.info("VoiceReceiver started", model=settings.whisper_model)
+        logger.info("VoiceReceiver prêt — modèle Whisper '{}' chargé, écoute active.", whisper_model)
 
     def _on_recording_start_cb(self) -> None:
         """Appelé par RealtimeSTT dès que le VAD détecte de la voix."""

@@ -85,6 +85,40 @@ async def settings_ui():
                         headers={"Cache-Control": "no-store"})
 
 
+@router.get("/", include_in_schema=False)
+async def home_ui():
+    from fastapi.responses import Response as FastResponse
+    content = _versioned_html(
+        Path("ui/static/home.html"),
+        [
+            ("/_shared.css",  "ui/static/_shared.css"),
+            ("/home.css",     "ui/static/home.css"),
+            ("/_shared.js",   "ui/static/_shared.js"),
+            ("/three.min.js", "ui/static/three.min.js"),
+            ("/orb.js",       "ui/static/orb.js"),
+            ("/home.js",      "ui/static/home.js"),
+        ],
+    )
+    return FastResponse(content=content, media_type="text/html",
+                        headers={"Cache-Control": "no-store"})
+
+
+@router.get("/capabilities", include_in_schema=False)
+async def capabilities_ui():
+    from fastapi.responses import Response as FastResponse
+    content = _versioned_html(
+        Path("ui/static/capabilities.html"),
+        [
+            ("/_shared.css",       "ui/static/_shared.css"),
+            ("/capabilities.css",  "ui/static/capabilities.css"),
+            ("/_shared.js",        "ui/static/_shared.js"),
+            ("/capabilities.js",   "ui/static/capabilities.js"),
+        ],
+    )
+    return FastResponse(content=content, media_type="text/html",
+                        headers={"Cache-Control": "no-store"})
+
+
 @router.get("/health", response_model=HealthResponse)
 async def health() -> HealthResponse:
     """Point de contrôle — vérifie que le serveur est up."""
@@ -1047,9 +1081,9 @@ async def conso_session() -> dict:
 
 
 @router.get("/api/conso/daily")
-async def conso_daily() -> list[dict]:
+async def conso_daily(days: int = 30) -> list[dict]:
     from core.tracking import tracker
-    return tracker.get_daily_totals(7)
+    return tracker.get_daily_totals(days)
 
 
 @router.get("/api/conso/providers")
@@ -1075,6 +1109,18 @@ async def conso_daily_providers() -> list[dict]:
 async def conso_monthly() -> dict:
     from core.tracking import tracker
     return tracker.get_monthly_totals()
+
+
+@router.get("/api/conso/by_model")
+async def conso_by_model() -> list[dict]:
+    from core.tracking import tracker
+    return tracker.get_monthly_by_model()
+
+
+@router.get("/api/conso/hourly")
+async def conso_hourly() -> list[float]:
+    from core.tracking import tracker
+    return tracker.get_today_hourly()
 
 
 # ── Settings API ──────────────────────────────────────────────────────────────
@@ -1199,6 +1245,7 @@ async def get_settings_endpoint() -> dict:
             "docker_timeout_seconds": _s.docker_timeout_seconds,
         },
         "proactive": {
+            "home_city":                 _s.home_city,
             "briefing_hour":             _s.briefing_hour,
             "calendar_reminder_minutes": _s.calendar_reminder_minutes,
         },
@@ -1211,9 +1258,12 @@ async def get_settings_endpoint() -> dict:
             "memory_dir": _s.memory_dir,
         },
         "jarvis": {
-            "log_level":   _s.log_level,
-            "environment": _s.environment,
-            "quebec_mode": _s.quebec_mode,
+            "user_firstname":        _s.user_firstname,
+            "quebec_mode":           _s.quebec_mode,
+            "wakeup_enabled":        _s.wakeup_enabled,
+            "clap_detection_enabled": _s.clap_detection_enabled,
+            "log_level":             _s.log_level,
+            "environment":           _s.environment,
         },
         "music": {
             "music_provider": _s.music_provider,
@@ -1579,11 +1629,6 @@ async def get_connectors() -> list:
             "sub": "LLM alternatif",
             "status": "on" if _env_ok("MISTRAL_API_KEY") else "off",
         },
-        {
-            "name": "Keypad Studio",
-            "sub": "Firmware CH552 · /keypad",
-            "status": "on",
-        },
     ]
     return connectors
 
@@ -1736,7 +1781,11 @@ async def voice_generate(body: VoiceGenerateRequest, request: Request):
             name="voice-autodream",
         )
 
-    return _SR(_stream(), media_type="text/plain")
+    return _SR(
+        _stream(),
+        media_type="text/plain",
+        headers={"X-Session-Id": str(session.id)},
+    )
 
 
 @router.get("/api/voice/token")
