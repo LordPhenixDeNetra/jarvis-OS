@@ -11,6 +11,8 @@
   let _interacting = false;
   let _resumeTimer = null;
 
+  let _pendingFlyTo = null; // queued fly_to before map is ready
+
   let _fetchTimer = null;
   let _flightsCache = [];
   let _flightsOn = false;
@@ -53,7 +55,7 @@
       container: 'globe-container',
       style: 'mapbox://styles/barth-95/cmosuocjv007801seho3g8r4y',
       projection: 'globe',
-      zoom: 1.5,
+      zoom: 2.5,
       center: [10, 20],
       pitch: 0,
       bearing: 0,
@@ -80,6 +82,12 @@
       _addLayers();
       _mapReady = true;
       if (_visible) { _startData(); _spinGlobe(); }
+      if (_pendingFlyTo) {
+        const p = _pendingFlyTo; _pendingFlyTo = null;
+        _map.stop();
+        _map.flyTo({ center: [p.lon, p.lat], zoom: p.zoom || 10, duration: 2500, curve: 1.5 });
+        if (p.location_name) _showToast(p.location_name);
+      }
     });
   }
 
@@ -418,12 +426,17 @@
     transitionToGlobe() {
       if (!_map) return;
       _autoRotate = true;
-      _map.flyTo({ center: [10, 20], zoom: 1.5, duration: 1500, curve: 1.2 });
+      _map.stop();
+      _map.flyTo({ center: [10, 20], zoom: 2.5, duration: 1500, curve: 1.2 });
     },
 
     handleFlyTo(msg) {
-      if (!_map) return;
       _autoRotate = false;
+      if (!_map || !_mapReady) {
+        _pendingFlyTo = msg; // will execute on style.load
+        return;
+      }
+      _map.stop();
       _map.flyTo({ center: [msg.lon, msg.lat], zoom: msg.zoom || 10, duration: 2500, curve: 1.5 });
       if (msg.location_name) _showToast(msg.location_name);
     },
