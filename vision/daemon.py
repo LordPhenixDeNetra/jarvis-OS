@@ -36,12 +36,19 @@ _FRAME_INTERVAL = 1.0 / _TARGET_FPS
 
 
 async def run_vision_daemon() -> None:
-    """Boucle principale du daemon vision."""
+    """Boucle principale du daemon vision.
+
+    La caméra hardware n'est ouverte que lorsque la permission 'camera' est
+    activée depuis l'UI (bouton Caméra). Elle est relachée dès que la
+    permission est révoquée, éteignant ainsi le voyant de la webcam.
+    """
     try:
         import cv2  # type: ignore[import-untyped]
     except ImportError:
         logger.error("Vision daemon: opencv-python non installé — daemon désactivé")
         return
+
+    from core.permissions import permissions as _perm_store
 
     detector = ObjectDetector(confidence=settings.vision_yolo_confidence)
     objects_q = get_vision_objects_queue()
@@ -54,13 +61,8 @@ async def run_vision_daemon() -> None:
         _face_recognizer = face_recognizer
         logger.info("FaceRecognizer activé dans le daemon vision")
 
-    cap = cv2.VideoCapture(settings.vision_webcam_index)
-    if not cap.isOpened():
-        logger.error("Vision daemon: webcam introuvable", index=settings.vision_webcam_index)
-        return
-
-    cap.set(cv2.CAP_PROP_FPS, _TARGET_FPS)
-    logger.info("Vision daemon démarré", fps=_TARGET_FPS)
+    cap: object | None = None  # ouvert dynamiquement selon la permission
+    logger.info("Vision daemon démarré — en attente d'activation caméra")
 
     loop = asyncio.get_running_loop()
 
@@ -68,6 +70,29 @@ async def run_vision_daemon() -> None:
         while True:
             loop_start = loop.time()
 
+            # ── Gestion permission caméra ─────────────────────────────────────
+            cam_allowed = _perm_store.get("camera")
+
+            if not cam_allowed:
+                if cap is not None:
+                    await loop.run_in_executor(None, cap.release)
+                    cap = None
+                    logger.info("Vision daemon: caméra relâchée (permission désactivée)")
+                await asyncio.sleep(1.0)
+                continue
+
+            # Ouvre la caméra si nécessaire
+            if cap is None:
+                cap = cv2.VideoCapture(settings.vision_webcam_index)
+                if not cap.isOpened():
+                    logger.error("Vision daemon: webcam introuvable", index=settings.vision_webcam_index)
+                    cap = None
+                    await asyncio.sleep(2.0)
+                    continue
+                cap.set(cv2.CAP_PROP_FPS, _TARGET_FPS)
+                logger.info("Vision daemon: caméra ouverte", fps=_TARGET_FPS)
+
+            # ── Capture + analyse ─────────────────────────────────────────────
             ret, frame = await loop.run_in_executor(None, cap.read)
             if not ret or frame is None:
                 await asyncio.sleep(0.5)
@@ -81,7 +106,6 @@ async def run_vision_daemon() -> None:
             result = await loop.run_in_executor(None, detector.process, frame)
 
             if result:
-                # Normaliser les bbox pour le browser (coordonnées [0,1])
                 boxes = [
                     {
                         "label": o.label,
@@ -138,7 +162,8 @@ async def run_vision_daemon() -> None:
             elapsed = loop.time() - loop_start
             await asyncio.sleep(max(0.0, _FRAME_INTERVAL - elapsed))
 
-    cap.release()
+    if cap is not None:
+        cap.release()
 
 
 async def _send_event(client: httpx.AsyncClient, event_type: str, data: dict) -> None:

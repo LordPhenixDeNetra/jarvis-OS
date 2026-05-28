@@ -7,7 +7,12 @@ class PermissionStore:
     """Permissions runtime accordées par l'utilisateur depuis l'UI."""
 
     def __init__(self) -> None:
-        self._state: dict[str, bool] = {k: True for k in _KEYS}
+        self._state: dict[str, bool] = {
+            "microphone": True,
+            "screen": False,
+            "camera": False,
+            "files": False,
+        }
 
     def get(self, key: str) -> bool:
         return self._state.get(key, True)
