@@ -329,15 +329,20 @@
   }
 
   // ── Show / Hide ──────────────────────────────────────────────────
+  function _orbElement() {
+    return document.getElementById('three-canvas')
+        || document.querySelector('.home-orb-wrap');
+  }
+
   async function showGlobe() {
     if (_visible) return;
     _visible = true;
-    const sc = document.getElementById('three-canvas');
-    const gc = document.getElementById('globe-container');
+    const orb = _orbElement();
+    const gc  = document.getElementById('globe-container');
     document.getElementById('globe-toggle')?.classList.add('active');
     document.body.classList.add('globe-mode');
-    if (sc) { sc.style.transition = 'opacity 350ms ease'; sc.style.opacity = '0'; sc.style.pointerEvents = 'none'; }
-    if (gc) { gc.style.display = 'block'; gc.getBoundingClientRect(); gc.style.opacity = '1'; }
+    if (orb) { orb.style.transition = 'opacity 350ms ease'; orb.style.opacity = '0'; orb.style.pointerEvents = 'none'; }
+    if (gc)  { gc.style.display = 'block'; gc.getBoundingClientRect(); gc.style.opacity = '1'; }
     await _init();
     if (_mapReady) { _map.resize(); _startData(); _startRotation(); }
   }
@@ -345,12 +350,12 @@
   function hideGlobe() {
     if (!_visible) return;
     _visible = false;
-    const sc = document.getElementById('three-canvas');
-    const gc = document.getElementById('globe-container');
+    const orb = _orbElement();
+    const gc  = document.getElementById('globe-container');
     document.getElementById('globe-toggle')?.classList.remove('active');
     document.body.classList.remove('globe-mode');
-    if (sc) { sc.style.transition = 'opacity 400ms ease 150ms'; sc.style.opacity = '1'; sc.style.pointerEvents = ''; }
-    if (gc) { gc.style.opacity = '0'; setTimeout(() => { gc.style.display = 'none'; }, 400); }
+    if (orb) { orb.style.transition = 'opacity 400ms ease 150ms'; orb.style.opacity = '1'; orb.style.pointerEvents = ''; }
+    if (gc)  { gc.style.opacity = '0'; setTimeout(() => { gc.style.display = 'none'; }, 400); }
     _stopRotation();
     _stopData();
   }
