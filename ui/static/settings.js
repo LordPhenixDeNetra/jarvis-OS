@@ -1,5 +1,5 @@
 /* settings.js — Configuration (Réglages) v2
- * 6 sous-pages : Profil · Modèles & API · Audio & voix · Conso · Système · À propos
+ * 5 sous-pages : Profil · Modèles & API · Conso · Système · À propos
  */
 (function () {
   "use strict";
@@ -8,7 +8,6 @@
   const PAGES = [
     { id: "preferences", label: "Préférences" },
     { id: "modeles",     label: "Modèles" },
-    { id: "audio",       label: "Audio" },
     { id: "conso",       label: "Conso" },
     { id: "systeme",     label: "Système" },
     { id: "apropos",     label: "À propos" },
@@ -215,8 +214,9 @@
   /* ───────── 02 Modèles & API ───────── */
   async function renderModeles() {
     const s = await getSettings();
-    const llm = s.llm || {};
-    const keys = s.api_keys || {};
+    const llm   = s.llm   || {};
+    const audio = s.audio || {};
+    const keys  = s.api_keys || {};
 
     const wrap = el("div", { style: { display:"flex", flexDirection:"column", gap:"40px" } });
 
@@ -231,7 +231,32 @@
       { label: "Modèle vocal",     sub: "VOICE_ANTHROPIC_MODEL",  options: CLAUDE,                             val: llm.voice_anthropic_model },
       { label: "Modèle vision",    sub: "VISION_MODEL",           options: VISION,                             val: llm.vision_model },
     ].forEach(m => modelList.appendChild(settingRow(m.label, m.sub, makeSelect(m.options, m.val, m.sub))));
-    wrap.appendChild(ghostSec("Modèles", "LLM · voix · vision", null, modelList));
+    wrap.appendChild(ghostSec("Modèles LLM", "LLM · voix · vision", null, modelList));
+
+    // ── Audio & voix ──
+    const audioList = el("div");
+    [
+      { label: "TTS Provider",     sub: "TTS_PROVIDER",     options: ["piper", "elevenlabs"],                      val: audio.tts_provider },
+      { label: "ElevenLabs model", sub: "ELEVENLABS_MODEL",  options: ["eleven_flash_v2_5", "eleven_turbo_v2_5"],   val: audio.elevenlabs_model },
+      { label: "Whisper model",    sub: "WHISPER_MODEL",     options: ["tiny", "base", "small", "medium", "large"], val: audio.whisper_model },
+    ].forEach(f => audioList.appendChild(settingRow(f.label, f.sub, makeSelect(f.options, f.val, f.sub))));
+
+    let voices = [];
+    try { voices = await J.api.get("/api/settings/voices"); } catch (_) {}
+    if (voices.length) {
+      const vSelect = el("select", { class: "select-mono", style: { minWidth: "200px" } });
+      voices.forEach(v => {
+        const opt = el("option", { value: v.id, text: v.name });
+        if (v.id === audio.elevenlabs_voice_id) opt.selected = true;
+        vSelect.appendChild(opt);
+      });
+      const saveBtn = el("button", { class: "m-btn", text: "Sauv." });
+      saveBtn.addEventListener("click", () => saveSetting("ELEVENLABS_VOICE_ID", vSelect.value, saveBtn));
+      const ctrl = el("div", { style: { display:"flex", gap:"8px", alignItems:"center" } });
+      ctrl.appendChild(vSelect); ctrl.appendChild(saveBtn);
+      audioList.appendChild(settingRow("Voix ElevenLabs", "ELEVENLABS_VOICE_ID", ctrl));
+    }
+    wrap.appendChild(ghostSec("Audio & voix", "TTS · STT · voix", null, audioList));
 
     // Clés API — édition inline, sans popup navigateur
     const keyList = el("div");
@@ -285,42 +310,7 @@
     root.innerHTML = ""; root.appendChild(page);
   }
 
-  /* ───────── 03 Audio & voix ───────── */
-  async function renderAudio() {
-    const s = await getSettings();
-    const audio = s.audio || {};
-
-    const list = el("div");
-    [
-      { label: "TTS Provider",     sub: "TTS_PROVIDER",     options: ["piper", "elevenlabs"],                            val: audio.tts_provider },
-      { label: "ElevenLabs model", sub: "ELEVENLABS_MODEL",  options: ["eleven_flash_v2_5", "eleven_turbo_v2_5"],         val: audio.elevenlabs_model },
-      { label: "Whisper model",    sub: "WHISPER_MODEL",     options: ["tiny", "base", "small", "medium", "large"],       val: audio.whisper_model },
-    ].forEach(f => list.appendChild(settingRow(f.label, f.sub, makeSelect(f.options, f.val, f.sub))));
-
-    // Voix ElevenLabs — liste dynamique depuis l'API
-    let voices = [];
-    try { voices = await J.api.get("/api/settings/voices"); } catch (_) {}
-    if (voices.length) {
-      const vSelect = el("select", { class: "select-mono", style: { minWidth: "200px" } });
-      voices.forEach(v => {
-        const opt = el("option", { value: v.id, text: v.name });
-        if (v.id === audio.elevenlabs_voice_id) opt.selected = true;
-        vSelect.appendChild(opt);
-      });
-      const saveBtn = el("button", { class: "m-btn", text: "Sauv." });
-      saveBtn.addEventListener("click", () => saveSetting("ELEVENLABS_VOICE_ID", vSelect.value, saveBtn));
-      const ctrl = el("div", { style: { display:"flex", gap:"8px", alignItems:"center" } });
-      ctrl.appendChild(vSelect); ctrl.appendChild(saveBtn);
-      list.appendChild(settingRow("Voix ElevenLabs", "ELEVENLABS_VOICE_ID", ctrl));
-    }
-
-    const wrap = el("div");
-    wrap.appendChild(ghostSec("Audio & voix", "TTS · STT · voix", null, list));
-    const page = pageWrapper("audio", "Audio & voix", null, wrap);
-    root.innerHTML = ""; root.appendChild(page);
-  }
-
-  /* ───────── 04 Conso ───────── */
+  /* ───────── 03 Conso ───────── */
   async function renderConso() {
     const C = window.JarvisCharts;
 
@@ -591,7 +581,7 @@
     root.innerHTML = ""; root.appendChild(page);
   }
 
-  /* ───────── 05 Système ───────── */
+  /* ───────── 04 Système ───────── */
   async function renderSysteme() {
     let perf = {};
     try { perf = await J.api.get("/api/system/perf"); } catch (_) {}
@@ -699,7 +689,7 @@
     root.innerHTML = ""; root.appendChild(page);
   }
 
-  /* ───────── 06 À propos ───────── */
+  /* ───────── 05 À propos ───────── */
   async function renderApropos() {
     let health = {};
     try { health = await J.api.get("/api/health"); } catch (_) {}
@@ -733,10 +723,9 @@
   const RENDERERS = {
     preferences: renderPreferences,
     modeles:     renderModeles,
-    audio:   renderAudio,
-    conso:   renderConso,
-    systeme: renderSysteme,
-    apropos: renderApropos,
+    conso:       renderConso,
+    systeme:     renderSysteme,
+    apropos:     renderApropos,
   };
 
   function navigate(pageId) {
