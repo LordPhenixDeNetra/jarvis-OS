@@ -1,0 +1,93 @@
+from __future__ import annotations
+
+from datetime import UTC, datetime
+from pathlib import Path
+
+from fastapi import APIRouter, HTTPException, Request
+from pydantic import BaseModel
+
+router = APIRouter()
+
+
+class _ContentBody(BaseModel):
+    content: str
+
+
+def _mem_dir(request: Request) -> Path:  # noqa: ARG001
+    from config.settings import settings
+    return Path(settings.memory_dir)
+
+
+@router.get("/api/memory/index")
+async def get_memory_index(request: Request) -> dict:
+    p = _mem_dir(request) / "MEMORY.md"
+    return {"content": p.read_text(encoding="utf-8") if p.exists() else ""}
+
+
+@router.put("/api/memory/index")
+async def put_memory_index(body: _ContentBody, request: Request) -> dict:
+    p = _mem_dir(request) / "MEMORY.md"
+    p.write_text(body.content, encoding="utf-8")
+    return {"ok": True}
+
+
+@router.get("/api/memory/topics")
+async def list_memory_topics(request: Request) -> list[dict]:
+    topics_dir = _mem_dir(request) / "topics"
+    if not topics_dir.exists():
+        return []
+    result = []
+    for p in sorted(topics_dir.glob("*.md")):
+        stat = p.stat()
+        mtime = datetime.fromtimestamp(stat.st_mtime, tz=UTC)
+        result.append({
+            "name":  p.name,
+            "size":  stat.st_size,
+            "mtime": mtime.isoformat(),
+        })
+    return result
+
+
+@router.get("/api/memory/topics/{name}")
+async def get_memory_topic(name: str, request: Request) -> dict:
+    if "/" in name or "\\" in name or ".." in name:
+        raise HTTPException(400, "Nom invalide")
+    p = _mem_dir(request) / "topics" / name
+    if not p.exists():
+        raise HTTPException(404, "Fichier introuvable")
+    return {"name": name, "content": p.read_text(encoding="utf-8")}
+
+
+@router.put("/api/memory/topics/{name}")
+async def put_memory_topic(name: str, body: _ContentBody, request: Request) -> dict:
+    if "/" in name or "\\" in name or ".." in name:
+        raise HTTPException(400, "Nom invalide")
+    p = _mem_dir(request) / "topics" / name
+    if not p.exists():
+        raise HTTPException(404, "Fichier introuvable")
+    p.write_text(body.content, encoding="utf-8")
+    return {"ok": True}
+
+
+@router.delete("/api/memory/topics/{name}")
+async def delete_memory_topic(name: str, request: Request) -> dict:
+    if "/" in name or "\\" in name or ".." in name:
+        raise HTTPException(400, "Nom invalide")
+    p = _mem_dir(request) / "topics" / name
+    if not p.exists():
+        raise HTTPException(404, "Fichier introuvable")
+    p.unlink()
+    return {"ok": True}
+
+
+@router.post("/api/memory/autodream")
+async def trigger_autodream(request: Request) -> dict:
+    import asyncio
+    auto_dream = getattr(request.app.state, "auto_dream", None)
+    if not auto_dream:
+        raise HTTPException(503, "AutoDream non disponible")
+    asyncio.create_task(
+        auto_dream._run_micro_safe(user_message="[trigger manuel]", assistant_message=""),
+        name="autodream-manual",
+    )
+    return {"triggered": True}
