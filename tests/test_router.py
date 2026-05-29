@@ -33,13 +33,18 @@ def test_strip_tag(raw: str, expected: str) -> None:
 
 # ── extract_route ─────────────────────────────────────────────
 
-async def _extract(chunks: list[str]) -> tuple[RouteEnum, str]:
+async def _extract(
+    chunks: list[str],
+    pre_route: RouteEnum = RouteEnum.INSTANT,
+) -> tuple[RouteEnum, str]:
     async def _gen() -> RouteEnum:  # type: ignore[valid-type]
         for c in chunks:
             yield c
-    route, stream = await SpeedRouter.extract_route(_gen())
+    route, stream = await SpeedRouter.extract_route(_gen(), pre_route=pre_route)
     return route, "".join([c async for c in stream])
 
+
+# ── cas nominaux (existants) ──────────────────────────────────
 
 async def test_extract_route_instant_single() -> None:
     route, text = await _extract(["[I] Il est 14h23."])
@@ -81,3 +86,73 @@ async def test_extract_route_multi_chunks() -> None:
     route, text = await _extract(["[I] ", "Il est ", "14h."])
     assert route == RouteEnum.INSTANT
     assert text == "Il est 14h."
+
+
+# ── nouveaux cas : préambule avant le tag ─────────────────────
+
+async def test_extract_route_tag_after_short_preamble() -> None:
+    """Tag précédé d'un court préambule dans le même chunk."""
+    route, text = await _extract(["Voici : [CF] Lumière allumée."])
+    assert route == RouteEnum.CONFIRM_FIRE
+    assert "Lumière allumée." in text
+
+
+async def test_extract_route_tag_after_long_preamble_same_chunk() -> None:
+    """Préambule ~40 caractères avant le tag — fenêtre de 80 chars."""
+    preamble = "Bien sûr, je m'en occupe tout de suite. "
+    assert len(preamble) < 80
+    route, text = await _extract([preamble + "[CF] Lumière allumée."])
+    assert route == RouteEnum.CONFIRM_FIRE
+    assert "Lumière allumée." in text
+
+
+async def test_extract_route_tag_in_second_chunk_after_preamble() -> None:
+    """Préambule dans le premier chunk, tag en début du second."""
+    route, text = await _extract(["Bien sûr, voici : ", "[CF] Lumière allumée."])
+    assert route == RouteEnum.CONFIRM_FIRE
+    assert "Lumière allumée." in text
+
+
+async def test_extract_route_bg_project_after_preamble() -> None:
+    """Tag BG:PROJECT détecté après préambule (priorité sur BG simple)."""
+    route, text = await _extract(["Lancement : [BG:PROJECT] Projet démarré."])
+    assert route == RouteEnum.PROJECT
+    assert "Projet démarré." in text
+
+
+# ── nouveaux cas : fallback pre_route CF ─────────────────────
+
+async def test_extract_route_no_tag_cf_fallback() -> None:
+    """Absence de tag + pre_route=CF → route CF conservée, texte intact."""
+    route, text = await _extract(
+        ["Lumière allumée maintenant."],
+        pre_route=RouteEnum.CONFIRM_FIRE,
+    )
+    assert route == RouteEnum.CONFIRM_FIRE
+    assert text == "Lumière allumée maintenant."
+
+
+async def test_extract_route_no_tag_instant_default() -> None:
+    """Absence de tag + pre_route=INSTANT (défaut) → route INSTANT."""
+    route, text = await _extract(["Bonjour, comment puis-je vous aider ?"])
+    assert route == RouteEnum.INSTANT
+    assert "Bonjour" in text
+
+
+async def test_extract_route_explicit_tag_overrides_pre_route() -> None:
+    """Tag explicite [I] prévaut même si pre_route=CF."""
+    route, text = await _extract(
+        ["[I] Simple réponse."],
+        pre_route=RouteEnum.CONFIRM_FIRE,
+    )
+    assert route == RouteEnum.INSTANT
+    assert text == "Simple réponse."
+
+
+async def test_extract_route_no_tag_bg_pre_route_falls_to_instant() -> None:
+    """pre_route=BG sans tag → INSTANT (le fallback ne s'active que pour CF)."""
+    route, _ = await _extract(
+        ["Réponse sans tag."],
+        pre_route=RouteEnum.BACKGROUND,
+    )
+    assert route == RouteEnum.INSTANT

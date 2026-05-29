@@ -17,6 +17,9 @@ class RouteEnum(StrEnum):
 # BG:PROJECT doit être testé AVANT BG pour éviter le match partiel.
 _TAG_RE = re.compile(r"^\[(I|CF|BG:PROJECT|BG)\]\s?")
 
+# Variante sans ancre — cherche le tag n'importe où dans la fenêtre de buffer.
+_TAG_SEARCH_RE = re.compile(r"\[(I|CF|BG:PROJECT|BG)\]\s?")
+
 # Filtre les tags routing inconnus courts (ex: [C], [A], [X]…)
 # Ne pas matcher [MINDMAP], [/MINDMAP] ou tout tag > 3 lettres
 _ANY_TAG_RE = re.compile(r"^\[[A-Z]{1,3}(?::[A-Z]+)?\]\s?")
@@ -47,18 +50,25 @@ class SpeedRouter:
     @staticmethod
     async def extract_route(
         stream: AsyncIterator[str],
+        pre_route: RouteEnum = RouteEnum.INSTANT,
     ) -> tuple[RouteEnum, AsyncIterator[str]]:
         """Lit le tag du début du stream et retourne (route, stream nettoyé).
 
-        Bufferise les premiers chunks jusqu'à voir ']' ou 20 caractères,
-        détecte le tag, puis relâche le reste proprement.
+        Bufferise jusqu'à voir ']', la première fin de ligne, ou ~80 caractères.
+        Cherche d'abord le tag en début de buffer (comportement nominal), puis
+        dans l'ensemble de la fenêtre si un préambule précède le tag.
+
+        Si aucun tag n'est trouvé et que pre_route vaut CONFIRM_FIRE, le route
+        CF est conservé (avec warning) plutôt que de tomber silencieusement en
+        INSTANT — ce qui désactiverait les actions domotiques.
         """
         buffer = ""
         async for chunk in stream:
             buffer += chunk
-            if "]" in buffer or len(buffer) >= 20:
+            if "]" in buffer or "\n" in buffer or len(buffer) >= 80:
                 break
 
+        # Essai 1 : tag strictement en début de buffer (cas nominal).
         match = _TAG_RE.match(buffer)
         if match:
             tag = match.group(1)
@@ -66,18 +76,38 @@ class SpeedRouter:
                 route = RouteEnum(tag)
             except ValueError:
                 route = RouteEnum.INSTANT
+            prefix = ""
             stripped = _TAG_RE.sub("", buffer)
             tag_consumed_all = not stripped
         else:
-            route = RouteEnum.INSTANT
-            # Strip any unrecognized [TAG] the model might have invented
-            stripped = _ANY_TAG_RE.sub("", buffer)
-            tag_consumed_all = not stripped
+            # Essai 2 : tag dans la fenêtre après un éventuel préambule.
+            search = _TAG_SEARCH_RE.search(buffer)
+            if search:
+                tag = search.group(1)
+                try:
+                    route = RouteEnum(tag)
+                except ValueError:
+                    route = RouteEnum.INSTANT
+                prefix   = buffer[:search.start()]
+                stripped = buffer[search.end():]
+                tag_consumed_all = not stripped
+            else:
+                # Aucun tag — fallback sur pre_route si CF, sinon INSTANT.
+                if pre_route is RouteEnum.CONFIRM_FIRE:
+                    logger.warning("SpeedRouter: tag absent — fallback sur pre_route CF")
+                    route = RouteEnum.CONFIRM_FIRE
+                else:
+                    route = RouteEnum.INSTANT
+                prefix = ""
+                stripped = _ANY_TAG_RE.sub("", buffer)
+                tag_consumed_all = not stripped
 
         logger.debug("SpeedRouter", route=route.value)
 
         async def _tail() -> AsyncIterator[str]:
-            lstrip_next = tag_consumed_all
+            if prefix:
+                yield prefix
+            lstrip_next = tag_consumed_all and not prefix
             if stripped:
                 yield stripped
             async for chunk in stream:
