@@ -273,6 +273,28 @@ class Settings(BaseSettings):
         description="Code d'accès BambuLab — 8 chiffres dans Bambu Studio → Settings → Printer.",
     )
 
+    # ── Budget & coût ─────────────────────────────────────────
+    budget_enabled: bool = Field(
+        default=False,
+        description="Active le contrôle de budget (hard-stop + alertes). Désactivé par défaut.",
+    )
+    budget_monthly_usd: float = Field(
+        default=10.0,
+        description="Plafond mensuel global en USD (toutes dépenses LLM/API confondues).",
+    )
+    budget_per_project_usd: float = Field(
+        default=2.0,
+        description="Plafond par run de projet agent en USD.",
+    )
+    budget_warn_pct: float = Field(
+        default=80.0,
+        description="Seuil d'alerte budget (% du plafond). Déclenche une notification.",
+    )
+    max_concurrent_workers: int = Field(
+        default=3,
+        description="Nombre maximal de workers agentiques simultanés.",
+    )
+
     # ── Fusion 360 MCP ────────────────────────────────────────
     fusion_enabled: bool = Field(
         default=False,

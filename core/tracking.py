@@ -1,9 +1,9 @@
 from __future__ import annotations
 
+import json
 from dataclasses import dataclass
 from datetime import date, timedelta
 from pathlib import Path
-import json
 
 
 @dataclass
@@ -84,6 +84,17 @@ class UsageTracker:
         log_file = self.CONSO_DIR / f"{today}.jsonl"
         with log_file.open("a") as f:
             f.write(json.dumps(entry.__dict__) + "\n")
+
+        # Branche les coûts mission vers BudgetGuard (import tardif pour éviter la circularité)
+        if entry.cost_usd > 0 and entry.context and entry.context.startswith("mission:"):
+            try:
+                from core.budget import get_budget_guard
+                guard = get_budget_guard()
+                if guard is not None:
+                    project_id = entry.context.split(":", 1)[1]
+                    guard.record(f"project:{project_id}", entry.cost_usd)
+            except Exception:
+                pass  # le tracking ne doit jamais lever d'exception
 
     def _read_day(self, d: date) -> list[dict]:
         log_file = self.CONSO_DIR / f"{d.isoformat()}.jsonl"
