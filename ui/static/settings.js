@@ -63,7 +63,7 @@
     return row;
   }
 
-  function makeSelect(options, current, key) {
+  function makeSelect(options, current, key, onchange) {
     let selected = options.includes(current) ? current : (options[0] || "");
 
     const wrap = el("div", { class: "csel-wrap" });
@@ -82,6 +82,7 @@
         lbl.textContent = o;
         dropdown.querySelectorAll(".csel-item").forEach(it => it.classList.toggle("active", it.textContent === o));
         close();
+        if (onchange) onchange(o);
       });
       dropdown.appendChild(item);
     });
@@ -305,10 +306,7 @@
     })();
   }
 
-  async function makeOllamaSection(llm) {
-    let data = { available: false, models: [] };
-    try { data = await J.api.get("/api/ollama/models"); } catch (_) {}
-
+  function _buildOllamaContent(data, llm) {
     const content = el("div");
 
     if (!data.available) {
@@ -366,7 +364,7 @@
         text: "Tous les modèles recommandés sont présents." }));
     }
 
-    return ghostSec("Modèles locaux", "Ollama · function calling hors-ligne", null, content);
+    return content;
   }
 
   /* ───────── 02 Modèles & API ───────── */
@@ -378,19 +376,60 @@
 
     const wrap = el("div", { style: { display:"flex", flexDirection:"column", gap:"40px" } });
 
-    const CLAUDE = ["claude-opus-4-7", "claude-sonnet-4-6", "claude-haiku-4-5-20251001"];
+    const MODELS_BY_BACKEND = {
+      anthropic: ["claude-opus-4-7", "claude-sonnet-4-6", "claude-haiku-4-5-20251001"],
+      mistral:   ["mistral-large-latest", "mistral-small-latest", "open-mistral-7b"],
+      openai:    ["gpt-4o", "gpt-4o-mini", "gpt-4-turbo"],
+    };
+    const CLAUDE = MODELS_BY_BACKEND.anthropic;
     const VISION = ["gpt-4o", "gpt-4o-mini", "claude-sonnet-4-6", "claude-haiku-4-5-20251001"];
 
-    const modelList = el("div");
-    [
-      { label: "LLM provider",     sub: "LLM_PROVIDER",          options: ["api", "local"],                   val: llm.llm_provider },
-      { label: "Backend API",      sub: "API_BACKEND",            options: ["anthropic", "mistral", "openai"], val: llm.api_backend },
-      { label: "Modèle principal", sub: "ANTHROPIC_MODEL",        options: CLAUDE,                             val: llm.anthropic_model },
-      { label: "Modèle vocal",     sub: "VOICE_ANTHROPIC_MODEL",  options: CLAUDE,                             val: llm.voice_anthropic_model },
-      { label: "Modèle vision",    sub: "VISION_MODEL",           options: VISION,                             val: llm.vision_model },
-    ].forEach(m => modelList.appendChild(settingRow(m.label, m.sub, makeSelect(m.options, m.val, m.sub))));
-    wrap.appendChild(ghostSec("Modèles LLM", "LLM · voix · vision", null, modelList));
-    wrap.appendChild(await makeOllamaSection(llm));
+    // Fetch Ollama data une fois pour toute la section
+    let ollamaData = { available: false, models: [] };
+    try { ollamaData = await J.api.get("/api/ollama/models"); } catch (_) {}
+
+    let liveProvider = llm.llm_provider || "api";
+    let liveBackend  = llm.api_backend  || "anthropic";
+
+    function buildApiContent() {
+      const d = el("div");
+      const modelDiv = el("div");
+      function refreshModelRow(backend) {
+        const models = MODELS_BY_BACKEND[backend] || CLAUDE;
+        modelDiv.innerHTML = "";
+        modelDiv.appendChild(settingRow("Modèle", "ANTHROPIC_MODEL",
+          makeSelect(models, llm.anthropic_model, "ANTHROPIC_MODEL")));
+      }
+      d.appendChild(settingRow("Backend", "API_BACKEND",
+        makeSelect(["anthropic", "mistral", "openai"], liveBackend, "API_BACKEND",
+          v => { liveBackend = v; refreshModelRow(v); })));
+      refreshModelRow(liveBackend);
+      d.appendChild(modelDiv);
+      d.appendChild(settingRow("Vocal", "VOICE_ANTHROPIC_MODEL",
+        makeSelect(CLAUDE, llm.voice_anthropic_model, "VOICE_ANTHROPIC_MODEL")));
+      return d;
+    }
+
+    const llmBody = el("div");
+    const subDiv  = el("div", { class: "llm-sub" });
+    function refreshSub(provider) {
+      subDiv.innerHTML = "";
+      subDiv.appendChild(provider === "local"
+        ? _buildOllamaContent(ollamaData, llm)
+        : buildApiContent());
+    }
+    llmBody.appendChild(settingRow("Provider", "LLM_PROVIDER",
+      makeSelect(["api", "local"], liveProvider, "LLM_PROVIDER",
+        v => { liveProvider = v; refreshSub(v); })));
+    llmBody.appendChild(subDiv);
+    refreshSub(liveProvider);
+    wrap.appendChild(ghostSec("Modèle LLM", "provider · backend · modèles", null, llmBody));
+
+    // Vision toujours présent — utilise les APIs cloud quel que soit le provider
+    const visionList = el("div");
+    visionList.appendChild(settingRow("Modèle vision", "VISION_MODEL",
+      makeSelect(VISION, llm.vision_model, "VISION_MODEL")));
+    wrap.appendChild(ghostSec("Vision", "modèle vision · toujours API", null, visionList));
 
     // ── Audio & voix ──
     const audioList = el("div");
