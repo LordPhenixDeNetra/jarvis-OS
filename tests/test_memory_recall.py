@@ -120,10 +120,22 @@ class TestTranscriptToText:
 # ── 3. CrossSessionRecall ────────────────────────────────────────────────────
 
 
+@pytest.fixture(autouse=False)
+def _force_api_mode():
+    """Force le mode 'api' pour les tests CrossSessionRecall qui vérifient l'appel LLM."""
+    from config.settings import settings
+
+    old = settings.llm_provider
+    object.__setattr__(settings, "llm_provider", "api")
+    yield
+    object.__setattr__(settings, "llm_provider", old)
+
+
 class TestCrossSessionRecall:
     """CrossSessionRecall combine FTS + vecteur et résume via LLM."""
 
     @pytest.mark.asyncio
+    @pytest.mark.usefixtures("_force_api_mode")
     async def test_recall_retourne_resume(self, tmp_path: Path) -> None:
         from memory.consolidation import CrossSessionRecall
 
@@ -172,6 +184,7 @@ class TestCrossSessionRecall:
         assert result is None
 
     @pytest.mark.asyncio
+    @pytest.mark.usefixtures("_force_api_mode")
     async def test_recall_resilient_si_llm_plante(self, tmp_path: Path) -> None:
         from memory.consolidation import CrossSessionRecall
 
@@ -189,6 +202,7 @@ class TestCrossSessionRecall:
         assert result is None  # Pas de propagation d'exception
 
     @pytest.mark.asyncio
+    @pytest.mark.usefixtures("_force_api_mode")
     async def test_recall_deduplique_par_doc_id(self, tmp_path: Path) -> None:
         from memory.consolidation import CrossSessionRecall
 
