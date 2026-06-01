@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from fastapi import APIRouter, HTTPException, Request
+from fastapi import APIRouter, HTTPException, Query, Request
 from pydantic import BaseModel
 
 router = APIRouter()
@@ -10,6 +10,10 @@ router = APIRouter()
 
 class RectifyBody(BaseModel):
     correction: str
+
+
+class ConfirmBody(BaseModel):
+    draft_content: str | None = None
 
 
 # ── Initiatives API ───────────────────────────────────────────────────────────
@@ -143,6 +147,70 @@ async def rectify_initiative(initiative_id: str, body: RectifyBody) -> dict:
         "mission_description": new_init.mission_description,
         "created_at": init.created_at.isoformat(),
     }
+
+
+# ── Proactive initiatives v2 (executor) ──────────────────────────────────────
+
+
+@router.get("/api/proactive/initiatives")
+async def list_proactive_initiatives(
+    days: int = Query(default=7, ge=1, le=30),
+    status: str | None = Query(default=None),
+) -> list[dict]:
+    """Liste les initiatives récentes (multi-jours). status=pending|done|dismissed|… ou absent=tous."""
+    from proactive.store import InitiativeStore
+
+    store = InitiativeStore()
+    statuses = [s.strip() for s in status.split(",") if s.strip()] if status else None
+    items = store.list_recent(days=days, statuses=statuses)
+    return [
+        {
+            "id": i.id,
+            "type": i.type,
+            "title": i.title,
+            "context": i.context,
+            "reasoning": i.reasoning,
+            "action": i.action,
+            "priority": i.priority,
+            "execution_mode": i.execution_mode,
+            "draft_content": i.draft_content,
+            "mission_description": i.mission_description,
+            "status": i.status,
+            "created_at": i.created_at.isoformat(),
+        }
+        for i in items
+    ]
+
+
+@router.post("/api/proactive/initiatives/{initiative_id}/run")
+async def run_initiative(initiative_id: str, request: Request) -> dict:
+    """Déclenche l'exécution pilotée d'une initiative (étape 1/2 pour les actions sensibles)."""
+    executor = getattr(request.app.state, "initiative_executor", None)
+    if not executor:
+        raise HTTPException(503, "InitiativeExecutor non disponible")
+    return await executor.run(initiative_id)
+
+
+@router.post("/api/proactive/initiatives/{initiative_id}/confirm")
+async def confirm_initiative(initiative_id: str, body: ConfirmBody, request: Request) -> dict:
+    """2e confirmation pour les actions sensibles (envoi mail après brouillon prêt)."""
+    executor = getattr(request.app.state, "initiative_executor", None)
+    if not executor:
+        raise HTTPException(503, "InitiativeExecutor non disponible")
+    return await executor.confirm(initiative_id, body.draft_content)
+
+
+@router.post("/api/proactive/initiatives/{initiative_id}/dismiss")
+async def dismiss_initiative(initiative_id: str) -> dict:
+    """Marque l'initiative comme ignorée (dismissed)."""
+    from proactive.store import InitiativeStore
+
+    store = InitiativeStore()
+    init = store.get_by_id(initiative_id)
+    if not init:
+        raise HTTPException(404, "Initiative introuvable")
+    store.update_status(initiative_id, "dismissed")
+    return {"status": "dismissed"}
 
 
 # ── Proactive engine API ──────────────────────────────────────────────────────
