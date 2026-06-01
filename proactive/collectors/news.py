@@ -2,6 +2,7 @@
 NewsCollector — agrège les actualités pertinentes via RSS.
 Sources : tech française et internationale, maker, IA, business.
 """
+
 from __future__ import annotations
 
 import asyncio
@@ -11,7 +12,6 @@ import feedparser
 
 from proactive.collectors.base import CollectorBase
 from proactive.schemas import ContextItem, ItemType, Priority
-
 
 RSS_FEEDS = [
     {"url": "https://www.frandroid.com/feed", "category": "tech_fr"},
@@ -24,10 +24,28 @@ RSS_FEEDS = [
 ]
 
 RELEVANT_KEYWORDS = [
-    "esp32", "raspberry pi", "arduino", "pcb", "cnc", "nfc", "iot",
-    "llm", "gpt", "claude", "mistral", "openai", "ia", "ai",
-    "maker", "embedded", "firmware", "electronics",
-    "startup", "levée de fonds", "youtube", "créateur"
+    "esp32",
+    "raspberry pi",
+    "arduino",
+    "pcb",
+    "cnc",
+    "nfc",
+    "iot",
+    "llm",
+    "gpt",
+    "claude",
+    "mistral",
+    "openai",
+    "ia",
+    "ai",
+    "maker",
+    "embedded",
+    "firmware",
+    "electronics",
+    "startup",
+    "levée de fonds",
+    "youtube",
+    "créateur",
 ]
 
 
@@ -36,10 +54,7 @@ class NewsCollector(CollectorBase):
 
     async def _collect(self) -> list[ContextItem]:
         loop = asyncio.get_event_loop()
-        tasks = [
-            loop.run_in_executor(None, self._fetch_feed, feed)
-            for feed in RSS_FEEDS
-        ]
+        tasks = [loop.run_in_executor(None, self._fetch_feed, feed) for feed in RSS_FEEDS]
         results = await asyncio.gather(*tasks, return_exceptions=True)
 
         items = []
@@ -65,16 +80,18 @@ class NewsCollector(CollectorBase):
                 if not is_relevant:
                     continue
 
-                items.append(ContextItem(
-                    type=ItemType.NEWS,
-                    title=title,
-                    summary=summary,
-                    raw=f"{title}\n{summary}",
-                    source=feed_config["category"],
-                    timestamp=datetime.now(),
-                    priority=Priority.LOW,
-                    metadata={"url": entry.get("link", "")}
-                ))
+                items.append(
+                    ContextItem(
+                        type=ItemType.NEWS,
+                        title=title,
+                        summary=summary,
+                        raw=f"{title}\n{summary}",
+                        source=feed_config["category"],
+                        timestamp=datetime.now(),
+                        priority=Priority.LOW,
+                        metadata={"url": entry.get("link", "")},
+                    )
+                )
 
             return items
         except Exception:

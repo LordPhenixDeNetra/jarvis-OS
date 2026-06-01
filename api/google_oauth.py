@@ -1,9 +1,9 @@
 """Google OAuth2 web flow — Gmail + Calendar."""
+
 from __future__ import annotations
 
 import base64
 import hashlib
-import json
 import os
 import secrets
 from pathlib import Path
@@ -63,9 +63,11 @@ async def google_auth(service: str, request: Request) -> RedirectResponse:
 
         state = secrets.token_urlsafe(16)
         code_verifier = base64.urlsafe_b64encode(os.urandom(32)).decode().rstrip("=")
-        code_challenge = base64.urlsafe_b64encode(
-            hashlib.sha256(code_verifier.encode()).digest()
-        ).decode().rstrip("=")
+        code_challenge = (
+            base64.urlsafe_b64encode(hashlib.sha256(code_verifier.encode()).digest())
+            .decode()
+            .rstrip("=")
+        )
 
         auth_url, _ = flow.authorization_url(
             access_type="offline",
@@ -75,7 +77,11 @@ async def google_auth(service: str, request: Request) -> RedirectResponse:
             code_challenge_method="S256",
         )
 
-        _pending[state] = {"service": service, "redirect_uri": redirect_uri, "code_verifier": code_verifier}
+        _pending[state] = {
+            "service": service,
+            "redirect_uri": redirect_uri,
+            "code_verifier": code_verifier,
+        }
         return RedirectResponse(auth_url)
 
     except ImportError:
@@ -88,7 +94,8 @@ async def google_auth(service: str, request: Request) -> RedirectResponse:
 
 @router.get("/callback/{service}")
 async def google_callback(
-    service: str, request: Request,
+    service: str,
+    request: Request,
     code: str | None = None,
     state: str | None = None,
     error: str | None = None,
@@ -108,9 +115,7 @@ async def google_callback(
         creds_path = _credentials_path()
         scopes = _SCOPES_GMAIL if service == "gmail" else _SCOPES_CALENDAR
 
-        flow = Flow.from_client_secrets_file(
-            str(creds_path), scopes=scopes, state=state
-        )
+        flow = Flow.from_client_secrets_file(str(creds_path), scopes=scopes, state=state)
         flow.redirect_uri = pending["redirect_uri"]
         flow.fetch_token(code=code, code_verifier=pending["code_verifier"])
 

@@ -2,6 +2,7 @@
 CalendarCollector — récupère les événements des prochaines 48h.
 Réutilise le tool calendar existant.
 """
+
 from __future__ import annotations
 
 from datetime import datetime
@@ -39,14 +40,16 @@ class CalendarCollector(CollectorBase):
             if "aujourd'hui" in line.lower() or "dans" in line.lower():
                 priority = Priority.HIGH
 
-            items.append(ContextItem(
-                type=ItemType.EVENT,
-                title=line.strip(),
-                summary=line.strip(),
-                raw=line.strip(),
-                source="google_calendar",
-                timestamp=now,
-                priority=priority
-            ))
+            items.append(
+                ContextItem(
+                    type=ItemType.EVENT,
+                    title=line.strip(),
+                    summary=line.strip(),
+                    raw=line.strip(),
+                    source="google_calendar",
+                    timestamp=now,
+                    priority=priority,
+                )
+            )
 
         return items

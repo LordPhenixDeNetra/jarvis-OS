@@ -19,6 +19,7 @@ _NOTION_BASE = "https://api.notion.com/v1"
 
 # ── Models ────────────────────────────────────────────────────
 
+
 class Task(BaseModel):
     id: str
     text: str
@@ -58,6 +59,7 @@ def _notion_headers() -> dict:
 
 # ── Notion tasks ──────────────────────────────────────────────
 
+
 @router.get("/tasks", response_model=TasksResponse)
 async def get_tasks() -> TasksResponse:
     token = settings.notion_token
@@ -85,8 +87,7 @@ async def get_tasks() -> TasksResponse:
 
         if btype.startswith("heading_"):
             text = "".join(
-                rt.get("plain_text", "")
-                for rt in block.get(btype, {}).get("rich_text", [])
+                rt.get("plain_text", "") for rt in block.get(btype, {}).get("rich_text", [])
             )
             if "Tâches du jour" in text or "tâches du jour" in text.lower():
                 in_section = True
@@ -96,21 +97,24 @@ async def get_tasks() -> TasksResponse:
 
         if in_section and btype == "to_do":
             todo = block.get("to_do", {})
-            text = "".join(
-                rt.get("plain_text", "") for rt in todo.get("rich_text", [])
-            ).strip()
+            text = "".join(rt.get("plain_text", "") for rt in todo.get("rich_text", [])).strip()
             if text:
-                tasks.append(Task(
-                    id=block["id"],
-                    text=text,
-                    done=bool(todo.get("checked", False)),
-                ))
+                tasks.append(
+                    Task(
+                        id=block["id"],
+                        text=text,
+                        done=bool(todo.get("checked", False)),
+                    )
+                )
 
     return TasksResponse(tasks=tasks)
 
 
 async def _find_section_anchor(client: httpx.AsyncClient, page_id: str) -> str | None:
-    """Return the ID of the last to_do block in 'Tâches du jour', or the heading ID if no to_do exists yet."""
+    """Return the ID of the last to_do block in 'Tâches du jour'.
+
+    Falls back to the heading ID if no to_do exists yet.
+    """
     resp = await client.get(
         f"{_NOTION_BASE}/blocks/{page_id}/children",
         headers=_notion_headers(),
@@ -126,8 +130,7 @@ async def _find_section_anchor(client: httpx.AsyncClient, page_id: str) -> str |
         btype = block.get("type", "")
         if btype.startswith("heading_"):
             heading_text = "".join(
-                rt.get("plain_text", "")
-                for rt in block.get(btype, {}).get("rich_text", [])
+                rt.get("plain_text", "") for rt in block.get(btype, {}).get("rich_text", [])
             )
             if "Tâches du jour" in heading_text or "tâches du jour" in heading_text.lower():
                 in_section = True
@@ -147,6 +150,7 @@ async def create_task(body: TaskCreate) -> Task:
     page_id = settings.notion_page_id
     if not token or not page_id:
         from fastapi import HTTPException
+
         raise HTTPException(status_code=503, detail="Notion non configuré")
 
     new_block = {
@@ -179,6 +183,7 @@ async def update_task(block_id: str, body: TaskPatch) -> Task:
     token = settings.notion_token
     if not token:
         from fastapi import HTTPException
+
         raise HTTPException(status_code=503, detail="Notion non configuré")
 
     update: dict = {"to_do": {}}
@@ -206,6 +211,7 @@ async def delete_task(block_id: str) -> dict:
     token = settings.notion_token
     if not token:
         from fastapi import HTTPException
+
         raise HTTPException(status_code=503, detail="Notion non configuré")
 
     async with httpx.AsyncClient(timeout=10.0) as client:

@@ -1,24 +1,23 @@
 """
 InitiativeGenerator — analyse l'état du monde et génère des initiatives.
 """
+
 from __future__ import annotations
 
 import json
 import re
 import uuid
-from datetime import datetime
+
+from loguru import logger
 
 from config.settings import settings
 from llm.api import AnthropicProvider
-from llm.factory import get_llm_provider
 from llm.local import OllamaProvider
 from proactive.context_builder import WorldState
 from proactive.schemas import ExecutionMode, Initiative, InitiativeType, Priority
-from loguru import logger
-
 
 MAX_INITIATIVES = 5
-MAX_HIGH        = 3
+MAX_HIGH = 3
 _PRIORITY_ORDER = {"high": 0, "medium": 1, "low": 2}
 
 
@@ -94,7 +93,7 @@ def _salvage_json(s: str) -> str | None:
         elif ch == "}":
             depth -= 1
             if depth == 0 and obj_start is not None:
-                items.append(s[obj_start: i + 1])
+                items.append(s[obj_start : i + 1])
                 obj_start = None
 
     if not items:
@@ -120,9 +119,11 @@ def _apply_caps(items: list) -> list:
 
 INITIATIVE_SYSTEM_PROMPT = """
 Tu es le moteur d'analyse proactif de Jarvis, assistant personnel de Barth.
-Barth : entrepreneur tech (SASU), YouTuber hardware, projets iPod DAP / Alfred / Chi//mp / Jarvis, Lyon.
+Barth : entrepreneur tech (SASU), YouTuber hardware,
+projets iPod DAP / Alfred / Chi//mp / Jarvis, Lyon.
 
-Génère 5 initiatives MAX (2 HIGH max). Chaque champ est limité en longueur — RESPECTE ces limites absolues.
+Génère 5 initiatives MAX (2 HIGH max).
+Chaque champ est limité en longueur — RESPECTE ces limites absolues.
 
 TYPES : draft_response | reminder | suggestion | alert | auto_task | info
 MODES : auto | notify | validate
@@ -186,7 +187,8 @@ Réponds UNIQUEMENT en JSON valide, sans markdown, sans explication :
 """
 
 DRAFT_SYSTEM_PROMPT = """
-Tu es Jarvis, assistant de Barth. Rédige un brouillon d'email professionnel, direct, 3 phrases max (50 mots max).
+Tu es Jarvis, assistant de Barth. Rédige un brouillon d'email professionnel,
+direct, 3 phrases max (50 mots max).
 Réponds UNIQUEMENT avec le corps du message, sans salutation formelle inutile, en français.
 """
 
@@ -205,7 +207,6 @@ Corps
 
 
 class InitiativeGenerator:
-
     def __init__(self) -> None:
         if settings.llm_provider == "local":
             self._llm = OllamaProvider()
@@ -248,10 +249,10 @@ class InitiativeGenerator:
 
         return initiatives
 
-    async def _generate_draft(self, init: "Initiative") -> str | None:
+    async def _generate_draft(self, init: Initiative) -> str | None:
         """Génère le brouillon email pour une initiative draft_response."""
         to_email = getattr(init, "_to_email", None) or ""
-        subject  = getattr(init, "_email_subject", None) or ""
+        subject = getattr(init, "_email_subject", None) or ""
         thread_id = getattr(init, "_thread_id", None) or ""
 
         prompt = (
@@ -370,9 +371,9 @@ class InitiativeGenerator:
                         mission_description=(item.get("mission_description") or None),
                     )
                     # Stocker les champs email pour la génération du brouillon
-                    init._to_email      = item.get("to_email") or ""      # type: ignore[attr-defined]
+                    init._to_email = item.get("to_email") or ""  # type: ignore[attr-defined]
                     init._email_subject = item.get("email_subject") or ""  # type: ignore[attr-defined]
-                    init._thread_id     = item.get("thread_id") or ""      # type: ignore[attr-defined]
+                    init._thread_id = item.get("thread_id") or ""  # type: ignore[attr-defined]
                     initiatives.append(init)
                 except (ValueError, KeyError) as e:
                     logger.warning(f"Skipping malformed initiative: {e}")
@@ -390,7 +391,10 @@ class InitiativeGenerator:
             capped = _apply_caps(unique)
 
             logger.info(
-                f"InitiativeGenerator: {len(initiatives)} → {len(unique)} (dédup) → {len(capped)} (caps)"
+                "InitiativeGenerator: %d → %d (dédup) → %d (caps)",
+                len(initiatives),
+                len(unique),
+                len(capped),
             )
             return capped
 

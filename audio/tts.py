@@ -28,7 +28,9 @@ class TTSEngine:
 
     async def _synthesize_elevenlabs(self, text: str) -> bytes:
         """ElevenLabs streaming TTS — modèle turbo, latence ~300ms."""
-        voice_id = settings.quebec_voice_id if settings.quebec_mode else settings.elevenlabs_voice_id
+        voice_id = (
+            settings.quebec_voice_id if settings.quebec_mode else settings.elevenlabs_voice_id
+        )
         url = f"https://api.elevenlabs.io/v1/text-to-speech/{voice_id}/stream"
         headers = {
             "xi-api-key": settings.elevenlabs_api_key,
@@ -49,16 +51,22 @@ class TTSEngine:
             async with httpx.AsyncClient(timeout=10.0) as client:
                 response = await client.post(url, json=payload, headers=headers)
                 if response.status_code == 200:
-                    logger.debug(f"ElevenLabs TTS done — {len(text)} chars, {len(response.content)} bytes")
-                    cost = calculate_cost("elevenlabs", settings.elevenlabs_model, characters=len(text))
-                    tracker.track(UsageEntry(
-                        timestamp=datetime.now().isoformat(),
-                        provider="elevenlabs",
-                        model=settings.elevenlabs_model,
-                        characters=len(text),
-                        cost_usd=cost,
-                        context="conversation",
-                    ))
+                    logger.debug(
+                        f"ElevenLabs TTS done — {len(text)} chars, {len(response.content)} bytes"
+                    )
+                    cost = calculate_cost(
+                        "elevenlabs", settings.elevenlabs_model, characters=len(text)
+                    )
+                    tracker.track(
+                        UsageEntry(
+                            timestamp=datetime.now().isoformat(),
+                            provider="elevenlabs",
+                            model=settings.elevenlabs_model,
+                            characters=len(text),
+                            cost_usd=cost,
+                            context="conversation",
+                        )
+                    )
                     return response.content
                 logger.error(f"ElevenLabs error {response.status_code} — {response.text[:300]}")
         except Exception as e:

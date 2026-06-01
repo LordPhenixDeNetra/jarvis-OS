@@ -8,10 +8,10 @@ from loguru import logger
 
 
 class RouteEnum(StrEnum):
-    INSTANT      = "I"
+    INSTANT = "I"
     CONFIRM_FIRE = "CF"
-    BACKGROUND   = "BG"
-    PROJECT      = "BG:PROJECT"
+    BACKGROUND = "BG"
+    PROJECT = "BG:PROJECT"
 
 
 # BG:PROJECT doit être testé AVANT BG pour éviter le match partiel.
@@ -88,8 +88,8 @@ class SpeedRouter:
                     route = RouteEnum(tag)
                 except ValueError:
                     route = RouteEnum.INSTANT
-                prefix   = buffer[:search.start()]
-                stripped = buffer[search.end():]
+                prefix = buffer[: search.start()]
+                stripped = buffer[search.end() :]
                 tag_consumed_all = not stripped
             else:
                 # Aucun tag — fallback sur pre_route si CF, sinon INSTANT.

@@ -1,8 +1,10 @@
 """Exécuteur de presets Jarvis — gère l'exécution step par step."""
+
 from __future__ import annotations
 
 import asyncio
 import platform
+
 from loguru import logger
 
 from skills.base import PresetSkill, PresetStep
@@ -14,23 +16,25 @@ class PresetExecutor:
     Types supportés : cli, spotify, tts, ai, wait, notify
     """
 
-    def __init__(self, tool_registry=None, tts_engine=None, llm_client=None):
+    def __init__(
+        self, tool_registry: object = None, tts_engine: object = None, llm_client: object = None
+    ) -> None:
         self._tools = tool_registry
         self._tts = tts_engine
         self._llm = llm_client
 
-    async def execute(self, preset: PresetSkill, broadcast_fn=None) -> dict:
+    async def execute(self, preset: PresetSkill, broadcast_fn: object = None) -> dict:
         """
         Exécute tous les steps d'un preset.
         broadcast_fn : coroutine async(dict) pour envoyer des events WebSocket.
         """
         from skills.app_checker import check_all_apps
+
         requires_apps = preset.metadata.get("requires_apps", [])
         if requires_apps:
             apps_status = check_all_apps(requires_apps)
             missing_required = [
-                a["name"] for a in apps_status["apps"]
-                if not a["installed"] and a["required"]
+                a["name"] for a in apps_status["apps"] if not a["installed"] and a["required"]
             ]
             if missing_required:
                 missing_str = ", ".join(missing_required)
@@ -56,22 +60,26 @@ class PresetExecutor:
         logger.info(f"Preset '{preset.name}' — démarrage ({len(steps)} steps)")
 
         if broadcast_fn:
-            await broadcast_fn({
-                "type": "preset_started",
-                "preset": preset.name,
-                "label": preset.label,
-                "total_steps": len(steps),
-            })
+            await broadcast_fn(
+                {
+                    "type": "preset_started",
+                    "preset": preset.name,
+                    "label": preset.label,
+                    "total_steps": len(steps),
+                }
+            )
 
         for i, step in enumerate(steps):
             step_result = await self._execute_step(step, i + 1, len(steps))
 
-            results["logs"].append({
-                "step": step.name,
-                "type": step.type,
-                "status": step_result["status"],
-                "message": step_result.get("message", ""),
-            })
+            results["logs"].append(
+                {
+                    "step": step.name,
+                    "type": step.type,
+                    "status": step_result["status"],
+                    "message": step_result.get("message", ""),
+                }
+            )
 
             if step_result["status"] == "done":
                 results["steps_done"] += 1
@@ -81,21 +89,25 @@ class PresetExecutor:
                 results["steps_failed"] += 1
 
             if broadcast_fn:
-                await broadcast_fn({
-                    "type": "preset_step",
-                    "preset": preset.name,
-                    "step_index": i + 1,
-                    "step_name": step.name,
-                    "step_type": step.type,
-                    "status": step_result["status"],
-                })
+                await broadcast_fn(
+                    {
+                        "type": "preset_step",
+                        "preset": preset.name,
+                        "step_index": i + 1,
+                        "step_name": step.name,
+                        "step_type": step.type,
+                        "status": step_result["status"],
+                    }
+                )
 
         if broadcast_fn:
-            await broadcast_fn({
-                "type": "preset_finished",
-                "preset": preset.name,
-                "results": results,
-            })
+            await broadcast_fn(
+                {
+                    "type": "preset_finished",
+                    "preset": preset.name,
+                    "results": results,
+                }
+            )
 
         logger.info(
             f"Preset '{preset.name}' terminée — "
@@ -168,6 +180,7 @@ class PresetExecutor:
         audio_bytes = await self._tts.synthesize(step.text)
 
         from background.notifications import broadcast_audio
+
         await broadcast_audio(audio_bytes)
 
         return {"status": "done", "message": f"TTS : {step.text[:50]}"}
@@ -187,6 +200,7 @@ class PresetExecutor:
         if self._tts and text:
             audio_bytes = await self._tts.synthesize(text)
             from background.notifications import broadcast_audio
+
             await broadcast_audio(audio_bytes)
 
         return {"status": "done", "message": text[:100]}
@@ -204,13 +218,10 @@ class PresetExecutor:
             if system == "darwin":
                 title = step.title.replace('"', '\\"')
                 body = step.body.replace('"', '\\"')
-                cmd = (
-                    f"osascript -e 'display notification "
-                    f'"{body}" with title "{title}"' + "'"
-                )
+                cmd = f'osascript -e \'display notification "{body}" with title "{title}"' + "'"
             elif system == "windows":
                 cmd = (
-                    f"powershell -c \"Add-Type -AssemblyName System.Windows.Forms; "
+                    f'powershell -c "Add-Type -AssemblyName System.Windows.Forms; '
                     f"[System.Windows.Forms.MessageBox]::Show('{step.body}','{step.title}')\""
                 )
             else:

@@ -7,6 +7,7 @@ Scopes :
 
 Patterns inspirés de Paperclip (MIT) — voir notices/budget-cost.md.
 """
+
 from __future__ import annotations
 
 import asyncio
@@ -25,16 +26,16 @@ class BudgetGuard:
     def __init__(self, notify_callback: Callable[[dict], None] | None = None) -> None:
         from config.settings import settings
 
-        self._enabled       = settings.budget_enabled
-        self._monthly_usd   = settings.budget_monthly_usd
-        self._per_project   = settings.budget_per_project_usd
-        self._warn_ratio    = settings.budget_warn_pct / 100.0
-        self._notify        = notify_callback or (lambda _: None)
-        self._lock          = asyncio.Lock()
+        self._enabled = settings.budget_enabled
+        self._monthly_usd = settings.budget_monthly_usd
+        self._per_project = settings.budget_per_project_usd
+        self._warn_ratio = settings.budget_warn_pct / 100.0
+        self._notify = notify_callback or (lambda _: None)
+        self._lock = asyncio.Lock()
 
         # Accumulateurs in-memory (projet et run)
         self._project_spent: dict[str, float] = {}
-        self._run_spent:     dict[str, float] = {}
+        self._run_spent: dict[str, float] = {}
 
         # Scopes ayant déjà déclenché l'alerte warn (pour ne pas spammer)
         self._warned: set[str] = set()
@@ -48,6 +49,7 @@ class BudgetGuard:
         """Recharge les dépenses mission du mois courant depuis les fichiers JSONL."""
         try:
             from core.tracking import UsageTracker
+
             tracker = UsageTracker()
             today = date.today()
             d = today.replace(day=1)
@@ -55,7 +57,7 @@ class BudgetGuard:
                 for e in tracker._read_day(d):
                     ctx = e.get("context") or ""
                     if ctx.startswith("mission:"):
-                        pid  = ctx.split(":", 1)[1]
+                        pid = ctx.split(":", 1)[1]
                         cost = e.get("cost_usd", 0.0)
                         self._project_spent[pid] = self._project_spent.get(pid, 0.0) + cost
                 d += timedelta(days=1)
@@ -69,6 +71,7 @@ class BudgetGuard:
         """Coût mensuel global lu depuis les fichiers JSONL (source de vérité)."""
         try:
             from core.tracking import UsageTracker
+
             return UsageTracker().get_monthly_totals()["cost_usd"]
         except Exception:
             return 0.0
@@ -111,41 +114,45 @@ class BudgetGuard:
             return True
 
         async with self._lock:
-            spent     = self._spent(scope)
-            limit     = self._limit(scope)
+            spent = self._spent(scope)
+            limit = self._limit(scope)
             projected = spent + estimated_usd
 
             if limit != float("inf") and projected > limit:
                 logger.warning(
                     "BudgetGuard hard-stop",
-                    scope=scope, spent=round(spent, 4),
-                    limit=limit, estimated=estimated_usd,
+                    scope=scope,
+                    spent=round(spent, 4),
+                    limit=limit,
+                    estimated=estimated_usd,
                 )
-                self._notify({
-                    "type":          "budget_hard_stop",
-                    "scope":         scope,
-                    "spent_usd":     round(spent, 6),
-                    "limit_usd":     limit,
-                    "estimated_usd": estimated_usd,
-                })
+                self._notify(
+                    {
+                        "type": "budget_hard_stop",
+                        "scope": scope,
+                        "spent_usd": round(spent, 6),
+                        "limit_usd": limit,
+                        "estimated_usd": estimated_usd,
+                    }
+                )
                 return False
 
             # Alerte warn (une seule fois par scope par session)
-            if (
-                self._scope_status(scope, projected) == "warning"
-                and scope not in self._warned
-            ):
+            if self._scope_status(scope, projected) == "warning" and scope not in self._warned:
                 self._warned.add(scope)
-                self._notify({
-                    "type":       "budget_warning",
-                    "scope":      scope,
-                    "spent_usd":  round(projected, 6),
-                    "limit_usd":  limit,
-                    "warn_pct":   self._warn_ratio * 100,
-                })
+                self._notify(
+                    {
+                        "type": "budget_warning",
+                        "scope": scope,
+                        "spent_usd": round(projected, 6),
+                        "limit_usd": limit,
+                        "warn_pct": self._warn_ratio * 100,
+                    }
+                )
                 logger.info(
                     "BudgetGuard: alerte warn",
-                    scope=scope, pct=f"{projected / limit * 100:.1f}%",
+                    scope=scope,
+                    pct=f"{projected / limit * 100:.1f}%",
                 )
 
             return True
@@ -172,26 +179,26 @@ class BudgetGuard:
     def status(self) -> dict:
         """Résumé complet de l'état budgétaire."""
         global_spent = self._global_spent()
-        limit_m      = self._monthly_usd
+        limit_m = self._monthly_usd
 
         projects: dict[str, dict] = {}
         for pid, spent in self._project_spent.items():
             scope = f"project:{pid}"
             projects[pid] = {
-                "spent_usd":     round(spent, 6),
-                "limit_usd":     self._per_project,
+                "spent_usd": round(spent, 6),
+                "limit_usd": self._per_project,
                 "remaining_usd": round(self.remaining(scope), 6),
-                "status":        self._scope_status(scope, spent),
+                "status": self._scope_status(scope, spent),
             }
 
         return {
             "enabled": self._enabled,
             "global": {
-                "spent_usd":       round(global_spent, 6),
-                "limit_usd":       limit_m,
-                "remaining_usd":   round(max(0.0, limit_m - global_spent), 6),
+                "spent_usd": round(global_spent, 6),
+                "limit_usd": limit_m,
+                "remaining_usd": round(max(0.0, limit_m - global_spent), 6),
                 "utilization_pct": round(global_spent / limit_m * 100, 2) if limit_m > 0 else 0.0,
-                "status":          self._scope_status("global", global_spent),
+                "status": self._scope_status("global", global_spent),
             },
             "projects": projects,
         }

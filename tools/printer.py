@@ -5,6 +5,7 @@ Outil imprimante 3D pour Jarvis — BambuLab.
 - status : état temps réel via bambulabs_api
 - cancel : stop_print via bambulabs_api
 """
+
 from __future__ import annotations
 
 import asyncio
@@ -16,7 +17,6 @@ from loguru import logger
 
 from config.settings import settings
 from tools.base import Tool, ToolResult
-
 
 _ORCA_CLI = "/Applications/OrcaSlicer.app/Contents/MacOS/OrcaSlicer"
 
@@ -31,9 +31,10 @@ def _require_bambu() -> tuple[str, str, str] | None:
     return ip, serial, code
 
 
-def _make_printer():
+def _make_printer() -> object:
     """Instancie un Printer bambulabs_api avec les settings courants."""
     import bambulabs_api as bl
+
     creds = _require_bambu()
     if creds is None:
         raise ValueError("PRINTER_IP / PRINTER_SERIAL / PRINTER_ACCESS_CODE non configurés")
@@ -41,7 +42,7 @@ def _make_printer():
     return bl.Printer(ip, code, serial)
 
 
-def _wait_ready(printer, timeout: float = 5.0) -> None:
+def _wait_ready(printer: object, timeout: float = 5.0) -> None:
     """Attend que le client MQTT soit prêt."""
     deadline = time.time() + timeout
     while time.time() < deadline:
@@ -159,7 +160,7 @@ class Printer3DTool(Tool):
         )
         try:
             _, stderr = await asyncio.wait_for(proc.communicate(), timeout=120)
-        except asyncio.TimeoutError:
+        except TimeoutError:
             proc.kill()
             return ToolResult(content="Timeout slicing (>120s)", is_error=True)
 
@@ -198,7 +199,7 @@ class Printer3DTool(Tool):
                 ok = printer.start_print(remote_name, plate_number=plate)
                 if ok:
                     return f"Impression lancée : {gcode.name} (plateau {plate})"
-                return f"Échec démarrage impression (start_print=False)"
+                return "Échec démarrage impression (start_print=False)"
             finally:
                 printer.disconnect()
 
@@ -229,10 +230,10 @@ class Printer3DTool(Tool):
                 _wait_ready(printer)
                 time.sleep(1)
                 return {
-                    "state":      str(printer.get_state()),
+                    "state": str(printer.get_state()),
                     "percentage": printer.get_percentage(),
-                    "time_min":   printer.get_time(),
-                    "file":       printer.get_file_name(),
+                    "time_min": printer.get_time(),
+                    "file": printer.get_file_name(),
                 }
             finally:
                 printer.disconnect()

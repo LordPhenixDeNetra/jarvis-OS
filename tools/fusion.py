@@ -6,6 +6,7 @@ API réelle (3 outils) :
   fusion_mcp_read     → lire (screenshot, documents, projets, doc API)
   fusion_mcp_update   → undo / redo
 """
+
 from __future__ import annotations
 
 import uuid
@@ -56,11 +57,14 @@ class _FusionClient:
 
     async def initialize(self) -> bool:
         try:
-            resp = await self._post("initialize", {
-                "protocolVersion": "2024-11-05",
-                "capabilities": {},
-                "clientInfo": {"name": "jarvis", "version": "3.0"},
-            })
+            resp = await self._post(
+                "initialize",
+                {
+                    "protocolVersion": "2024-11-05",
+                    "capabilities": {},
+                    "clientInfo": {"name": "jarvis", "version": "3.0"},
+                },
+            )
             return "result" in resp
         except Exception:
             return False
@@ -82,6 +86,7 @@ class _FusionClient:
 
 def _parse_sse(body: str) -> dict:
     import json
+
     for line in body.splitlines():
         if line.startswith("data: "):
             try:
@@ -187,7 +192,8 @@ INTERDIT (provoque RuntimeError) :
   - root.occurrences.addNewComponent(...) → interdit (mode Part, pas Assemblage)
   - Pour nommer : body.name = "MonNom" sur BRepBody uniquement
 Shell : top_face = max(body.faces, key=lambda f: f.centroid.z); jamais par index.
-Cut (CutFeatureOperation) : "Aucun corps cible" = sketch sur mauvais plan ou participantBodies absent.
+Cut (CutFeatureOperation) : "Aucun corps cible" = sketch sur mauvais plan
+  ou participantBodies absent.
   body = root.bRepBodies.item(0)
   face = max(body.faces, key=lambda f: f.centroid.z)   # sketch sur la face du body
   sketch = root.sketches.add(face)                      # PAS sur xYConstructionPlane
@@ -209,7 +215,10 @@ Cut (CutFeatureOperation) : "Aucun corps cible" = sketch sur mauvais plan ou par
             },
             "script": {
                 "type": "string",
-                "description": "Script Python Fusion API complet (requis pour execute_script). Doit contenir def run(context):",
+                "description": (
+                    "Script Python Fusion API complet (requis pour execute_script)."
+                    " Doit contenir def run(context):"
+                ),
             },
             "query_type": {
                 "type": "string",
@@ -218,7 +227,16 @@ Cut (CutFeatureOperation) : "Aucun corps cible" = sketch sur mauvais plan ou par
             },
             "direction": {
                 "type": "string",
-                "enum": ["current", "front", "back", "top", "bottom", "left", "right", "iso-top-right"],
+                "enum": [
+                    "current",
+                    "front",
+                    "back",
+                    "top",
+                    "bottom",
+                    "left",
+                    "right",
+                    "iso-top-right",
+                ],
                 "description": "Direction caméra pour screenshot (défaut: current)",
             },
             "name": {
@@ -279,7 +297,7 @@ Cut (CutFeatureOperation) : "Aucun corps cible" = sketch sur mauvais plan ou par
                 if not ok:
                     return ToolResult(
                         content=f"Fusion 360 MCP inaccessible (port {settings.fusion_mcp_port}). "
-                                "Vérifier que Fusion est ouvert.",
+                        "Vérifier que Fusion est ouvert.",
                         is_error=True,
                     )
 
@@ -287,13 +305,18 @@ Cut (CutFeatureOperation) : "Aucun corps cible" = sketch sur mauvais plan ou par
             if action == "execute_script":
                 if not script:
                     return ToolResult(content="script requis pour execute_script", is_error=True)
-                ok, result = await _client.call("fusion_mcp_execute", {
-                    "featureType": "script",
-                    "object": {"script": _wrap_script(script)},
-                })
+                ok, result = await _client.call(
+                    "fusion_mcp_execute",
+                    {
+                        "featureType": "script",
+                        "object": {"script": _wrap_script(script)},
+                    },
+                )
                 # Détecter les erreurs dans le résultat
                 if ok and "FUSION_ERROR:" in result:
-                    return ToolResult(content=result.replace("FUSION_ERROR:", "Erreur Fusion:"), is_error=True)
+                    return ToolResult(
+                        content=result.replace("FUSION_ERROR:", "Erreur Fusion:"), is_error=True
+                    )
                 return ToolResult(content=result or "Script exécuté.", is_error=not ok)
 
             elif action == "read":

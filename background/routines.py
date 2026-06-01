@@ -8,6 +8,7 @@ Helpers : fire_routine, apply_catch_up, next_cron_datetime.
 Le flag ROUTINES_ENABLED est lu depuis la variable d'env ROUTINES_ENABLED
 (pas depuis config/settings.py pour rester dans le périmètre autorisé).
 """
+
 from __future__ import annotations
 
 import json
@@ -43,7 +44,7 @@ class ConcurrencyPolicy(StrEnum):
     """Comportement quand un run est déjà actif au déclenchement."""
 
     SKIP_IF_ACTIVE = "skip_if_active"
-    COALESCE = "coalesce"         # fusionne dans le run actif
+    COALESCE = "coalesce"  # fusionne dans le run actif
     ALWAYS_ENQUEUE = "always_enqueue"
 
 
@@ -144,9 +145,7 @@ class RoutineStore:
                     concurrency_policy=ConcurrencyPolicy(
                         r.get("concurrency_policy", "skip_if_active")
                     ),
-                    catch_up_policy=CatchUpPolicy(
-                        r.get("catch_up_policy", "skip_missed")
-                    ),
+                    catch_up_policy=CatchUpPolicy(r.get("catch_up_policy", "skip_missed")),
                     enabled=r.get("enabled", True),
                     cron_expr=r.get("cron_expr"),
                     interval_seconds=r.get("interval_seconds"),
@@ -238,11 +237,7 @@ class RoutineStore:
         routine_name: str | None = None,
         limit: int = 50,
     ) -> list[RoutineRun]:
-        runs = [
-            r
-            for r in self._runs
-            if routine_name is None or r.routine_name == routine_name
-        ]
+        runs = [r for r in self._runs if routine_name is None or r.routine_name == routine_name]
         return list(reversed(runs[-limit:]))
 
 
@@ -283,9 +278,7 @@ async def fire_routine(
         if routine.concurrency_policy == ConcurrencyPolicy.COALESCE:
             active.add_step("coalesced", "Déclenchement fusionné dans le run actif")
             store.update_run(active)
-            logger.info(
-                f"Routine '{routine.name}': coalesced dans run actif {active.id}"
-            )
+            logger.info(f"Routine '{routine.name}': coalesced dans run actif {active.id}")
             return active
 
         # ALWAYS_ENQUEUE : on crée un nouveau run même si un autre tourne
@@ -318,8 +311,7 @@ async def fire_routine(
     store.update_run(run)
 
     logger.info(
-        f"Routine '{routine.name}': run {run.id} terminé "
-        f"(status={run.status}, catch_up={catch_up})"
+        f"Routine '{routine.name}': run {run.id} terminé (status={run.status}, catch_up={catch_up})"
     )
     return run
 
@@ -363,9 +355,7 @@ async def apply_catch_up(
 
     result: list[RoutineRun] = []
     for i in range(count):
-        run = await fire_routine(
-            routine, store, broadcast, wake_engine, catch_up=True
-        )
+        run = await fire_routine(routine, store, broadcast, wake_engine, catch_up=True)
         if run and run.status != RunStatus.SKIPPED:
             run.add_step("catch_up_index", f"Rattrapage {i + 1}/{count}")
             store.update_run(run)

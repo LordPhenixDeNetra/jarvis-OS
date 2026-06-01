@@ -1,11 +1,15 @@
 """Installation/désinstallation des skills depuis jarvis-skills."""
+
 from __future__ import annotations
+
 import json
 import shutil
 from pathlib import Path
+
 import httpx
 from loguru import logger
-from skills.registry import skill_registry, SKILLS_INSTALLED_DIR
+
+from skills.registry import SKILLS_INSTALLED_DIR, skill_registry
 
 ENV_FILE = Path(".env")
 
@@ -16,10 +20,10 @@ LOCAL_CATALOG = Path("skills/catalog.json")
 
 
 class SkillInstaller:
-
     def _inject_env_vars(self, requires_env: list[str], skill_name: str) -> None:
         """Ajoute les variables requires_env manquantes dans .env avec valeur vide."""
-        from dotenv import set_key, dotenv_values
+        from dotenv import dotenv_values, set_key
+
         existing = dotenv_values(str(ENV_FILE)) if ENV_FILE.exists() else {}
         for key in requires_env:
             if key not in existing:
@@ -59,14 +63,12 @@ class SkillInstaller:
     async def install(self, skill_name: str) -> dict:
         """Télécharge et installe un skill depuis GitHub."""
         catalog = await self.fetch_catalog()
-        skill_meta = next(
-            (s for s in catalog if s["name"] == skill_name), None
-        )
+        skill_meta = next((s for s in catalog if s["name"] == skill_name), None)
 
         if not skill_meta:
             return {
                 "success": False,
-                "message": f"Skill '{skill_name}' introuvable dans le catalogue"
+                "message": f"Skill '{skill_name}' introuvable dans le catalogue",
             }
 
         skill_dir = SKILLS_INSTALLED_DIR / skill_name
@@ -77,9 +79,7 @@ class SkillInstaller:
             async with httpx.AsyncClient(timeout=15) as client:
                 r = await client.get(f"{SKILLS_REPO_RAW}/{path}/skill.py")
                 if r.status_code != 200:
-                    raise Exception(
-                        f"skill.py introuvable (HTTP {r.status_code})"
-                    )
+                    raise Exception(f"skill.py introuvable (HTTP {r.status_code})")
                 (skill_dir / "skill.py").write_text(r.text)
 
                 r = await client.get(f"{SKILLS_REPO_RAW}/{path}/skill.yaml")
@@ -90,6 +90,7 @@ class SkillInstaller:
             yaml_path = skill_dir / "skill.yaml"
             if yaml_path.exists():
                 import yaml
+
                 with yaml_path.open() as f:
                     meta = yaml.safe_load(f) or {}
                 requires_env = meta.get("requires_env", [])
@@ -107,14 +108,13 @@ class SkillInstaller:
                                 (static_dst / fname).write_bytes(r.content)
                                 logger.debug(f"Fichier statique installé : {fname}")
                             else:
-                                logger.warning(f"Fichier statique manquant : {fname} (HTTP {r.status_code})")
+                                logger.warning(
+                                    f"Fichier statique manquant : {fname} (HTTP {r.status_code})"
+                                )
 
             skill_registry.reload()
             logger.info(f"Skill installé : {skill_name}")
-            return {
-                "success": True,
-                "message": f"Skill '{skill_name}' installé avec succès"
-            }
+            return {"success": True, "message": f"Skill '{skill_name}' installé avec succès"}
 
         except Exception as e:
             if skill_dir.exists():
@@ -127,10 +127,7 @@ class SkillInstaller:
         skill_dir = SKILLS_INSTALLED_DIR / skill_name
 
         if not skill_dir.exists():
-            return {
-                "success": False,
-                "message": f"Skill '{skill_name}' n'est pas installé"
-            }
+            return {"success": False, "message": f"Skill '{skill_name}' n'est pas installé"}
 
         try:
             shutil.rmtree(skill_dir)
@@ -141,10 +138,7 @@ class SkillInstaller:
                 logger.debug(f"Fichiers statiques supprimés pour {skill_name}")
             skill_registry.reload()
             logger.info(f"Skill désinstallé : {skill_name}")
-            return {
-                "success": True,
-                "message": f"Skill '{skill_name}' désinstallé"
-            }
+            return {"success": True, "message": f"Skill '{skill_name}' désinstallé"}
         except Exception as e:
             return {"success": False, "message": str(e)}
 

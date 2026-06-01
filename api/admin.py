@@ -56,6 +56,7 @@ class MemoryOverview(BaseModel):
 
 def _memory_dir(request: Request) -> Path:
     from config.settings import settings
+
     return Path(settings.memory_dir)
 
 
@@ -65,6 +66,7 @@ def _memory_dir(request: Request) -> Path:
 @router.get("/sessions", response_model=list[SessionMeta])
 async def list_sessions(request: Request) -> list[SessionMeta]:
     from memory.sessions import SessionStore
+
     store: SessionStore = SessionStore(_memory_dir(request) / "sessions")
     result = []
     for path in store.list_recent(50):
@@ -76,18 +78,21 @@ async def list_sessions(request: Request) -> list[SessionMeta]:
             count = len(lines)
         except OSError:
             count = 0
-        result.append(SessionMeta(
-            session_id=session_id,
-            name=path.stem,
-            date=date,
-            message_count=count,
-        ))
+        result.append(
+            SessionMeta(
+                session_id=session_id,
+                name=path.stem,
+                date=date,
+                message_count=count,
+            )
+        )
     return result
 
 
 @router.get("/sessions/{session_id}", response_model=list[SessionMessage])
 async def get_session(session_id: str, request: Request) -> list[SessionMessage]:
     from memory.sessions import SessionStore
+
     store: SessionStore = SessionStore(_memory_dir(request) / "sessions")
     path = store._find(session_id)  # noqa: SLF001
     if not path:
@@ -99,11 +104,13 @@ async def get_session(session_id: str, request: Request) -> list[SessionMessage]
             continue
         try:
             entry = json.loads(line)
-            messages.append(SessionMessage(
-                role=entry.get("role", "?"),
-                content=entry.get("content", ""),
-                ts=entry.get("ts", ""),
-            ))
+            messages.append(
+                SessionMessage(
+                    role=entry.get("role", "?"),
+                    content=entry.get("content", ""),
+                    ts=entry.get("ts", ""),
+                )
+            )
         except json.JSONDecodeError:
             continue
     return messages
@@ -127,6 +134,7 @@ async def get_memory(request: Request) -> MemoryOverview:
         for p in sorted(topics_dir.glob("*.md")):
             stat = p.stat()
             import datetime as dt
+
             mtime = dt.datetime.fromtimestamp(stat.st_mtime).strftime("%Y-%m-%d %H:%M")
             topics.append(TopicMeta(name=p.name, mtime=mtime, size=stat.st_size))
 
@@ -198,6 +206,7 @@ async def delete_topic(filename: str, request: Request) -> dict:
 async def get_tasks(request: Request) -> dict:
     from background.scheduler import Scheduler
     from background.worker import BackgroundWorker
+
     scheduler: Scheduler = request.app.state.scheduler
     worker: BackgroundWorker = request.app.state.worker
 
@@ -216,6 +225,7 @@ async def get_tasks(request: Request) -> dict:
 
 
 # ── Mise à jour ───────────────────────────────────────────────
+
 
 async def _run(cmd: str) -> tuple[int, str]:
     proc = await asyncio.create_subprocess_shell(
@@ -270,6 +280,7 @@ async def system_update() -> dict:
 @router.get("/notifications")
 async def get_notifications(request: Request) -> dict:
     from background.notifications import NotificationQueue
+
     queue: NotificationQueue = request.app.state.notifications
     return {
         "pending": [

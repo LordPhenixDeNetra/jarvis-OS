@@ -4,6 +4,7 @@ Point d'entrée : POST /api/channels/{platform}/webhook
 Utilisé par les plateformes qui pushent des événements (WhatsApp, Slack, Signal)
 plutôt que de maintenir une connexion polling (Telegram/Discord).
 """
+
 from __future__ import annotations
 
 from fastapi import APIRouter, HTTPException, Request

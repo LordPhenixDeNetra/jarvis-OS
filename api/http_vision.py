@@ -8,6 +8,7 @@ router = APIRouter()
 
 # ── Vision endpoints ──────────────────────────────────────────────────────────
 
+
 @router.post("/api/vision/verify-face")
 async def verify_face() -> dict:
     """
@@ -18,6 +19,7 @@ async def verify_face() -> dict:
     import asyncio
 
     from vision.daemon import get_face_recognizer
+
     recognizer = get_face_recognizer()
 
     if recognizer is not None and recognizer._available:
@@ -28,7 +30,7 @@ async def verify_face() -> dict:
         if result is not None:
             return {
                 "recognized": result.recognized,
-                "name":       result.name,
+                "name": result.name,
                 "confidence": round(result.confidence, 2),
             }
 
@@ -47,6 +49,7 @@ async def verify_face() -> dict:
         if not ret:
             return {"recognized": False, "name": "error", "confidence": 0.0}
         from vision.face_recognizer import FaceRecognizer
+
         res = FaceRecognizer().process(frame)
         return {
             "recognized": res.recognized,
@@ -68,6 +71,7 @@ async def add_face(request: Request) -> dict:
         raise HTTPException(400, "name et path requis")
 
     from vision.daemon import get_face_recognizer
+
     recognizer = get_face_recognizer()
     if recognizer is None:
         raise HTTPException(503, "FaceRecognizer non actif (FACE_RECOGNITION_ENABLED=false ?)")
@@ -77,6 +81,7 @@ async def add_face(request: Request) -> dict:
 
 
 # ── Vision webhooks ───────────────────────────────────────────────────────────
+
 
 class ObjectDetectedPayload(BaseModel):
     new_objects: list[str]
@@ -108,12 +113,14 @@ class FaceRecognitionPayload(BaseModel):
 async def webhook_face_recognition(body: FaceRecognitionPayload, request: Request) -> dict:
     """Reçoit les changements d'état de reconnaissance faciale du daemon vision."""
     proactive = request.app.state.proactive_queue
-    proactive.broadcast_event({
-        "type":       "face_recognition",
-        "recognized": body.recognized,
-        "name":       body.name,
-        "confidence": body.confidence,
-    })
+    proactive.broadcast_event(
+        {
+            "type": "face_recognition",
+            "recognized": body.recognized,
+            "name": body.name,
+            "confidence": body.confidence,
+        }
+    )
     if body.recognized:
         notifications = request.app.state.notifications
         notifications.add(

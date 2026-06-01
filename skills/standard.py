@@ -4,6 +4,7 @@ Spec : https://agentskills.io/specification
 Format SKILL.md : frontmatter YAML (name, description, license, compatibility,
                   metadata, allowed-tools) + corps Markdown.
 """
+
 from __future__ import annotations
 
 import re
@@ -105,6 +106,7 @@ class AgentSkillsAdapter:
             for subdir in ("scripts", "references", "assets"):
                 if (src_path / subdir).exists():
                     import shutil
+
                     shutil.copytree(src_path / subdir, dest / subdir, dirs_exist_ok=True)
 
         logger.info("Skill importé depuis standard agentskills.io", name=name, dest=str(dest))
@@ -235,8 +237,9 @@ class AgentSkillsAdapter:
                 "tags": tags,
             },
         }
-        fm_yaml = yaml.dump(fm_dict, Dumper=_BlockDumper, allow_unicode=True,
-                            sort_keys=False).rstrip()
+        fm_yaml = yaml.dump(
+            fm_dict, Dumper=_BlockDumper, allow_unicode=True, sort_keys=False
+        ).rstrip()
         body = system_prompt.strip() or f"# {name}\n\n{description}"
 
         return f"---\n{fm_yaml}\n---\n\n{body}\n"

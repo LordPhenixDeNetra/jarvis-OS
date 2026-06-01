@@ -11,6 +11,7 @@ router = APIRouter()
 
 # ── Tools API ─────────────────────────────────────────────────────────────────
 
+
 @router.get("/api/tools")
 async def list_tools_endpoint(request: Request) -> list[dict]:
     registry = getattr(request.app.state, "tool_registry", None)
@@ -34,11 +35,12 @@ async def execute_tool(body: ToolExecuteRequest, request: Request) -> dict:
     result = await registry.call(body.tool, body.params)
     return {
         "success": not result.is_error,
-        "result":  result.content,
+        "result": result.content,
     }
 
 
 # ── Voice API ─────────────────────────────────────────────────────────────────
+
 
 @router.post("/api/voice/speak")
 async def voice_speak(body: dict) -> dict:
@@ -53,9 +55,10 @@ async def voice_speak(body: dict) -> dict:
         return {"status": "error", "audio_b64": None}
 
     from audio.tts import tts_engine
+
     audio_bytes = await tts_engine.synthesize(text)
     return {
-        "status":    "ok",
+        "status": "ok",
         "audio_b64": base64.b64encode(audio_bytes).decode() if audio_bytes else None,
     }
 
@@ -76,11 +79,11 @@ async def voice_generate(body: VoiceGenerateRequest, request: Request) -> Stream
     from background.worker import BackgroundTask
     from core.router import RouteEnum
 
-    gateway      = request.app.state.voice_gateway
-    worker       = request.app.state.worker
+    gateway = request.app.state.voice_gateway
+    worker = request.app.state.worker
     orchestrator = getattr(request.app.state, "orchestrator", None)
     consolidation = request.app.state.consolidation
-    auto_dream   = request.app.state.auto_dream
+    auto_dream = request.app.state.auto_dream
 
     voice_msg = f"{body.message}\n[voix]"
 
@@ -104,6 +107,7 @@ async def voice_generate(body: VoiceGenerateRequest, request: Request) -> Stream
                     yield chunk
         except Exception as e:
             from loguru import logger as _log
+
             _log.error("Voice generate stream error", error=str(e))
             full = "Désolé, j'ai eu un souci."
             yield full
@@ -111,9 +115,7 @@ async def voice_generate(body: VoiceGenerateRequest, request: Request) -> Stream
         session.add_message("assistant", full)
 
         if route is RouteEnum.BACKGROUND:
-            worker.submit(BackgroundTask(
-                session_id=str(session.id), instruction=message_original
-            ))
+            worker.submit(BackgroundTask(session_id=str(session.id), instruction=message_original))
         elif route is RouteEnum.PROJECT and orchestrator:
             asyncio.create_task(
                 orchestrator.create_and_run(message_original),
@@ -121,15 +123,11 @@ async def voice_generate(body: VoiceGenerateRequest, request: Request) -> Stream
             )
 
         asyncio.create_task(
-            consolidation._run_safe(
-                user_message=message_original, assistant_message=full
-            ),
+            consolidation._run_safe(user_message=message_original, assistant_message=full),
             name="voice-consolidation",
         )
         asyncio.create_task(
-            auto_dream._run_micro_safe(
-                user_message=message_original, assistant_message=full
-            ),
+            auto_dream._run_micro_safe(user_message=message_original, assistant_message=full),
             name="voice-autodream",
         )
 
@@ -154,8 +152,8 @@ async def get_voice_token(session_id: str | None = None) -> dict:  # noqa: ARG00
         VideoGrants,
     )
 
-    api_key     = os.getenv("LIVEKIT_API_KEY")
-    api_secret  = os.getenv("LIVEKIT_API_SECRET")
+    api_key = os.getenv("LIVEKIT_API_KEY")
+    api_secret = os.getenv("LIVEKIT_API_SECRET")
     livekit_url = os.getenv("LIVEKIT_URL")
 
     room_name = f"jarvis-{uuid.uuid4().hex[:8]}"
@@ -170,12 +168,14 @@ async def get_voice_token(session_id: str | None = None) -> dict:  # noqa: ARG00
         AccessToken(api_key=api_key, api_secret=api_secret)
         .with_identity("barth")
         .with_name("Barth")
-        .with_grants(VideoGrants(
-            room_join=True,
-            room=room_name,
-            can_publish=True,
-            can_subscribe=True,
-        ))
+        .with_grants(
+            VideoGrants(
+                room_join=True,
+                room=room_name,
+                can_publish=True,
+                can_subscribe=True,
+            )
+        )
         .to_jwt()
     )
 
@@ -184,10 +184,12 @@ async def get_voice_token(session_id: str | None = None) -> dict:  # noqa: ARG00
 
 # ── Internal broadcast ────────────────────────────────────────────────────────
 
+
 @router.post("/internal/broadcast", include_in_schema=False)
 async def internal_broadcast(request: Request) -> dict:
     """Endpoint interne utilisé par le voice agent pour envoyer des événements UI."""
     from background.notifications import broadcast_event
+
     event = await request.json()
     await broadcast_event(event)
     return {"ok": True}

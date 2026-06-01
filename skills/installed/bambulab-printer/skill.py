@@ -1,10 +1,11 @@
 """Skill BambuLab — imprimante 3D."""
+
 from __future__ import annotations
+
 from skills.base import SkillBase
 
 
 class BambuLabPrinterSkill(SkillBase):
-
     SYSTEM_PROMPT = """
 ## Imprimante 3D BambuLab
 
@@ -25,4 +26,5 @@ Règles impératives :
 
     def get_tools(self) -> list:
         from tools.printer import Printer3DTool
+
         return [Printer3DTool()]

@@ -1,4 +1,5 @@
 """RemoteBackend — stub pour les environnements serverless distants."""
+
 from __future__ import annotations
 
 from loguru import logger

@@ -22,7 +22,7 @@ except ImportError:
     _HAS_GOOGLE = False
 
 
-def _load_creds(token_path: Path, credentials_path: Path) -> "Credentials":
+def _load_creds(token_path: Path, credentials_path: Path) -> Credentials:
     """Charge et rafraîchit les credentials OAuth2 (bloquant — exécuté dans un thread)."""
     if not _HAS_GOOGLE:
         raise RuntimeError("google-api-python-client non installé.")

@@ -1,18 +1,19 @@
 """API REST pour les projets agent worker."""
+
 from __future__ import annotations
 
 from fastapi import APIRouter, HTTPException, Request
-from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 
 router = APIRouter()
 
 
-def _orch(request: Request):
+def _orch(request: Request) -> object:
     return request.app.state.orchestrator
 
 
 # ── Schemas ───────────────────────────────────────────────────────────────────
+
 
 class ApprovalBody(BaseModel):
     step_id: str
@@ -21,18 +22,19 @@ class ApprovalBody(BaseModel):
 
 # ── Endpoints ─────────────────────────────────────────────────────────────────
 
+
 @router.get("/api/projects")
 async def list_projects(request: Request) -> list[dict]:
     orch = _orch(request)
     projects = orch.list_projects()
     return [
         {
-            "id":          p.id,
-            "title":       p.title,
-            "status":      p.status,
-            "steps_done":  sum(1 for s in p.steps if s.status == "done"),
+            "id": p.id,
+            "title": p.title,
+            "status": p.status,
+            "steps_done": sum(1 for s in p.steps if s.status == "done"),
             "steps_total": len(p.steps),
-            "created_at":  p.created_at.isoformat(),
+            "created_at": p.created_at.isoformat(),
             "completed_at": p.completed_at.isoformat() if p.completed_at else None,
             "files_created": len(p.files_created),
         }
@@ -55,11 +57,11 @@ async def get_logs(project_id: str, request: Request) -> list[dict]:
     logs = orch.get_logs(project_id)
     return [
         {
-            "ts":      e.timestamp.isoformat(),
-            "level":   e.level,
-            "msg":     e.message,
+            "ts": e.timestamp.isoformat(),
+            "level": e.level,
+            "msg": e.message,
             "step_id": e.step_id,
-            "data":    e.data,
+            "data": e.data,
         }
         for e in logs
     ]
@@ -90,9 +92,10 @@ class ResetStepsBody(BaseModel):
 @router.post("/api/projects/{project_id}/reset-steps")
 async def reset_steps(project_id: str, body: ResetStepsBody, request: Request) -> dict:
     """Remet des étapes spécifiques en pending (sans relancer le worker)."""
-    from agent.project_store import ProjectStore, WORKSPACE_DIR
-    from agent.schemas import StepStatus
     import json
+
+    from agent.project_store import WORKSPACE_DIR
+
     state_file = WORKSPACE_DIR / project_id / ".jarvis" / "state.json"
     if not state_file.exists():
         raise HTTPException(404, f"Projet non trouvé : {project_id}")
@@ -130,15 +133,16 @@ async def read_file(project_id: str, path: str, request: Request) -> dict:
         content = orch.read_workspace_file(project_id, path)
         return {"path": path, "content": content}
     except FileNotFoundError as e:
-        raise HTTPException(404, str(e))
+        raise HTTPException(404, str(e)) from e
     except ValueError as e:
-        raise HTTPException(403, str(e))
+        raise HTTPException(403, str(e)) from e
 
 
 @router.delete("/api/projects/{project_id}")
 async def delete_project(project_id: str, request: Request) -> dict:
     import shutil
     from pathlib import Path
+
     orch = _orch(request)
     project = orch.get_project(project_id)
     if not project:

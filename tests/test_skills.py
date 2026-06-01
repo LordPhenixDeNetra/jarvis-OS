@@ -7,6 +7,7 @@ Couvre :
   - AgentSkillsAdapter.export_to_standard : produit un SKILL.md valide
   - AgentSkillsAdapter.import_from_standard : round-trip import/export
 """
+
 from __future__ import annotations
 
 import tempfile
@@ -98,6 +99,7 @@ async def test_propose_skill_skill_md_valide(tmp_path: Path) -> None:
 
     skill_md = (tmp_path / skill_name / "SKILL.md").read_text(encoding="utf-8")
     import re
+
     fm_match = re.match(r"^---\s*\n(.*?)\n---", skill_md, re.DOTALL)
     assert fm_match, "Frontmatter YAML absent du SKILL.md"
     fm = yaml.safe_load(fm_match.group(1))
@@ -154,7 +156,7 @@ async def test_improve_skill_met_a_jour_les_fichiers(tmp_path: Path) -> None:
         await synth.improve_skill(skill_name, "Leçon : toujours vérifier plusieurs sources.")
 
     updated = (skill_dir / "SKILL.md").read_text(encoding="utf-8")
-    assert '1.1' in updated, "Version non incrémentée dans le SKILL.md amélioré"
+    assert "1.1" in updated, "Version non incrémentée dans le SKILL.md amélioré"
 
     with (skill_dir / "skill.yaml").open(encoding="utf-8") as f:
         meta = yaml.safe_load(f)
@@ -192,6 +194,7 @@ async def test_skill_synthetise_chargeable_par_le_registry(tmp_path: Path) -> No
 
     # Charge le skill directement depuis le dossier temporaire
     from skills.registry import SkillRegistry
+
     registry = SkillRegistry.__new__(SkillRegistry)
     registry._skills = {}
     with patch("skills.registry.SKILLS_INSTALLED_DIR", tmp_path):
@@ -303,9 +306,7 @@ def test_round_trip_export_import(tmp_path: Path) -> None:
     with patch("skills.standard.SKILLS_INSTALLED_DIR", import_dir):
         imported_name = AgentSkillsAdapter.import_from_standard(skill_md)
 
-    assert imported_name == skill_name, (
-        f"Nom après round-trip : '{imported_name}' ≠ '{skill_name}'"
-    )
+    assert imported_name == skill_name, f"Nom après round-trip : '{imported_name}' ≠ '{skill_name}'"
     with (import_dir / imported_name / "skill.yaml").open(encoding="utf-8") as f:
         imported_meta = yaml.safe_load(f)
 
@@ -373,8 +374,13 @@ async def test_skill_list_tool_avec_skills() -> None:
 
     mock_registry = MagicMock()
     mock_registry.list_installed.return_value = [
-        {"name": "web-research", "version": "1.0.0", "description": "Recherche web.",
-         "tags": ["research"], "type": "conversational"},
+        {
+            "name": "web-research",
+            "version": "1.0.0",
+            "description": "Recherche web.",
+            "tags": ["research"],
+            "type": "conversational",
+        },
     ]
 
     tool = SkillListTool()

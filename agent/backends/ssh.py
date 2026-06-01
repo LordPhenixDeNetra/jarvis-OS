@@ -1,4 +1,5 @@
 """SSHBackend — exécution sur hôte distant via SSH avec ControlMaster."""
+
 from __future__ import annotations
 
 import asyncio
@@ -30,10 +31,10 @@ class SSHBackend(ExecutionBackend):
         key_path: str = "",
         remote_workdir: str = "~/jarvis-workspace",
     ) -> None:
-        self._host         = host
-        self._user         = user
-        self._port         = port
-        self._key_path     = key_path
+        self._host = host
+        self._user = user
+        self._port = port
+        self._key_path = key_path
         self._remote_workdir = remote_workdir
 
         _tag = hashlib.sha1(f"{user}@{host}:{port}".encode()).hexdigest()[:12]
@@ -51,17 +52,22 @@ class SSHBackend(ExecutionBackend):
     def _build_cmd(self, command: str) -> list[str]:
         """Construit la commande ssh avec ControlMaster et wrap workdir."""
         wrapped = (
-            f"mkdir -p {self._remote_workdir} 2>/dev/null; "
-            f"cd {self._remote_workdir} && {command}"
+            f"mkdir -p {self._remote_workdir} 2>/dev/null; cd {self._remote_workdir} && {command}"
         )
         args: list[str] = [
             "ssh",
-            "-o", f"ControlPath={self._control_path}",
-            "-o", "ControlMaster=auto",
-            "-o", "ControlPersist=60s",
-            "-o", "StrictHostKeyChecking=accept-new",
-            "-o", "BatchMode=yes",
-            "-p", str(self._port),
+            "-o",
+            f"ControlPath={self._control_path}",
+            "-o",
+            "ControlMaster=auto",
+            "-o",
+            "ControlPersist=60s",
+            "-o",
+            "StrictHostKeyChecking=accept-new",
+            "-o",
+            "BatchMode=yes",
+            "-p",
+            str(self._port),
         ]
         if self._key_path:
             args += ["-i", self._key_path]

@@ -1,9 +1,13 @@
 """Gestionnaire des skills installés localement."""
+
 from __future__ import annotations
+
 import importlib.util
 from pathlib import Path
+
 from loguru import logger
-from skills.base import SkillBase, PresetSkill
+
+from skills.base import PresetSkill, SkillBase
 
 SKILLS_INSTALLED_DIR = Path("skills/installed")
 
@@ -18,7 +22,7 @@ class SkillRegistry:
     _skills: dict[str, SkillBase] = {}
 
     @classmethod
-    def get_instance(cls) -> "SkillRegistry":
+    def get_instance(cls) -> SkillRegistry:
         if cls._instance is None:
             cls._instance = cls()
             cls._instance.load_all()
@@ -41,6 +45,7 @@ class SkillRegistry:
         metadata = {}
         if skill_yaml.exists():
             import yaml
+
             with skill_yaml.open() as f:
                 metadata = yaml.safe_load(f) or {}
 
@@ -50,25 +55,27 @@ class SkillRegistry:
             metadata["capabilities"] = []
 
         try:
-            spec = importlib.util.spec_from_file_location(
-                f"skill_{skill_dir.name}", skill_py
-            )
+            spec = importlib.util.spec_from_file_location(f"skill_{skill_dir.name}", skill_py)
             module = importlib.util.module_from_spec(spec)
             spec.loader.exec_module(module)
 
             for attr_name in dir(module):
                 attr = getattr(module, attr_name)
-                if (isinstance(attr, type)
-                        and issubclass(attr, SkillBase)
-                        and attr is not SkillBase
-                        and attr is not PresetSkill):
+                if (
+                    isinstance(attr, type)
+                    and issubclass(attr, SkillBase)
+                    and attr is not SkillBase
+                    and attr is not PresetSkill
+                ):
                     skill = attr(metadata=metadata)
                     self._skills[skill.name] = skill
                     skill_type = metadata.get("type", "conversational")
                     if skill_type == "preset" or isinstance(skill, PresetSkill):
                         logger.debug(f"Preset chargé : {skill.name} v{skill.version}")
                     else:
-                        logger.debug(f"Skill conversationnel chargé : {skill.name} v{skill.version}")
+                        logger.debug(
+                            f"Skill conversationnel chargé : {skill.name} v{skill.version}"
+                        )
                     break
 
         except Exception as e:
@@ -79,9 +86,7 @@ class SkillRegistry:
         prompts = []
         for skill in self._skills.values():
             if skill.is_active():
-                prompts.append(
-                    f"## Skill actif : {skill.name}\n{skill.get_system_prompt()}"
-                )
+                prompts.append(f"## Skill actif : {skill.name}\n{skill.get_system_prompt()}")
         return "\n\n---\n\n".join(prompts)
 
     def reload(self) -> None:
@@ -89,7 +94,7 @@ class SkillRegistry:
         self.load_all()
         logger.info("SkillRegistry rechargé")
 
-    def get(self, name: str) -> "SkillBase | None":
+    def get(self, name: str) -> SkillBase | None:
         return self._skills.get(name)
 
     def _is_preset(self, skill: SkillBase) -> bool:
@@ -126,11 +131,7 @@ class SkillRegistry:
 
     def get_presets(self) -> dict[str, SkillBase]:
         """Retourne uniquement les skills de type preset."""
-        return {
-            name: skill
-            for name, skill in self._skills.items()
-            if self._is_preset(skill)
-        }
+        return {name: skill for name, skill in self._skills.items() if self._is_preset(skill)}
 
     def get_preset(self, name: str) -> SkillBase | None:
         """Retourne un preset par son nom."""

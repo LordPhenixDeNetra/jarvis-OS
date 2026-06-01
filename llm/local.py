@@ -36,7 +36,7 @@ class OllamaProvider(LLMProvider):
             "model": self._model,
             "messages": [{"role": "system", "content": system}, *messages],
             "stream": stream,
-            "think": False,          # désactive le mode reasoning Qwen3 côté Ollama
+            "think": False,  # désactive le mode reasoning Qwen3 côté Ollama
             "options": {"temperature": 0.7},
         }
 
@@ -63,9 +63,7 @@ class OllamaProvider(LLMProvider):
 
     async def _stream(self, payload: dict) -> AsyncIterator[str]:
         async with httpx.AsyncClient(timeout=120.0) as client:
-            async with client.stream(
-                "POST", f"{self._base_url}/api/chat", json=payload
-            ) as resp:
+            async with client.stream("POST", f"{self._base_url}/api/chat", json=payload) as resp:
                 resp.raise_for_status()
                 in_think = False
                 think_buf = ""
@@ -86,7 +84,7 @@ class OllamaProvider(LLMProvider):
                                 if end == -1:
                                     think_buf = ""
                                     break
-                                think_buf = think_buf[end + len("</think>"):]
+                                think_buf = think_buf[end + len("</think>") :]
                                 in_think = False
                             else:
                                 start = think_buf.find("<think>")
@@ -95,7 +93,7 @@ class OllamaProvider(LLMProvider):
                                     think_buf = ""
                                     break
                                 output += think_buf[:start]
-                                think_buf = think_buf[start + len("<think>"):]
+                                think_buf = think_buf[start + len("<think>") :]
                                 in_think = True
                         if output:
                             yield output

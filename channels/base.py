@@ -6,6 +6,7 @@ Définit :
   - MessageTarget : cible de réponse normalisée
   - ChannelAdapter : ABC des adaptateurs
 """
+
 from __future__ import annotations
 
 from abc import ABC, abstractmethod

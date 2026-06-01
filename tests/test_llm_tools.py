@@ -81,15 +81,19 @@ async def test_mistral_tool_loop_executes_tool() -> None:
         result = await provider.tool_loop(
             messages=[{"role": "user", "content": "Quel temps à Paris ?"}],
             system="Tu es Jarvis.",
-            tools=[{
-                "name": "get_weather",
-                "description": "Retourne la météo d'une ville.",
-                "input_schema": {
-                    "type": "object",
-                    "properties": {"city": {"type": "string", "description": "Nom de la ville"}},
-                    "required": ["city"],
-                },
-            }],
+            tools=[
+                {
+                    "name": "get_weather",
+                    "description": "Retourne la météo d'une ville.",
+                    "input_schema": {
+                        "type": "object",
+                        "properties": {
+                            "city": {"type": "string", "description": "Nom de la ville"}
+                        },
+                        "required": ["city"],
+                    },
+                }
+            ],
             tool_executor=mock_executor,
         )
 
@@ -137,14 +141,16 @@ async def test_mistral_stream_with_capture_detects_tool() -> None:
         stream, capture = provider.stream_with_capture(
             messages=[{"role": "user", "content": "Météo Lyon ?"}],
             system="Tu es Jarvis.",
-            tools=[{
-                "name": "get_weather",
-                "description": "Météo",
-                "input_schema": {
-                    "type": "object",
-                    "properties": {"city": {"type": "string"}},
-                },
-            }],
+            tools=[
+                {
+                    "name": "get_weather",
+                    "description": "Météo",
+                    "input_schema": {
+                        "type": "object",
+                        "properties": {"city": {"type": "string"}},
+                    },
+                }
+            ],
         )
 
         text_chunks: list[str] = []
@@ -228,15 +234,17 @@ async def test_gemini_tool_loop_executes_tool() -> None:
         result = await provider.tool_loop(
             messages=[{"role": "user", "content": "Météo Lyon ?"}],
             system="Tu es Jarvis.",
-            tools=[{
-                "name": "get_weather",
-                "description": "Retourne la météo.",
-                "input_schema": {
-                    "type": "object",
-                    "properties": {"city": {"type": "string"}},
-                    "required": ["city"],
-                },
-            }],
+            tools=[
+                {
+                    "name": "get_weather",
+                    "description": "Retourne la météo.",
+                    "input_schema": {
+                        "type": "object",
+                        "properties": {"city": {"type": "string"}},
+                        "required": ["city"],
+                    },
+                }
+            ],
             tool_executor=mock_executor,
         )
 
@@ -270,9 +278,7 @@ async def test_gemini_stream_with_capture_detects_tool() -> None:
             for c in [chunk_text, chunk_fc]:
                 yield c
 
-        mock_client.aio.models.generate_content_stream = AsyncMock(
-            return_value=_fake_stream()
-        )
+        mock_client.aio.models.generate_content_stream = AsyncMock(return_value=_fake_stream())
 
         from llm.api import GeminiProvider
 
@@ -280,14 +286,16 @@ async def test_gemini_stream_with_capture_detects_tool() -> None:
         stream, capture = provider.stream_with_capture(
             messages=[{"role": "user", "content": "Cherche Python asyncio"}],
             system="Tu es Jarvis.",
-            tools=[{
-                "name": "search_web",
-                "description": "Recherche web",
-                "input_schema": {
-                    "type": "object",
-                    "properties": {"query": {"type": "string"}},
-                },
-            }],
+            tools=[
+                {
+                    "name": "search_web",
+                    "description": "Recherche web",
+                    "input_schema": {
+                        "type": "object",
+                        "properties": {"query": {"type": "string"}},
+                    },
+                }
+            ],
         )
 
         text_chunks: list[str] = []

@@ -95,10 +95,7 @@ class AutoDream:
             return
 
         prefs = self._read_prefs()
-        prompt = (
-            f"Préférences actuelles :\n{prefs}\n\n"
-            f"Sessions récentes :\n{sessions_text}"
-        )
+        prompt = f"Préférences actuelles :\n{prefs}\n\nSessions récentes :\n{sessions_text}"
         result = await self._llm.complete(
             messages=[{"role": "user", "content": prompt}],
             system=_DEEP_SYSTEM,

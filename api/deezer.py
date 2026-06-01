@@ -13,10 +13,10 @@ from config.settings import settings
 
 router = APIRouter(prefix="/api/deezer")
 
-_AUTH_URL  = "https://connect.deezer.com/oauth/auth.php"
+_AUTH_URL = "https://connect.deezer.com/oauth/auth.php"
 _TOKEN_URL = "https://connect.deezer.com/oauth/access_token.php"
-_API_BASE  = "https://api.deezer.com"
-_PERMS     = "basic_access,email,offline_access,listening_history,manage_library"
+_API_BASE = "https://api.deezer.com"
+_PERMS = "basic_access,email,offline_access,listening_history,manage_library"
 
 
 def _token_path() -> Path:
@@ -41,6 +41,7 @@ def _get_access_token() -> str | None:
 
 # ── OAuth ─────────────────────────────────────────────────────
 
+
 @router.get("/auth")
 async def deezer_auth() -> RedirectResponse:
     params = {
@@ -52,7 +53,9 @@ async def deezer_auth() -> RedirectResponse:
 
 
 @router.get("/callback")
-async def deezer_callback(code: str | None = None, error_reason: str | None = None) -> RedirectResponse:
+async def deezer_callback(
+    code: str | None = None, error_reason: str | None = None
+) -> RedirectResponse:
     if error_reason or not code:
         logger.error("Deezer OAuth error", error=error_reason)
         return RedirectResponse("/?deezer_error=1")
@@ -80,12 +83,14 @@ async def deezer_callback(code: str | None = None, error_reason: str | None = No
 
 # ── Token for frontend SDK ─────────────────────────────────────
 
+
 @router.get("/token")
 async def get_token() -> JSONResponse:
     return JSONResponse({"token": _get_access_token()})
 
 
 # ── Player state ──────────────────────────────────────────────
+
 
 async def _get_player_state() -> dict:
     token = _get_access_token()
@@ -133,6 +138,7 @@ async def get_player() -> JSONResponse:
 
 # ── Controls ──────────────────────────────────────────────────
 
+
 async def _action(method: str, endpoint: str) -> JSONResponse:
     token = _get_access_token()
     if not token:
@@ -154,13 +160,16 @@ async def _action(method: str, endpoint: str) -> JSONResponse:
 async def play() -> JSONResponse:
     return await _action("put", "play")
 
+
 @router.post("/pause")
 async def pause() -> JSONResponse:
     return await _action("put", "pause")
 
+
 @router.post("/next")
 async def next_track() -> JSONResponse:
     return await _action("post", "next")
+
 
 @router.post("/previous")
 async def previous_track() -> JSONResponse:

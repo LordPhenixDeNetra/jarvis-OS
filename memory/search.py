@@ -124,9 +124,7 @@ class VectorIndex:
             ]
             self._manifest.extend(entries)
             self._vectors = (
-                vectors
-                if self._vectors is None
-                else np.vstack([self._vectors, vectors])
+                vectors if self._vectors is None else np.vstack([self._vectors, vectors])
             )
         logger.debug("VectorIndex.add", doc_id=doc_id, chunks=len(chunks))
 
@@ -168,9 +166,7 @@ class VectorIndex:
             json.dumps(self._manifest, ensure_ascii=False, indent=2),
             encoding="utf-8",
         )
-        logger.debug(
-            "VectorIndex persisted", entries=len(self._manifest), dir=str(self._dir)
-        )
+        logger.debug("VectorIndex persisted", entries=len(self._manifest), dir=str(self._dir))
 
     def load(self) -> None:
         """Charge l'index depuis disque s'il existe. Sinon laisse l'index vide."""
@@ -181,9 +177,7 @@ class VectorIndex:
         try:
             self._vectors = np.load(self._vectors_path)
             self._manifest = json.loads(self._manifest_path.read_text(encoding="utf-8"))
-            logger.info(
-                "VectorIndex loaded", entries=len(self._manifest), dir=str(self._dir)
-            )
+            logger.info("VectorIndex loaded", entries=len(self._manifest), dir=str(self._dir))
         except (OSError, ValueError, json.JSONDecodeError) as e:
             logger.error("VectorIndex.load failed", error=str(e))
             self._vectors = None
@@ -318,10 +312,7 @@ class FTSIndex:
         except sqlite3.OperationalError:
             # Requête FTS5 malformée (guillemets non fermés, etc.)
             return []
-        return [
-            {"doc_id": row[0], "text": row[1], "score": float(row[2])}
-            for row in rows
-        ]
+        return [{"doc_id": row[0], "text": row[1], "score": float(row[2])} for row in rows]
 
     def _count_sync(self) -> int:
         with sqlite3.connect(self._db_path) as conn:

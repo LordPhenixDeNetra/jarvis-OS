@@ -14,6 +14,7 @@ from tools.memory import MemoryLoadTopicTool, MemorySearchTool
 
 # ── SessionStore ──────────────────────────────────────────────
 
+
 def test_session_store_append_and_load(tmp_path: Path) -> None:
     store = SessionStore(tmp_path / "sessions")
     store.append("abc-123", "user", "Bonjour")
@@ -50,6 +51,7 @@ def test_session_store_list_recent(tmp_path: Path) -> None:
 
 
 # ── MemoryIndex ───────────────────────────────────────────────
+
 
 def test_memory_index_read(tmp_path: Path) -> None:
     md = tmp_path / "MEMORY.md"
@@ -98,6 +100,7 @@ def test_memory_index_add_pointer_existing_section(tmp_path: Path) -> None:
 
 # ── TopicStore ────────────────────────────────────────────────
 
+
 def test_topic_store_write_and_load(tmp_path: Path) -> None:
     store = TopicStore(tmp_path / "topics")
     store.write("project_ipod.md", "# iPod DAP\n\nPCM5102A, DAC haute qualité.")
@@ -126,6 +129,7 @@ def test_topic_store_exists(tmp_path: Path) -> None:
 
 
 # ── Session persist callback ───────────────────────────────────
+
 
 def test_session_persist_callback(tmp_path: Path) -> None:
     from core.session import Session
@@ -159,6 +163,7 @@ def test_session_manager_restore_from_jsonl(tmp_path: Path) -> None:
 
 
 # ── Couche 2 : injection de la liste seule + memory_load_topic ────────
+
 
 def test_agent_build_system_lists_topics_only(tmp_path: Path) -> None:
     """_build_system() doit injecter la LISTE des topics, pas leur contenu."""

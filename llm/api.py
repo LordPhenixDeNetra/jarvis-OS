@@ -65,11 +65,7 @@ def _messages_to_openai(messages: list[dict]) -> list[dict]:
         has_tool_result = any(b.get("type") == "tool_result" for b in content)
 
         if has_tool_use:
-            text = " ".join(
-                b["text"]
-                for b in content
-                if b.get("type") == "text" and b.get("text")
-            )
+            text = " ".join(b["text"] for b in content if b.get("type") == "text" and b.get("text"))
             tool_calls = [
                 {
                     "id": b["id"],
@@ -82,20 +78,24 @@ def _messages_to_openai(messages: list[dict]) -> list[dict]:
                 for b in content
                 if b.get("type") == "tool_use"
             ]
-            result.append({
-                "role": "assistant",
-                "content": text or None,
-                "tool_calls": tool_calls,
-            })
+            result.append(
+                {
+                    "role": "assistant",
+                    "content": text or None,
+                    "tool_calls": tool_calls,
+                }
+            )
         elif has_tool_result:
             # Chaque tool_result devient un message "tool" séparé (rôle OpenAI)
             for block in content:
                 if block.get("type") == "tool_result":
-                    result.append({
-                        "role": "tool",
-                        "tool_call_id": block["tool_use_id"],
-                        "content": block.get("content", ""),
-                    })
+                    result.append(
+                        {
+                            "role": "tool",
+                            "tool_call_id": block["tool_use_id"],
+                            "content": block.get("content", ""),
+                        }
+                    )
         else:
             text = " ".join(b.get("text", "") for b in content if b.get("type") == "text")
             result.append({"role": role, "content": text})
@@ -142,19 +142,22 @@ class AnthropicProvider(LLMProvider):
         text = response.content[0].text
         logger.debug("Anthropic complete", model=self._model, tokens=response.usage.output_tokens)
         cost = calculate_cost(
-            "anthropic", self._model,
+            "anthropic",
+            self._model,
             input_tokens=response.usage.input_tokens,
             output_tokens=response.usage.output_tokens,
         )
-        tracker.track(UsageEntry(
-            timestamp=datetime.now().isoformat(),
-            provider="anthropic",
-            model=self._model,
-            input_tokens=response.usage.input_tokens,
-            output_tokens=response.usage.output_tokens,
-            cost_usd=cost,
-            context=context,
-        ))
+        tracker.track(
+            UsageEntry(
+                timestamp=datetime.now().isoformat(),
+                provider="anthropic",
+                model=self._model,
+                input_tokens=response.usage.input_tokens,
+                output_tokens=response.usage.output_tokens,
+                cost_usd=cost,
+                context=context,
+            )
+        )
         return text
 
     async def _stream(self, kwargs: dict) -> AsyncIterator[str]:
@@ -190,7 +193,7 @@ class AnthropicProvider(LLMProvider):
         capture.calls est peuplé dès content_block_stop pour chaque outil, ce qui permet
         à _pipe() de démarrer la task outil aussitôt que le stream texte est épuisé.
         """
-        _input: dict[int, str] = {}             # index → partial_json accumulé
+        _input: dict[int, str] = {}  # index → partial_json accumulé
         _meta: dict[int, tuple[str, str]] = {}  # index → (tool_id, tool_name)
 
         async with self._client.messages.stream(**kwargs) as s:
@@ -240,19 +243,22 @@ class AnthropicProvider(LLMProvider):
                 tools=tools,
             )
             cost = calculate_cost(
-                "anthropic", self._model,
+                "anthropic",
+                self._model,
                 input_tokens=response.usage.input_tokens,
                 output_tokens=response.usage.output_tokens,
             )
-            tracker.track(UsageEntry(
-                timestamp=datetime.now().isoformat(),
-                provider="anthropic",
-                model=self._model,
-                input_tokens=response.usage.input_tokens,
-                output_tokens=response.usage.output_tokens,
-                cost_usd=cost,
-                context=context,
-            ))
+            tracker.track(
+                UsageEntry(
+                    timestamp=datetime.now().isoformat(),
+                    provider="anthropic",
+                    model=self._model,
+                    input_tokens=response.usage.input_tokens,
+                    output_tokens=response.usage.output_tokens,
+                    cost_usd=cost,
+                    context=context,
+                )
+            )
 
             if response.stop_reason != "tool_use":
                 text = "".join(
@@ -463,21 +469,23 @@ class MistralProvider(LLMProvider):
                 return choice.message.content or ""
 
             tc_list = choice.message.tool_calls or []
-            current.append({
-                "role": "assistant",
-                "content": choice.message.content,
-                "tool_calls": [
-                    {
-                        "id": tc.id,
-                        "type": "function",
-                        "function": {
-                            "name": tc.function.name,
-                            "arguments": tc.function.arguments,
-                        },
-                    }
-                    for tc in tc_list
-                ],
-            })
+            current.append(
+                {
+                    "role": "assistant",
+                    "content": choice.message.content,
+                    "tool_calls": [
+                        {
+                            "id": tc.id,
+                            "type": "function",
+                            "function": {
+                                "name": tc.function.name,
+                                "arguments": tc.function.arguments,
+                            },
+                        }
+                        for tc in tc_list
+                    ],
+                }
+            )
 
             parsed: list[tuple[str, str, dict]] = []
             for tc in tc_list:
@@ -491,11 +499,13 @@ class MistralProvider(LLMProvider):
             logger.debug("Mistral tools called", names=[n for _, n, _ in parsed])
 
             for (tool_id, _, _), result in zip(parsed, results, strict=True):
-                current.append({
-                    "role": "tool",
-                    "tool_call_id": tool_id,
-                    "content": result,
-                })
+                current.append(
+                    {
+                        "role": "tool",
+                        "tool_call_id": tool_id,
+                        "content": result,
+                    }
+                )
 
         logger.warning("Mistral tool loop max iterations reached", max=_MAX_TOOL_ITERATIONS)
         return "Je n'ai pas pu terminer — trop d'étapes."
@@ -634,20 +644,24 @@ class GeminiProvider(LLMProvider):
                     if btype == "text" and block.get("text"):
                         model_parts.append(_t.Part(text=block["text"]))
                     elif btype == "tool_use":
-                        model_parts.append(_t.Part(
-                            function_call=_t.FunctionCall(
-                                name=block["name"],
-                                args=block.get("input", {}),
+                        model_parts.append(
+                            _t.Part(
+                                function_call=_t.FunctionCall(
+                                    name=block["name"],
+                                    args=block.get("input", {}),
+                                )
                             )
-                        ))
+                        )
                     elif btype == "tool_result":
                         tool_name = id_to_name.get(block["tool_use_id"], block["tool_use_id"])
-                        user_parts.append(_t.Part(
-                            function_response=_t.FunctionResponse(
-                                name=tool_name,
-                                response={"result": block.get("content", "")},
+                        user_parts.append(
+                            _t.Part(
+                                function_response=_t.FunctionResponse(
+                                    name=tool_name,
+                                    response={"result": block.get("content", "")},
+                                )
                             )
-                        ))
+                        )
 
                 if model_parts:
                     result.append(_t.Content(role="model", parts=model_parts))
@@ -732,9 +746,7 @@ class GeminiProvider(LLMProvider):
                     if fc.name not in seen_keys:
                         seen_keys.add(fc.name)
                         call_id = f"call_{fc.name}_{uuid.uuid4().hex[:8]}"
-                        capture.calls.append(
-                            (call_id, fc.name, dict(fc.args) if fc.args else {})
-                        )
+                        capture.calls.append((call_id, fc.name, dict(fc.args) if fc.args else {}))
                         capture.stop_reason = "tool_use"
 
     async def tool_loop(
@@ -768,9 +780,7 @@ class GeminiProvider(LLMProvider):
             candidate = response.candidates[0]
             contents.append(candidate.content)
 
-            tool_calls_data = [
-                (fc.name, dict(fc.args) if fc.args else {}) for fc in function_calls
-            ]
+            tool_calls_data = [(fc.name, dict(fc.args) if fc.args else {}) for fc in function_calls]
             results = await asyncio.gather(
                 *(tool_executor(name, inp) for name, inp in tool_calls_data)
             )

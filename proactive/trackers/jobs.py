@@ -2,12 +2,13 @@
 JobTracker — suivi des candidatures stages/jobs.
 Stockage JSON dans memory_data/jobs.json.
 """
+
 from __future__ import annotations
 
 import json
 import uuid
-from dataclasses import asdict, dataclass, field
-from datetime import datetime, date
+from dataclasses import asdict, dataclass
+from datetime import date, datetime
 from enum import StrEnum
 from pathlib import Path
 
@@ -52,7 +53,6 @@ def _jobs_path() -> Path:
 
 
 class JobTracker:
-
     def load(self) -> list[JobApplication]:
         path = _jobs_path()
         if not path.exists():
@@ -67,8 +67,7 @@ class JobTracker:
         path = _jobs_path()
         path.parent.mkdir(parents=True, exist_ok=True)
         path.write_text(
-            json.dumps([asdict(a) for a in apps],
-                       ensure_ascii=False, indent=2),
+            json.dumps([asdict(a) for a in apps], ensure_ascii=False, indent=2),
             encoding="utf-8",
         )
 
@@ -87,7 +86,9 @@ class JobTracker:
         self.save_all(apps)
         return app
 
-    def update_status(self, company: str, status: JobStatus, notes: str = "") -> JobApplication | None:
+    def update_status(
+        self, company: str, status: JobStatus, notes: str = ""
+    ) -> JobApplication | None:
         apps = self.load()
         # Cherche par nom d'entreprise (case-insensitive)
         company_lower = company.lower()
@@ -105,10 +106,7 @@ class JobTracker:
 
     def get_pending(self, min_days: int = 7) -> list[JobApplication]:
         """Candidatures en attente depuis plus de min_days jours."""
-        return [
-            a for a in self.load()
-            if a.is_pending() and a.days_since_applied() >= min_days
-        ]
+        return [a for a in self.load() if a.is_pending() and a.days_since_applied() >= min_days]
 
     def summary(self) -> str:
         apps = self.load()

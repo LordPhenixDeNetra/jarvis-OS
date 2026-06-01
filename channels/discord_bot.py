@@ -8,6 +8,7 @@ Variables d'environnement requises :
   DISCORD_BOT_TOKEN  — token du bot Discord
   DISCORD_OWNER_ID   — ID numérique (int) du seul utilisateur autorisé
 """
+
 from __future__ import annotations
 
 import os
@@ -19,6 +20,7 @@ from channels.base import ChannelAdapter, IncomingMessage, MessageTarget, Platfo
 
 try:
     import discord
+
     DISCORD_AVAILABLE = True
 except ImportError:
     DISCORD_AVAILABLE = False
@@ -88,6 +90,7 @@ class DiscordChannel(ChannelAdapter):
                 logger.warning("[Discord] Aucun dispatch configuré — message ignoré")
 
         import asyncio
+
         asyncio.create_task(
             self._client.start(self._token),  # type: ignore[union-attr]
             name="discord-bot",

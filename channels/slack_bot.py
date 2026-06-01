@@ -1,4 +1,5 @@
 """Stub Slack pour Jarvis — à implémenter via Slack Bolt SDK."""
+
 from __future__ import annotations
 
 from channels.base import ChannelAdapter, MessageTarget, Platform

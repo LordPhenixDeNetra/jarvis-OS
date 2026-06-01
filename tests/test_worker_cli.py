@@ -1,4 +1,5 @@
 """Tests de sécurité pour WorkerCLITool."""
+
 from __future__ import annotations
 
 from pathlib import Path
@@ -16,6 +17,7 @@ def tool(tmp_path: Path) -> WorkerCLITool:
 
 # ── python -c / inline ────────────────────────────────────────────────────────
 
+
 def test_python3_c_inline_blocked(tool: WorkerCLITool) -> None:
     result = tool._check("python3 -c 'import os; os.remove(\"/tmp/x\")'")
     assert result is not None
@@ -24,7 +26,7 @@ def test_python3_c_inline_blocked(tool: WorkerCLITool) -> None:
 
 
 def test_python_c_inline_blocked(tool: WorkerCLITool) -> None:
-    result = tool._check('python -c "print(\'pwned\')"')
+    result = tool._check("python -c \"print('pwned')\"")
     assert result is not None
     assert result["success"] is False
 
@@ -36,6 +38,7 @@ def test_python3_file_allowed(tool: WorkerCLITool) -> None:
 
 
 # ── sh -c / bash -c ──────────────────────────────────────────────────────────
+
 
 def test_sh_c_not_whitelisted(tool: WorkerCLITool) -> None:
     # Pas de pattern _BLOCKED_RE ici — la commande doit échouer via la whitelist
@@ -53,6 +56,7 @@ def test_bash_c_not_whitelisted(tool: WorkerCLITool) -> None:
 
 
 # ── chaînage ; / && ──────────────────────────────────────────────────────────
+
 
 def test_semicolon_chaining_second_blocked(tool: WorkerCLITool) -> None:
     """ls est valide, rm -rf / est bloqué : le chaînage doit être refusé."""
@@ -76,6 +80,7 @@ def test_chaining_both_segments_valid(tool: WorkerCLITool) -> None:
 
 # ── opt-in exécution directe ─────────────────────────────────────────────────
 
+
 async def test_run_direct_refused_without_opt_in(
     tool: WorkerCLITool,
     monkeypatch: pytest.MonkeyPatch,
@@ -96,6 +101,7 @@ async def test_run_direct_refused_without_opt_in(
 
 
 # ── commandes simples autorisées ─────────────────────────────────────────────
+
 
 def test_ls_allowed(tool: WorkerCLITool) -> None:
     assert tool._check("ls -la") is None

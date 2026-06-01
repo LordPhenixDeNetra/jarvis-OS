@@ -14,6 +14,7 @@ Sécurité :
 Inspiré de hermes-agent code_execution_tool.py (MIT License, NousResearch).
 Voir notices/exec-backends.md pour l'attribution complète.
 """
+
 from __future__ import annotations
 
 import asyncio
@@ -32,16 +33,18 @@ if TYPE_CHECKING:
 
 # Sous-ensemble d'outils exposés dans le sandbox RPC.
 # Intersection avec les outils enregistrés au moment de l'exécution.
-RPC_ALLOWED_TOOLS: frozenset[str] = frozenset([
-    "weather",
-    "browser",
-    "read_file",
-    "find_files",
-    "calendar_list",
-    "memory_search",
-    "cli_runner",
-    "execute_cli",
-])
+RPC_ALLOWED_TOOLS: frozenset[str] = frozenset(
+    [
+        "weather",
+        "browser",
+        "read_file",
+        "find_files",
+        "calendar_list",
+        "memory_search",
+        "cli_runner",
+        "execute_cli",
+    ]
+)
 
 _STUB_TEMPLATE = textwrap.dedent("""\
     \"\"\"Stub jarvis_tools — généré par ScriptRPCRunner. Ne pas modifier.\"\"\"
@@ -73,8 +76,7 @@ _STUB_TEMPLATE = textwrap.dedent("""\
 def _build_stub(rpc_dir: str, tools: list[str]) -> str:
     """Génère le module jarvis_tools.py avec une fonction par outil."""
     lines = [
-        f"def {name}(**kwargs):\n    return _call({name!r}, **kwargs)\n"
-        for name in sorted(tools)
+        f"def {name}(**kwargs):\n    return _call({name!r}, **kwargs)\n" for name in sorted(tools)
     ]
     return _STUB_TEMPLATE.format(rpc_dir=rpc_dir, stubs="\n".join(lines))
 
@@ -85,7 +87,7 @@ class ScriptRPCRunner:
     Pattern "zéro coût de contexte" : N appels d'outils = 1 seul tour LLM.
     """
 
-    MAX_TOOL_CALLS  = 50
+    MAX_TOOL_CALLS = 50
     MAX_STDOUT_BYTES = 50_000
 
     def __init__(
@@ -94,8 +96,8 @@ class ScriptRPCRunner:
         tool_registry: ToolRegistry,
         workspace: Path,
     ) -> None:
-        self._backend   = backend
-        self._registry  = tool_registry
+        self._backend = backend
+        self._registry = tool_registry
         self._workspace = workspace
 
     async def run(
@@ -113,8 +115,8 @@ class ScriptRPCRunner:
             registered = frozenset(t["name"] for t in self._registry.schemas())
             allowed_tools = RPC_ALLOWED_TOOLS & registered
 
-        run_id     = uuid.uuid4().hex[:8]
-        rpc_dir    = self._workspace / ".jarvis_rpc" / run_id
+        run_id = uuid.uuid4().hex[:8]
+        rpc_dir = self._workspace / ".jarvis_rpc" / run_id
         rpc_dir.mkdir(parents=True, exist_ok=True)
 
         # Chemin du rpc_dir tel que vu depuis le backend.
@@ -135,15 +137,15 @@ class ScriptRPCRunner:
         async def _dispatcher() -> None:
             while True:
                 for req_path in sorted(rpc_dir.glob("req_*.json")):
-                    req_id   = req_path.stem[4:]  # "req_<id>" → "<id>"
+                    req_id = req_path.stem[4:]  # "req_<id>" → "<id>"
                     res_path = rpc_dir / f"res_{req_id}.json"
                     if res_path.exists():
                         continue  # déjà traité
 
                     try:
-                        data      = json.loads(req_path.read_text())
+                        data = json.loads(req_path.read_text())
                         tool_name = data["tool"]
-                        inputs    = data.get("inputs", {})
+                        inputs = data.get("inputs", {})
 
                         if tool_name not in allowed_tools:
                             response = {
@@ -153,6 +155,7 @@ class ScriptRPCRunner:
                             response = {"error": "Quota d'appels RPC atteint"}
                         else:
                             from core.approval_checker import get_approval_checker
+
                             checker = get_approval_checker()
                             if checker:
                                 approved = await checker.check(
@@ -188,7 +191,7 @@ class ScriptRPCRunner:
                 await asyncio.sleep(0.05)
 
         dispatch_task = asyncio.create_task(_dispatcher())
-        script_path   = f"{backend_rpc}/user_script.py"
+        script_path = f"{backend_rpc}/user_script.py"
 
         try:
             result = await self._backend.execute(
@@ -204,8 +207,8 @@ class ScriptRPCRunner:
             shutil.rmtree(rpc_dir, ignore_errors=True)
 
         return {
-            "success":    result["success"],
-            "stdout":     result["stdout"][: self.MAX_STDOUT_BYTES],
-            "stderr":     result["stderr"],
+            "success": result["success"],
+            "stdout": result["stdout"][: self.MAX_STDOUT_BYTES],
+            "stderr": result["stderr"],
             "tool_calls": tool_call_count[0],
         }

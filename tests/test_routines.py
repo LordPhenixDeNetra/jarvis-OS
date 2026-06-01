@@ -7,6 +7,7 @@ Cas couverts :
   3. La concurrence bloque le chevauchement (politique skip_if_active).
   4. Chaque décision proactive produit un ProactiveAuditEvent consultable.
 """
+
 from __future__ import annotations
 
 import sys
@@ -22,7 +23,7 @@ for _dep in ("openai", "anthropic", "ollama", "google", "google.genai", "google.
     if _dep not in sys.modules:
         sys.modules[_dep] = MagicMock()  # type: ignore[assignment]
 
-from background.routines import (
+from background.routines import (  # noqa: E402
     CatchUpPolicy,
     ConcurrencyPolicy,
     Routine,
@@ -33,7 +34,7 @@ from background.routines import (
     fire_routine,
     next_cron_datetime,
 )
-from proactive.schemas import ExecutionMode, Initiative, InitiativeType, Priority
+from proactive.schemas import ExecutionMode, Initiative, InitiativeType, Priority  # noqa: E402
 
 # ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -197,9 +198,7 @@ def test_proactive_audit_event() -> None:
     assert audit_broadcasts[0]["event"]["initiative_id"] == "init_test_01"
 
     # Vérification que la notification texte a bien été ajoutée
-    notif_broadcasts = [
-        e for e in broadcast_events if e.get("type") != "proactive_audit"
-    ]
+    notif_broadcasts = [e for e in broadcast_events if e.get("type") != "proactive_audit"]
     assert len(notif_broadcasts) == 0  # NOTIFY passe par _notifications.add(), pas broadcast
 
 

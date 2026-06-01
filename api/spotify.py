@@ -15,13 +15,17 @@ from config.settings import settings
 
 router = APIRouter(prefix="/api/spotify")
 
-_SCOPES = "user-read-currently-playing user-read-playback-state user-modify-playback-state streaming user-read-email user-read-private"
+_SCOPES = (
+    "user-read-currently-playing user-read-playback-state"
+    " user-modify-playback-state streaming user-read-email user-read-private"
+)
 _AUTH_URL = "https://accounts.spotify.com/authorize"
 _TOKEN_URL = "https://accounts.spotify.com/api/token"
 _API_BASE = "https://api.spotify.com/v1"
 
 
 # ── Token management ──────────────────────────────────────────
+
 
 def _token_path() -> Path:
     return Path(settings.spotify_token_path)
@@ -79,6 +83,7 @@ async def _get_access_token() -> str | None:
 
 # ── OAuth flow ────────────────────────────────────────────────
 
+
 @router.get("/auth")
 async def spotify_auth() -> RedirectResponse:
     params = {
@@ -111,17 +116,20 @@ async def spotify_callback(code: str | None = None, error: str | None = None) ->
         )
         resp.raise_for_status()
         data = resp.json()
-        _save_token({
-            "access_token": data["access_token"],
-            "refresh_token": data["refresh_token"],
-            "expires_at": time.time() + data["expires_in"],
-        })
+        _save_token(
+            {
+                "access_token": data["access_token"],
+                "refresh_token": data["refresh_token"],
+                "expires_at": time.time() + data["expires_in"],
+            }
+        )
         logger.info("Spotify token saved")
 
     return RedirectResponse("/?spotify_ok=1")
 
 
 # ── Token for Web Playback SDK ────────────────────────────────
+
 
 @router.get("/token")
 async def get_token() -> JSONResponse:
@@ -152,6 +160,7 @@ async def transfer_playback(request: Request) -> JSONResponse:
 
 
 # ── Player state ──────────────────────────────────────────────
+
 
 async def _get_player_state() -> dict:
     token = await _get_access_token()
@@ -230,6 +239,7 @@ async def get_player() -> JSONResponse:
 
 
 # ── Playback controls ─────────────────────────────────────────
+
 
 async def _player_action(method: str, endpoint: str) -> JSONResponse:
     token = await _get_access_token()

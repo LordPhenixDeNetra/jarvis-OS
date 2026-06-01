@@ -1,4 +1,5 @@
 """LocalBackend — exécution directe sur l'hôte dans le workspace (opt-in explicite)."""
+
 from __future__ import annotations
 
 import asyncio

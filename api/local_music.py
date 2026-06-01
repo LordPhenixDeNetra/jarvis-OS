@@ -14,7 +14,9 @@ _FIELDS = ["title", "artist", "album", "artworkURL", "playbackRate", "duration",
 async def _run(cmd: str, *args: str) -> str | None:
     try:
         proc = await asyncio.create_subprocess_exec(
-            "nowplaying-cli", cmd, *args,
+            "nowplaying-cli",
+            cmd,
+            *args,
             stdout=asyncio.subprocess.PIPE,
             stderr=asyncio.subprocess.DEVNULL,
         )
@@ -23,7 +25,7 @@ async def _run(cmd: str, *args: str) -> str | None:
     except FileNotFoundError:
         logger.debug("nowplaying-cli not installed")
         return None
-    except (asyncio.TimeoutError, Exception) as e:
+    except (TimeoutError, Exception) as e:
         logger.debug("nowplaying-cli error", error=str(e))
         return None
 
@@ -37,7 +39,7 @@ async def _get_player_state() -> dict:
     if len(lines) < len(_FIELDS):
         return {"connected": True, "is_playing": False, "track": None}
 
-    values = dict(zip(_FIELDS, lines))
+    values = dict(zip(_FIELDS, lines, strict=False))
     title = values.get("title", "")
     if not title or title == "null":
         return {"connected": True, "is_playing": False, "track": None}
@@ -78,15 +80,18 @@ async def play() -> JSONResponse:
     await _run("play")
     return JSONResponse({"ok": True})
 
+
 @router.post("/pause")
 async def pause() -> JSONResponse:
     await _run("pause")
     return JSONResponse({"ok": True})
 
+
 @router.post("/next")
 async def next_track() -> JSONResponse:
     await _run("next")
     return JSONResponse({"ok": True})
+
 
 @router.post("/previous")
 async def previous_track() -> JSONResponse:

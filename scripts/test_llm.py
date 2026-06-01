@@ -2,6 +2,7 @@
 Script de validation Phase 1 — appelle LLMProvider.complete() et affiche la réponse.
 Usage : uv run python scripts/test_llm.py [--stream] [--provider anthropic|openai|mistral|ollama]
 """
+
 from __future__ import annotations
 
 import argparse

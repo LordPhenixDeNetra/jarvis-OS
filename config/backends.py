@@ -10,6 +10,7 @@ Chaque backend peut être : auto | docker | local | ssh | remote
 
 Pattern identique à config/approvals.py : dataclass + JSON persisté.
 """
+
 from __future__ import annotations
 
 import json
@@ -23,10 +24,10 @@ from loguru import logger
 class BackendType(StrEnum):
     """Type de backend d'exécution sélectionnable."""
 
-    AUTO   = "auto"
+    AUTO = "auto"
     DOCKER = "docker"
-    LOCAL  = "local"
-    SSH    = "ssh"
+    LOCAL = "local"
+    SSH = "ssh"
     REMOTE = "remote"
 
 
@@ -34,10 +35,10 @@ class BackendType(StrEnum):
 class SSHConfig:
     """Paramètres de connexion pour le backend SSH."""
 
-    host: str         = ""
-    user: str         = ""
-    port: int         = 22
-    key_path: str     = ""
+    host: str = ""
+    user: str = ""
+    port: int = 22
+    key_path: str = ""
     remote_workdir: str = "~/jarvis-workspace"
 
 
@@ -46,8 +47,8 @@ class BackendsConfig:
     """Configuration globale des backends d'exécution."""
 
     default_backend: BackendType = BackendType.AUTO
-    ssh: SSHConfig               = field(default_factory=SSHConfig)
-    remote_provider: str         = "modal"
+    ssh: SSHConfig = field(default_factory=SSHConfig)
+    remote_provider: str = "modal"
 
 
 _CONFIG_FILE = Path("config/backends.json")
@@ -61,14 +62,14 @@ def load_backends_config() -> BackendsConfig:
         return cfg
 
     try:
-        raw     = json.loads(_CONFIG_FILE.read_text(encoding="utf-8"))
+        raw = json.loads(_CONFIG_FILE.read_text(encoding="utf-8"))
         ssh_raw = raw.pop("ssh", {})
-        bt      = BackendType(raw.get("default_backend", BackendType.AUTO))
+        bt = BackendType(raw.get("default_backend", BackendType.AUTO))
         ssh_cfg = SSHConfig(**{k: v for k, v in ssh_raw.items() if hasattr(SSHConfig, k)})
         return BackendsConfig(
-            default_backend  = bt,
-            ssh              = ssh_cfg,
-            remote_provider  = raw.get("remote_provider", "modal"),
+            default_backend=bt,
+            ssh=ssh_cfg,
+            remote_provider=raw.get("remote_provider", "modal"),
         )
     except Exception:
         logger.warning("config/backends.json illisible — utilisation des valeurs par défaut")

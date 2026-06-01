@@ -8,6 +8,7 @@ ScriptRPCTool    : execute un script Python qui appelle les outils via RPC —
 Inspiré de hermes-agent delegate_tool.py et execute_code.py
 (MIT License, NousResearch — voir notices/exec-backends.md).
 """
+
 from __future__ import annotations
 
 import tempfile
@@ -123,8 +124,8 @@ class ScriptRPCTool(Tool):
         tool_registry: ToolRegistry,
         workspace_path: str | None = None,
     ) -> None:
-        self._tool_registry   = tool_registry
-        self._workspace_path  = workspace_path
+        self._tool_registry = tool_registry
+        self._workspace_path = workspace_path
 
     async def execute(self, script: str, timeout: int = 300) -> ToolResult:  # type: ignore[override]  # noqa: ASYNC109
         from agent.backends.rpc import ScriptRPCRunner

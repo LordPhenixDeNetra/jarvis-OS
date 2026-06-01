@@ -3,6 +3,7 @@ ProactiveEngine — orchestrateur principal.
 Tourne en background toutes les 30 minutes.
 Dispatche les initiatives selon leur mode d'exécution.
 """
+
 from __future__ import annotations
 
 import asyncio
@@ -33,10 +34,10 @@ class ProactiveAuditEvent:
     event_id: str
     initiative_id: str
     initiative_title: str
-    decision: str        # "notify" | "validate" | "auto"
+    decision: str  # "notify" | "validate" | "auto"
     reasoning: str
     sources: list[str]
-    decided_at: str      # ISO UTC
+    decided_at: str  # ISO UTC
 
 
 def _extract_sources(initiative: Initiative) -> list[str]:
@@ -54,7 +55,6 @@ def _extract_sources(initiative: Initiative) -> list[str]:
 
 
 class ProactiveEngine:
-
     def __init__(
         self,
         notification_queue: NotificationQueue,
@@ -152,11 +152,13 @@ class ProactiveEngine:
                 f"{len(initiatives)} initiatives, {high_count} HIGH"
             )
 
-            self._broadcast_event({
-                "type": "proactive_update",
-                "count": len(initiatives),
-                "high_priority": high_count,
-            })
+            self._broadcast_event(
+                {
+                    "type": "proactive_update",
+                    "count": len(initiatives),
+                    "high_priority": high_count,
+                }
+            )
 
             return initiatives
 
@@ -194,18 +196,20 @@ class ProactiveEngine:
 
         elif initiative.execution_mode == ExecutionMode.VALIDATE:
             # Envoyer au Command Center pour validation
-            self._broadcast_event({
-                "type": "initiative_pending",
-                "initiative": {
-                    "id": initiative.id,
-                    "type": initiative.type,
-                    "title": initiative.title,
-                    "context": initiative.context,
-                    "reasoning": initiative.reasoning,
-                    "action": initiative.action,
-                    "priority": initiative.priority,
-                    "draft_content": initiative.draft_content,
-                    "created_at": initiative.created_at.isoformat(),
-                },
-            })
+            self._broadcast_event(
+                {
+                    "type": "initiative_pending",
+                    "initiative": {
+                        "id": initiative.id,
+                        "type": initiative.type,
+                        "title": initiative.title,
+                        "context": initiative.context,
+                        "reasoning": initiative.reasoning,
+                        "action": initiative.action,
+                        "priority": initiative.priority,
+                        "draft_content": initiative.draft_content,
+                        "created_at": initiative.created_at.isoformat(),
+                    },
+                }
+            )
             logger.info(f"ProactiveEngine VALIDATE: {initiative.title}")

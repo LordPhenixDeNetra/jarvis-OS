@@ -63,9 +63,7 @@ class DeepgramReceiver:
         self._running = False
         if self._loop and not self._loop.is_closed():
             try:
-                asyncio.run_coroutine_threadsafe(
-                    self._disconnect(), self._loop
-                ).result(timeout=5.0)
+                asyncio.run_coroutine_threadsafe(self._disconnect(), self._loop).result(timeout=5.0)
             except Exception:
                 pass
         logger.info("DeepgramReceiver stopped")

@@ -1,11 +1,12 @@
 """
 Vérifie si les applications requises par un skill sont installées.
 """
+
 from __future__ import annotations
+
 import platform
 import subprocess
 from pathlib import Path
-from loguru import logger
 
 
 def check_app_installed(app: dict) -> dict:
@@ -32,7 +33,9 @@ def check_app_installed(app: dict) -> dict:
             try:
                 result = subprocess.run(
                     ["mdfind", f"kMDItemFSName == '{mac_bundle}.app'"],
-                    capture_output=True, text=True, timeout=3
+                    capture_output=True,
+                    text=True,
+                    timeout=3,
                 )
                 installed = bool(result.stdout.strip())
             except Exception:
@@ -43,8 +46,7 @@ def check_app_installed(app: dict) -> dict:
         if windows_exe:
             try:
                 result = subprocess.run(
-                    ["where", windows_exe],
-                    capture_output=True, text=True, timeout=3
+                    ["where", windows_exe], capture_output=True, text=True, timeout=3
                 )
                 installed = result.returncode == 0
             except Exception:
@@ -55,8 +57,7 @@ def check_app_installed(app: dict) -> dict:
         if linux_cmd:
             try:
                 result = subprocess.run(
-                    ["which", linux_cmd],
-                    capture_output=True, text=True, timeout=3
+                    ["which", linux_cmd], capture_output=True, text=True, timeout=3
                 )
                 installed = result.returncode == 0
             except Exception:
@@ -84,10 +85,7 @@ def check_all_apps(requires_apps: list[dict]) -> dict:
     """
     results = [check_app_installed(app) for app in requires_apps]
 
-    all_required_installed = all(
-        r["installed"] or not r["required"]
-        for r in results
-    )
+    all_required_installed = all(r["installed"] or not r["required"] for r in results)
 
     return {
         "all_required_installed": all_required_installed,

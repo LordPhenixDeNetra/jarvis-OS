@@ -1,4 +1,5 @@
 """Outils LLM pour la gestion des skills Jarvis (création, amélioration, liste)."""
+
 from __future__ import annotations
 
 from typing import TYPE_CHECKING
@@ -49,6 +50,7 @@ class SkillCreateTool(Tool):
     def __init__(self, synthesizer: SkillSynthesizer | None = None) -> None:
         if synthesizer is None:
             from skills.synthesizer import SkillSynthesizer
+
             synthesizer = SkillSynthesizer()
         self._synthesizer = synthesizer
 
@@ -106,6 +108,7 @@ class SkillImproveTool(Tool):
     def __init__(self, synthesizer: SkillSynthesizer | None = None) -> None:
         if synthesizer is None:
             from skills.synthesizer import SkillSynthesizer
+
             synthesizer = SkillSynthesizer()
         self._synthesizer = synthesizer
 
@@ -116,9 +119,7 @@ class SkillImproveTool(Tool):
     ) -> ToolResult:
         try:
             await self._synthesizer.improve_skill(skill_name, new_experience)
-            return ToolResult(
-                content=f"Skill '{skill_name}' amélioré avec la nouvelle expérience."
-            )
+            return ToolResult(content=f"Skill '{skill_name}' amélioré avec la nouvelle expérience.")
         except FileNotFoundError as exc:
             return ToolResult(content=str(exc), is_error=True)
         except Exception as exc:  # noqa: BLE001
@@ -151,8 +152,7 @@ class SkillListTool(Tool):
         skills = skill_registry.list_installed()
         if filter_tag:
             skills = [
-                s for s in skills
-                if filter_tag.lower() in [t.lower() for t in s.get("tags", [])]
+                s for s in skills if filter_tag.lower() in [t.lower() for t in s.get("tags", [])]
             ]
 
         if not skills:

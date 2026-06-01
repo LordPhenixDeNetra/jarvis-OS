@@ -1,4 +1,5 @@
 """Classe de base pour tous les skills Jarvis."""
+
 from __future__ import annotations
 
 import platform
@@ -12,7 +13,7 @@ if TYPE_CHECKING:
     from tools.base import Tool
 
 
-class SkillBase(ABC):
+class SkillBase(ABC):  # noqa: B024 — sous-classes surchargent par convention, pas via abstractmethod
     """
     Un skill est une extension de capacité pour Jarvis.
 
@@ -25,7 +26,7 @@ class SkillBase(ABC):
 
     SYSTEM_PROMPT: str = ""
 
-    def __init__(self, metadata: dict = None):
+    def __init__(self, metadata: dict = None) -> None:
         self.metadata = metadata or {}
         self.name = metadata.get("name", self.__class__.__name__)
         self.label = metadata.get("label", self.name)
@@ -37,7 +38,7 @@ class SkillBase(ABC):
     def get_system_prompt(self) -> str:
         return self.SYSTEM_PROMPT.strip()
 
-    def get_tools(self) -> list["Tool"]:
+    def get_tools(self) -> list[Tool]:
         """Retourne les outils fournis par ce skill (vide par défaut)."""
         return []
 
@@ -47,7 +48,7 @@ class SkillBase(ABC):
     def is_preset(self) -> bool:
         return False
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return f"<Skill {self.name} v{self.version} by {self.author}>"
 
 
@@ -57,7 +58,7 @@ class SkillBase(ABC):
 class PresetStep:
     """Un step d'un preset."""
 
-    def __init__(self, data: dict):
+    def __init__(self, data: dict) -> None:
         self.name = data.get("name", "")
         self.type = data.get("type", "")
         self.platforms = data.get("platforms", {})

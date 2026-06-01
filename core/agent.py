@@ -49,16 +49,18 @@ class Agent:
     ) -> str:
         """Assemble le prompt système : partie statique + contexte dynamique."""
         from config.settings import settings as _s
+
         static_system = _STATIC_PROMPT_PATH.read_text(encoding="utf-8")
         if _s.quebec_mode:
             static_system += (
                 "\n\n## Mode Québécois (ACTIF)\n"
                 "Tu parles avec un accent et du dialecte québécois authentique. "
-                "Utilise des expressions typiques : 'ostie', 'câlice', 'tabarnak' (avec parcimonie), "
-                "'c'est le boutte', 'en masse', 'pantoute', 'tantôt', 'maudit', 'icitte', "
-                "'chu' (je suis), 'ben' (bien), 'toé' (toi), 'moé' (moi), 'faque' (fait que / donc), "
-                "'t'sé' (tu sais), 'un char' (une voiture), 'magasiner' (faire du shopping). "
-                "Garde la personnalité de Jarvis (direct, efficace, ironie) mais avec la couleur québécoise."
+                "Utilise : 'ostie', 'câlice', 'tabarnak' (avec parcimonie),"
+                " 'c'est le boutte', 'en masse', 'pantoute', 'tantôt', 'maudit', 'icitte',"
+                " 'chu' (je suis), 'ben' (bien), 'toé', 'moé', 'faque', 't'sé',"
+                " 'un char' (voiture), 'magasiner' (shopping). "
+                "Garde la personnalité Jarvis (direct, efficace, ironie)"
+                " avec la couleur québécoise."
             )
         dynamic_parts: list[str] = ["=== CONTEXTE DYNAMIQUE ==="]
 
@@ -67,9 +69,7 @@ class Agent:
         dynamic_parts.append(f"## Date et heure\n\n{now.strftime('%Y-%m-%d %H:%M')}")
 
         if recall_summary:
-            dynamic_parts.append(
-                f"## Rappel de sessions précédentes\n\n{recall_summary}"
-            )
+            dynamic_parts.append(f"## Rappel de sessions précédentes\n\n{recall_summary}")
 
         if self._user_model_path is not None and self._user_model_path.exists():
             model_text = self._user_model_path.read_text(encoding="utf-8").strip()
@@ -99,8 +99,7 @@ class Agent:
 
         if self._tool_registry is not None and self._tool_registry.has_tools():
             tool_lines = "\n".join(
-                f"- `{s['name']}` : {s['description']}"
-                for s in self._tool_registry.schemas()
+                f"- `{s['name']}` : {s['description']}" for s in self._tool_registry.schemas()
             )
             dynamic_parts.append(
                 f"## Outils disponibles (router [CF] pour les utiliser)\n\n{tool_lines}"
@@ -234,12 +233,14 @@ class Agent:
         if ack_text.strip():
             assistant_content.append({"type": "text", "text": ack_text})
         for tool_id, tool_name, tool_input in capture.calls:
-            assistant_content.append({
-                "type": "tool_use",
-                "id": tool_id,
-                "name": tool_name,
-                "input": tool_input,
-            })
+            assistant_content.append(
+                {
+                    "type": "tool_use",
+                    "id": tool_id,
+                    "name": tool_name,
+                    "input": tool_input,
+                }
+            )
 
         # Bloc user avec les tool_result
         tool_result_blocks = [

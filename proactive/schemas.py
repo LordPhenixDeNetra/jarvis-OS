@@ -1,4 +1,5 @@
 from __future__ import annotations
+
 from dataclasses import dataclass, field
 from datetime import datetime
 from enum import StrEnum
@@ -22,6 +23,7 @@ class Priority(StrEnum):
 @dataclass
 class ContextItem:
     """Un élément d'information collecté depuis une source."""
+
     type: ItemType
     title: str
     summary: str
@@ -35,6 +37,7 @@ class ContextItem:
 @dataclass
 class CollectionResult:
     """Résultat d'une collecte complète (toutes sources)."""
+
     items: list[ContextItem]
     collected_at: datetime
     errors: dict[str, str] = field(default_factory=dict)

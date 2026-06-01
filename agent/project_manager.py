@@ -1,4 +1,5 @@
 """ProjectManager — analyse une mission et la décompose en étapes exécutables."""
+
 from __future__ import annotations
 
 import json
@@ -33,15 +34,18 @@ Types de projet :
 - "generic"       : tout autre type
 
 Règles spéciales pour fusion_360 :
-- Détecte fusion_360 si la demande mentionne Fusion 360, CAO, modélisation 3D, impression 3D, STL, coque, boîtier, pièce 3D, etc.
+- Détecte fusion_360 si la demande mentionne Fusion 360, CAO, modélisation 3D,
+  impression 3D, STL, coque, boîtier, pièce 3D, etc.
 - Chaque étape doit décrire EXACTEMENT l'opération Fusion 360 à faire avec l'outil fusion_360.
 - NE PAS utiliser execute_cli ou write_file pour des tâches Fusion 360.
-- L'agent dispose de l'outil fusion_360(action="execute_script", script="...") pour exécuter des scripts Python Fusion API.
+- L'agent dispose de l'outil fusion_360(action="execute_script", script="...")
+  pour exécuter des scripts Python Fusion API.
 - Les scripts Fusion utilisent adsk.core, adsk.fusion, et les CENTIMÈTRES (10mm → createByReal(1)).
 - Chaque étape = une opération (sketch, extrusion, fillet, shell, export STL, etc.)
 - Toujours prendre un screenshot après les opérations importantes.
 - requires_network=false (Fusion est local)
-- Exemple de description d'étape Fusion : "Créer le sketch de base 14.3x7.1 cm sur le plan XY, puis l'extruder de 1.5 cm vers le haut avec l'outil fusion_360."
+- Exemple d'étape Fusion : "Créer le sketch de base 14.3x7.1 cm sur le plan XY,
+  puis l'extruder de 1.5 cm vers le haut avec l'outil fusion_360."
 
 Réseau :
 - requires_network=true si le projet nécessite internet (npm install, pip install, API externe,
@@ -66,13 +70,13 @@ Réponds UNIQUEMENT avec du JSON valide (sans markdown, sans commentaires) :
 
 
 class ProjectManager:
-
     def __init__(self) -> None:
         self._store = ProjectStore()
 
     async def create_project(self, mission: str, timeout_minutes: int = 30) -> Project:
-        from llm.api import AnthropicProvider
         from config.settings import settings
+        from llm.api import AnthropicProvider
+
         llm = AnthropicProvider(max_tokens=2048, model=settings.voice_anthropic_model)
 
         logger.info("ProjectManager planning", mission=mission[:80])
@@ -94,13 +98,15 @@ class ProjectManager:
         project.requires_network = bool(plan.get("requires_network", False))
 
         for step_data in plan["steps"]:
-            project.steps.append(Step(
-                id=step_data["id"],
-                title=step_data["title"],
-                description=step_data["description"],
-                requires_approval=step_data.get("requires_approval", False),
-                status=StepStatus.PENDING,
-            ))
+            project.steps.append(
+                Step(
+                    id=step_data["id"],
+                    title=step_data["title"],
+                    description=step_data["description"],
+                    requires_approval=step_data.get("requires_approval", False),
+                    status=StepStatus.PENDING,
+                )
+            )
 
         project.llm_calls += 1
         self._store.save_project(project)
@@ -120,9 +126,9 @@ class ProjectManager:
 
         # Retire les doublons que le LLM aurait pu générer
         steps = [
-            s for s in steps
-            if "rapport" not in s.get("title", "").lower()
-            and "test" not in s.get("id", "").lower()
+            s
+            for s in steps
+            if "rapport" not in s.get("title", "").lower() and "test" not in s.get("id", "").lower()
         ]
 
         n = len(steps)
@@ -155,7 +161,7 @@ class ProjectManager:
                 "title": "Vérification finale du site",
                 "description": (
                     "1. Lister tous les fichiers HTML créés avec list_files. "
-                    "2. Pour chaque HTML : vérifier que les CSS et JS référencés existent dans le workspace. "
+                    "2. Pour chaque HTML : vérifier que les CSS et JS référencés existent. "
                     "3. Si des fichiers manquent : les créer maintenant. "
                     "4. Vérifier que index.html existe à la racine. "
                     "5. Exécuter une validation syntaxique si possible."
@@ -171,8 +177,8 @@ class ProjectManager:
                     "1. Exécuter le script principal avec python3 et des données de test. "
                     "2. Vérifier que le code de retour est 0. "
                     "3. Analyser stdout : la sortie est-elle cohérente avec l'objectif ? "
-                    "4. Si erreur (returncode != 0) : lire stderr, corriger le fichier, relancer. "
-                    "5. Ne pas passer à l'étape suivante tant que le script ne tourne pas sans erreur."
+                    "4. Si erreur (returncode != 0) : lire stderr, corriger, relancer. "
+                    "5. Ne pas continuer tant que le script ne tourne pas sans erreur."
                 ),
                 "requires_approval": False,
             }
@@ -183,7 +189,7 @@ class ProjectManager:
                 "title": "Relecture et cohérence",
                 "description": (
                     "1. Lire chaque fichier créé avec read_file et vérifier qu'il n'est pas vide. "
-                    "2. Vérifier la cohérence entre les fichiers (références croisées, numérotation, etc.). "
+                    "2. Vérifier la cohérence entre les fichiers (références croisées, etc.). "
                     "3. Vérifier que l'objectif initial de la mission est atteint. "
                     "4. Corriger toute incohérence détectée."
                 ),
@@ -195,10 +201,12 @@ class ProjectManager:
                 "id": step_id,
                 "title": "Vérification finale Fusion 360",
                 "description": (
-                    "1. Prendre un screenshot isométrique avec fusion_360(action='read', query_type='screenshot', direction='iso-top-right'). "
+                    "1. Prendre un screenshot isométrique avec "
+                    "fusion_360(action='read', query_type='screenshot',"
+                    " direction='iso-top-right'). "
                     "2. Vérifier que la géométrie est visible et conforme à l'objectif. "
-                    "3. Si un problème est détecté (géométrie manquante, erreur), utiliser fusion_360(action='undo') et corriger. "
-                    "4. Prendre un screenshot final depuis le dessus (direction='top') pour confirmer."
+                    "3. Si problème détecté, utiliser fusion_360(action='undo') et corriger. "
+                    "4. Prendre un screenshot final (direction='top') pour confirmer."
                 ),
                 "requires_approval": False,
             }
@@ -208,7 +216,7 @@ class ProjectManager:
             "id": step_id,
             "title": "Vérification et validation",
             "description": (
-                "1. Lister tous les fichiers créés avec list_files et vérifier qu'aucun n'est vide. "
+                "1. Lister tous les fichiers créés avec list_files, vérifier qu'aucun n'est vide. "
                 "2. Vérifier que l'objectif initial de la mission est atteint. "
                 "3. Tester / exécuter les livrables principaux si applicable. "
                 "4. Corriger tout problème détecté avant de passer à l'étape suivante."
@@ -222,4 +230,4 @@ class ProjectManager:
             return json.loads(clean)
         except json.JSONDecodeError as e:
             logger.error("Plan parse failed", error=str(e), raw=raw[:300])
-            raise ValueError(f"Impossible de parser le plan LLM : {e}")
+            raise ValueError(f"Impossible de parser le plan LLM : {e}") from e

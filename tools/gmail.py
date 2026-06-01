@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import asyncio
 import base64
-from datetime import datetime
 from email.mime.text import MIMEText
 from pathlib import Path
 
@@ -27,7 +26,7 @@ except ImportError:
     _HAS_GOOGLE = False
 
 
-def _load_gmail_creds(credentials_path: Path, token_path: Path) -> "Credentials":
+def _load_gmail_creds(credentials_path: Path, token_path: Path) -> Credentials:
     """Charge et rafraîchit les credentials Gmail OAuth2 (bloquant)."""
     if not _HAS_GOOGLE:
         raise RuntimeError("google-api-python-client non installé.")
@@ -41,11 +40,8 @@ def _load_gmail_creds(credentials_path: Path, token_path: Path) -> "Credentials"
             creds.refresh(Request())
         else:
             if not credentials_path.exists():
-                raise FileNotFoundError(
-                    f"Credentials Google manquants : {credentials_path}."
-                )
-            flow = InstalledAppFlow.from_client_secrets_file(
-                str(credentials_path), _SCOPES)
+                raise FileNotFoundError(f"Credentials Google manquants : {credentials_path}.")
+            flow = InstalledAppFlow.from_client_secrets_file(str(credentials_path), _SCOPES)
             creds = flow.run_local_server(port=0)
         token_path.write_text(creds.to_json())
 
@@ -125,13 +121,11 @@ class GmailListTool(Tool):
 
             lines = []
             for msg in metas:
-                hdrs = {h["name"]: h["value"]
-                        for h in msg.get("payload", {}).get("headers", [])}
+                hdrs = {h["name"]: h["value"] for h in msg.get("payload", {}).get("headers", [])}
                 sender = hdrs.get("From", "?")
                 subject = hdrs.get("Subject", "(sans sujet)")
                 snippet = msg.get("snippet", "")[:120]
-                lines.append(
-                    f"De : {sender}\nSujet : {subject}\nAperçu : {snippet}")
+                lines.append(f"De : {sender}\nSujet : {subject}\nAperçu : {snippet}")
 
             content = "\n\n---\n\n".join(lines)
             logger.debug("Gmail emails listed", count=len(lines))
@@ -143,6 +137,7 @@ class GmailListTool(Tool):
 
 
 # ── Send email ────────────────────────────────────────────────────────────────
+
 
 def _load_gmail_send_creds(credentials_path: Path, token_path: Path):  # noqa: ANN202
     """Réutilise le même token unifié (readonly + send) que _load_gmail_creds."""
@@ -168,7 +163,7 @@ def _parse_draft(draft_content: str) -> tuple[str, str, str | None, str]:
             in_body = True
             continue
         if line.startswith("[THREAD_ID:"):
-            thread_id = line[len("[THREAD_ID:"):].rstrip("]").strip()
+            thread_id = line[len("[THREAD_ID:") :].rstrip("]").strip()
             continue
         if ":" in line:
             key, _, val = line.partition(":")
@@ -211,6 +206,5 @@ async def send_gmail_draft(
         resp.raise_for_status()
 
     sent_id: str = resp.json().get("id", "")
-    logger.info(f"Gmail message sent", to=to,
-                subject=subject, message_id=sent_id)
+    logger.info("Gmail message sent", to=to, subject=subject, message_id=sent_id)
     return sent_id

@@ -4,6 +4,7 @@ Maintient un fichier user_model.md qui s'enrichit au fil des échanges.
 Mise à jour LLM fire-and-forget après chaque tour de conversation.
 Voir notices/memory-recall.md pour l'attribution complète.
 """
+
 from __future__ import annotations
 
 import asyncio

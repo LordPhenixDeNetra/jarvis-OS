@@ -144,9 +144,7 @@ class Scheduler:
 
         while True:
             await asyncio.sleep(interval)
-            await fire_routine(
-                routine, store, self._proactive.broadcast_event, wake_engine
-            )
+            await fire_routine(routine, store, self._proactive.broadcast_event, wake_engine)
 
     async def _routine_cron_loop(
         self,
@@ -161,9 +159,7 @@ class Scheduler:
             try:
                 next_run = next_cron_datetime(expr, after=now)
             except ValueError as exc:
-                logger.error(
-                    f"Routine '{routine.name}': expression cron invalide — {exc}"
-                )
+                logger.error(f"Routine '{routine.name}': expression cron invalide — {exc}")
                 await asyncio.sleep(3600)
                 continue
 
@@ -173,9 +169,7 @@ class Scheduler:
                 f"dans {delay:.0f}s ({next_run.isoformat()})"
             )
             await asyncio.sleep(max(delay, 0))
-            await fire_routine(
-                routine, store, self._proactive.broadcast_event, wake_engine
-            )
+            await fire_routine(routine, store, self._proactive.broadcast_event, wake_engine)
 
     # ── Briefing matinal ─────────────────────────────────────
 
@@ -198,6 +192,7 @@ class Scheduler:
 
         try:
             from tools.notion import NotionTasksTool
+
             tasks_result = await NotionTasksTool().execute()
             if not tasks_result.is_error and tasks_result.content:
                 parts.append(f"Tâches du jour :\n{tasks_result.content}")
@@ -244,9 +239,7 @@ class Scheduler:
                 logger.debug("Calendar event delta", delta_min=round(delta_min, 1), event=line[:60])
                 if 0 < delta_min <= cutoff:
                     seen.add(fingerprint)
-                    self._proactive.broadcast(
-                        f"Rappel dans {int(delta_min)} min : {line}"
-                    )
+                    self._proactive.broadcast(f"Rappel dans {int(delta_min)} min : {line}")
                     logger.info("Rappel calendrier envoyé", event=line[:60])
         except Exception:
             logger.exception("Calendar reminder error")

@@ -1,4 +1,5 @@
 """Stub Signal pour Jarvis — à implémenter via signal-cli ou AsamiSignal."""
+
 from __future__ import annotations
 
 from channels.base import ChannelAdapter, MessageTarget, Platform

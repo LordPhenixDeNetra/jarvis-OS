@@ -57,6 +57,7 @@ async def install_skill(slug: str, skills_dir: Path) -> tuple[bool, str]:
 
     if not (dest / "SKILL.md").exists():
         import shutil
+
         shutil.rmtree(dest)
         return False, f"Skill '{slug}' invalide : SKILL.md manquant."
 

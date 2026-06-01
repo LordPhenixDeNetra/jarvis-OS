@@ -7,6 +7,7 @@ Couvre :
   - claim atomique : empêche la double-exécution
   - reprise d'un projet en pause budgétaire
 """
+
 from __future__ import annotations
 
 import tempfile
@@ -17,6 +18,7 @@ import pytest
 
 # ── Helpers ───────────────────────────────────────────────────────────────────
 
+
 def _make_settings(
     enabled: bool = True,
     monthly_usd: float = 10.0,
@@ -24,10 +26,10 @@ def _make_settings(
     warn_pct: float = 80.0,
 ) -> MagicMock:
     s = MagicMock()
-    s.budget_enabled         = enabled
-    s.budget_monthly_usd     = monthly_usd
+    s.budget_enabled = enabled
+    s.budget_monthly_usd = monthly_usd
     s.budget_per_project_usd = per_project
-    s.budget_warn_pct        = warn_pct
+    s.budget_warn_pct = warn_pct
     return s
 
 
@@ -47,12 +49,14 @@ def make_guard(
         patch("config.settings.settings", settings_mock),
     ):
         from core.budget import BudgetGuard
+
         guard = BudgetGuard(notify_callback=notifications.append)
 
     return guard, notifications
 
 
 # ── Tests reserve / record ────────────────────────────────────────────────────
+
 
 @pytest.mark.asyncio
 async def test_reserve_ok_quand_sous_budget() -> None:
@@ -92,8 +96,7 @@ async def test_reserve_hard_stop_projet() -> None:
     ok = await guard.reserve("project:projX", 0.1)  # 0.95 + 0.1 > 1.0 → stop
     assert ok is False
     assert any(
-        n["type"] == "budget_hard_stop" and n["scope"] == "project:projX"
-        for n in notifications
+        n["type"] == "budget_hard_stop" and n["scope"] == "project:projX" for n in notifications
     )
 
 
@@ -140,6 +143,7 @@ def test_remaining_illimite_pour_run() -> None:
 
 # ── Tests warn threshold ──────────────────────────────────────────────────────
 
+
 @pytest.mark.asyncio
 async def test_warn_declenche_notification_une_fois() -> None:
     notifications: list[dict] = []
@@ -172,14 +176,17 @@ async def test_warn_pas_declenche_sous_seuil() -> None:
 
 # ── Tests claim atomique ──────────────────────────────────────────────────────
 
+
 def test_claim_step_premier_worker_gagne() -> None:
     with tempfile.TemporaryDirectory() as tmpdir:
         import agent.project_store as ps_mod
+
         original = ps_mod.WORKSPACE_DIR
         ps_mod.WORKSPACE_DIR = Path(tmpdir)
         try:
             (Path(tmpdir) / "proj1" / ".jarvis").mkdir(parents=True, exist_ok=True)
             from agent.project_store import ProjectStore
+
             store = ProjectStore()
 
             ok1 = store.claim_step("proj1", "step-A", "worker-1")
@@ -194,11 +201,13 @@ def test_claim_step_premier_worker_gagne() -> None:
 def test_claim_step_deux_etapes_differentes() -> None:
     with tempfile.TemporaryDirectory() as tmpdir:
         import agent.project_store as ps_mod
+
         original = ps_mod.WORKSPACE_DIR
         ps_mod.WORKSPACE_DIR = Path(tmpdir)
         try:
             (Path(tmpdir) / "proj2" / ".jarvis").mkdir(parents=True, exist_ok=True)
             from agent.project_store import ProjectStore
+
             store = ProjectStore()
 
             ok_a = store.claim_step("proj2", "step-A", "w1")
@@ -212,11 +221,13 @@ def test_claim_step_deux_etapes_differentes() -> None:
 def test_release_step_claim_permet_re_claim() -> None:
     with tempfile.TemporaryDirectory() as tmpdir:
         import agent.project_store as ps_mod
+
         original = ps_mod.WORKSPACE_DIR
         ps_mod.WORKSPACE_DIR = Path(tmpdir)
         try:
             (Path(tmpdir) / "proj3" / ".jarvis").mkdir(parents=True, exist_ok=True)
             from agent.project_store import ProjectStore
+
             store = ProjectStore()
 
             store.claim_step("proj3", "step-X", "w1")
@@ -229,13 +240,12 @@ def test_release_step_claim_permet_re_claim() -> None:
 
 # ── Tests pause / reprise budget ─────────────────────────────────────────────
 
+
 def _make_project(tmpdir: str, project_id: str = "proj_test", n_steps: int = 3) -> object:
     from agent.schemas import Project, ProjectStatus, Step, StepStatus
+
     workspace = str(Path(tmpdir) / project_id)
-    steps = [
-        Step(id=f"s{i}", title=f"Step {i}", description=f"desc {i}")
-        for i in range(n_steps)
-    ]
+    steps = [Step(id=f"s{i}", title=f"Step {i}", description=f"desc {i}") for i in range(n_steps)]
     steps[0].status = StepStatus.DONE
     steps[1].status = StepStatus.RUNNING
     # steps[2] reste PENDING
@@ -252,6 +262,7 @@ def _make_project(tmpdir: str, project_id: str = "proj_test", n_steps: int = 3) 
 def test_pause_for_budget_met_running_en_pending() -> None:
     with tempfile.TemporaryDirectory() as tmpdir:
         import agent.project_store as ps_mod
+
         original = ps_mod.WORKSPACE_DIR
         ps_mod.WORKSPACE_DIR = Path(tmpdir)
         try:
@@ -261,6 +272,7 @@ def test_pause_for_budget_met_running_en_pending() -> None:
 
             from agent.project_store import ProjectStore
             from agent.schemas import ProjectStatus, StepStatus
+
             store = ProjectStore()
 
             store.claim_step("proj_pause", "s1", "w1")
@@ -281,6 +293,7 @@ def test_pause_for_budget_met_running_en_pending() -> None:
 def test_is_resumable_vrai_si_paused_avec_pending() -> None:
     with tempfile.TemporaryDirectory() as tmpdir:
         import agent.project_store as ps_mod
+
         original = ps_mod.WORKSPACE_DIR
         ps_mod.WORKSPACE_DIR = Path(tmpdir)
         try:
@@ -289,6 +302,7 @@ def test_is_resumable_vrai_si_paused_avec_pending() -> None:
             (ws / ".jarvis").mkdir(parents=True, exist_ok=True)
 
             from agent.project_store import ProjectStore
+
             store = ProjectStore()
             store.pause_for_budget(project, "s1")
 
@@ -314,6 +328,7 @@ def test_projet_pause_reprise_reprend_etapes_pending() -> None:
 
     with tempfile.TemporaryDirectory() as tmpdir:
         import agent.project_store as ps_mod
+
         original = ps_mod.WORKSPACE_DIR
         ps_mod.WORKSPACE_DIR = Path(tmpdir)
         try:
@@ -322,13 +337,13 @@ def test_projet_pause_reprise_reprend_etapes_pending() -> None:
             (ws / ".jarvis").mkdir(parents=True, exist_ok=True)
 
             from agent.project_store import ProjectStore
+
             store = ProjectStore()
             store.pause_for_budget(project, "s1")
 
             # Simulation de la logique run() : skip DONE/SKIPPED
             pending_steps = [
-                s for s in project.steps
-                if s.status not in (StepStatus.DONE, StepStatus.SKIPPED)
+                s for s in project.steps if s.status not in (StepStatus.DONE, StepStatus.SKIPPED)
             ]
             assert len(pending_steps) == 2  # s1 (reset PENDING) + s2 (était déjà PENDING)
             assert all(s.status == StepStatus.PENDING for s in pending_steps)

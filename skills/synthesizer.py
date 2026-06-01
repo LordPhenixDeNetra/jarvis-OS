@@ -1,4 +1,5 @@
 """Synthétiseur de skills — génère et améliore des skills depuis des tâches accomplies."""
+
 from __future__ import annotations
 
 import re
@@ -78,6 +79,7 @@ Commence par --- (frontmatter YAML).
 
 # ── YAML Dumper avec block scalars pour les longues chaînes ──────────────────
 
+
 class _BlockDumper(yaml.SafeDumper):
     pass
 
@@ -107,6 +109,7 @@ class SkillSynthesizer:
     def __init__(self, llm: LLMProvider | None = None) -> None:
         if llm is None:
             from llm.factory import get_llm_provider
+
             llm = get_llm_provider()
         self._llm = llm
 
@@ -141,8 +144,12 @@ class SkillSynthesizer:
 
         (skill_dir / "SKILL.md").write_text(skill_md, encoding="utf-8")
         (skill_dir / "skill.yaml").write_text(
-            yaml.dump(self._to_jarvis_yaml(fm, body), Dumper=_BlockDumper,
-                      allow_unicode=True, sort_keys=False),
+            yaml.dump(
+                self._to_jarvis_yaml(fm, body),
+                Dumper=_BlockDumper,
+                allow_unicode=True,
+                sort_keys=False,
+            ),
             encoding="utf-8",
         )
         (skill_dir / "skill.py").write_text(
@@ -163,9 +170,7 @@ class SkillSynthesizer:
         skill_dir = SKILLS_INSTALLED_DIR / skill_name
         skill_md_path = skill_dir / "SKILL.md"
         if not skill_md_path.exists():
-            raise FileNotFoundError(
-                f"Skill '{skill_name}' introuvable dans {SKILLS_INSTALLED_DIR}"
-            )
+            raise FileNotFoundError(f"Skill '{skill_name}' introuvable dans {SKILLS_INSTALLED_DIR}")
 
         existing = skill_md_path.read_text(encoding="utf-8")
         improved = await self._llm_improve(existing, new_experience)
@@ -175,8 +180,12 @@ class SkillSynthesizer:
 
         skill_md_path.write_text(improved, encoding="utf-8")
         (skill_dir / "skill.yaml").write_text(
-            yaml.dump(self._to_jarvis_yaml(fm, body), Dumper=_BlockDumper,
-                      allow_unicode=True, sort_keys=False),
+            yaml.dump(
+                self._to_jarvis_yaml(fm, body),
+                Dumper=_BlockDumper,
+                allow_unicode=True,
+                sort_keys=False,
+            ),
             encoding="utf-8",
         )
         (skill_dir / "skill.py").write_text(

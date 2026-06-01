@@ -12,6 +12,7 @@ router = APIRouter()
 
 def _mem_dir(request: Request) -> Path:  # noqa: ARG001
     from config.settings import settings
+
     return Path(settings.memory_dir)
 
 
@@ -69,13 +70,15 @@ async def list_sessions(request: Request) -> list[dict]:
             except (json.JSONDecodeError, KeyError):
                 pass
         default_preview = first_user or f"Session {date_str}"
-        result.append({
-            "id":            session_id,
-            "date":          date_str,
-            "preview":       default_preview,
-            "title":         titles.get(session_id) or default_preview,
-            "message_count": msg_count,
-        })
+        result.append(
+            {
+                "id": session_id,
+                "date": date_str,
+                "preview": default_preview,
+                "title": titles.get(session_id) or default_preview,
+                "message_count": msg_count,
+            }
+        )
     return result
 
 
@@ -110,6 +113,7 @@ async def delete_session(session_id: str, request: Request) -> dict:
     fts_index = getattr(request.app.state, "fts_index", None)
     vector_index = getattr(request.app.state, "vector_index", None)
     if fts_index is not None or vector_index is not None:
+
         async def _remove_from_indices() -> None:
             if fts_index is not None:
                 await fts_index.remove(filename)
@@ -117,6 +121,7 @@ async def delete_session(session_id: str, request: Request) -> dict:
                 async with vector_index._lock:
                     vector_index._remove_doc_locked(f"transcript:{filename}")
                 await vector_index.persist()
+
         asyncio.create_task(_remove_from_indices(), name=f"indices-remove-{session_id}")
 
     return {"deleted": session_id}

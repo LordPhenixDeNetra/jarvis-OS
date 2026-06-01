@@ -6,6 +6,7 @@ pour ne pas casser le démarrage existant dans main.py.
 
 Un seul utilisateur autorisé : TELEGRAM_OWNER_ID.
 """
+
 from __future__ import annotations
 
 import os
@@ -24,6 +25,7 @@ try:
         MessageHandler,
         filters,
     )
+
     TELEGRAM_AVAILABLE = True
 except ImportError:
     TELEGRAM_AVAILABLE = False
@@ -78,9 +80,7 @@ class TelegramChannel(ChannelAdapter):
         self._app.add_handler(CommandHandler("status", self._cmd_status))
         self._app.add_handler(CommandHandler("initiatives", self._cmd_initiatives))
         self._app.add_handler(CommandHandler("help", self._cmd_help))
-        self._app.add_handler(
-            MessageHandler(filters.TEXT & ~filters.COMMAND, self._on_message)
-        )
+        self._app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, self._on_message))
 
         await self._app.initialize()
         await self._app.start()
@@ -193,6 +193,7 @@ class TelegramChannel(ChannelAdapter):
             return
         try:
             import httpx
+
             async with httpx.AsyncClient(timeout=5) as client:
                 r = await client.get("http://localhost:8000/api/health")
                 health = r.json()
@@ -200,9 +201,7 @@ class TelegramChannel(ChannelAdapter):
             lines = []
             for name, info in checks.items():
                 emoji = (
-                    "✅" if info["status"] == "ok"
-                    else "⚠️" if info["status"] == "warning"
-                    else "❌"
+                    "✅" if info["status"] == "ok" else "⚠️" if info["status"] == "warning" else "❌"
                 )
                 lines.append(f"{emoji} *{name}* — {info['detail']}")
             text = "🖥 *Jarvis Doctor*\n\n" + "\n".join(lines)
@@ -219,6 +218,7 @@ class TelegramChannel(ChannelAdapter):
             return
         try:
             import httpx
+
             async with httpx.AsyncClient(timeout=10) as client:
                 r = await client.get("http://localhost:8000/api/initiatives")
                 data = r.json()
@@ -250,10 +250,10 @@ class TelegramChannel(ChannelAdapter):
             "*/initiatives* — liste des initiatives en attente\n"
             "*/help* — cette aide\n\n"
             "*Message libre* — parle à Jarvis normalement :\n"
-            "• _\"Quelle est la météo à Lyon ?\"\n"
-            "• \"Lance le preset travail\"\n"
-            "• \"Mets du Booba sur Spotify\"\n"
-            "• \"Quelles sont mes tâches du jour ?\"\n"
-            "• \"État de mon impression 3D ?\"_"
+            '• _"Quelle est la météo à Lyon ?"\n'
+            '• "Lance le preset travail"\n'
+            '• "Mets du Booba sur Spotify"\n'
+            '• "Quelles sont mes tâches du jour ?"\n'
+            '• "État de mon impression 3D ?"_'
         )
         await update.message.reply_text(text, parse_mode="Markdown")

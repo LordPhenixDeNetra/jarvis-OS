@@ -3,7 +3,6 @@ from __future__ import annotations
 import json
 import secrets
 from pathlib import Path
-from typing import Any
 
 from loguru import logger
 
@@ -26,7 +25,7 @@ def _new_slot_id() -> str:
     return f"p_{secrets.token_hex(4)}"
 
 
-def merge_profile(raw: Any, workspace: str) -> KeypadProfile:
+def merge_profile(raw: object, workspace: str) -> KeypadProfile:
     base = default_profile(workspace)
     if not isinstance(raw, dict):
         return base
@@ -44,13 +43,15 @@ def merge_profile(raw: Any, workspace: str) -> KeypadProfile:
         return base
 
 
-def migrate_to_bundle(raw: Any, workspace: str) -> WorkspaceProfileBundle:
+def migrate_to_bundle(raw: object, workspace: str) -> WorkspaceProfileBundle:
     if isinstance(raw, dict) and raw.get("bundleVersion") == 2:
         raw_profiles = raw.get("profiles") or []
         slots: list[ProfileSlot] = []
         for s in raw_profiles:
             if not isinstance(s, dict):
-                logger.warning("migrate_to_bundle: slot invalide ignoré (type={})", type(s).__name__)
+                logger.warning(
+                    "migrate_to_bundle: slot invalide ignoré (type={})", type(s).__name__
+                )
                 continue
             sid = s.get("id") or _new_slot_id()
             sname = s.get("name") or "Profil"

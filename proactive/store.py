@@ -2,12 +2,15 @@
 InitiativeStore — persistance des initiatives sur le disque.
 Format : JSONL dans memory_data/initiatives/
 """
+
 from __future__ import annotations
 
 import json
 import re
 from datetime import datetime
 from pathlib import Path
+
+from proactive.schemas import ExecutionMode, Initiative, InitiativeType, Priority
 
 
 def _title_key(title: str) -> str:
@@ -23,8 +26,6 @@ def _jaccard(a: str, b: str) -> float:
         return 0.0
     return len(wa & wb) / len(wa | wb)
 
-from proactive.schemas import ExecutionMode, Initiative, InitiativeType, Priority
-
 
 def _shares_keyword(a: str, b: str, min_len: int = 7) -> bool:
     """True if both titles share at least one meaningful word of length ≥ min_len."""
@@ -34,11 +35,7 @@ def _shares_keyword(a: str, b: str, min_len: int = 7) -> bool:
 
 
 def _similar(a: str, b: str) -> bool:
-    return (
-        _title_key(a) == _title_key(b)
-        or _jaccard(a, b) >= 0.35
-        or _shares_keyword(a, b)
-    )
+    return _title_key(a) == _title_key(b) or _jaccard(a, b) >= 0.35 or _shares_keyword(a, b)
 
 
 def _dedup_initiatives(initiatives: list) -> list:
@@ -52,11 +49,11 @@ def _dedup_initiatives(initiatives: list) -> list:
             kept.append(candidate)
     return kept
 
+
 INITIATIVES_DIR = Path("memory_data/initiatives")
 
 
 class InitiativeStore:
-
     def __init__(self) -> None:
         INITIATIVES_DIR.mkdir(parents=True, exist_ok=True)
 
@@ -85,20 +82,25 @@ class InitiativeStore:
                 return
 
         with log_file.open("a", encoding="utf-8") as f:
-            f.write(json.dumps({
-                "id": initiative.id,
-                "type": initiative.type,
-                "title": initiative.title,
-                "context": initiative.context,
-                "reasoning": initiative.reasoning,
-                "action": initiative.action,
-                "priority": initiative.priority,
-                "execution_mode": initiative.execution_mode,
-                "draft_content": initiative.draft_content,
-                "mission_description": initiative.mission_description,
-                "status": initiative.status,
-                "created_at": initiative.created_at.isoformat()
-            }) + "\n")
+            f.write(
+                json.dumps(
+                    {
+                        "id": initiative.id,
+                        "type": initiative.type,
+                        "title": initiative.title,
+                        "context": initiative.context,
+                        "reasoning": initiative.reasoning,
+                        "action": initiative.action,
+                        "priority": initiative.priority,
+                        "execution_mode": initiative.execution_mode,
+                        "draft_content": initiative.draft_content,
+                        "mission_description": initiative.mission_description,
+                        "status": initiative.status,
+                        "created_at": initiative.created_at.isoformat(),
+                    }
+                )
+                + "\n"
+            )
 
     def load_pending(self) -> list[Initiative]:
         """Charge toutes les initiatives en attente du jour, dédupliquées."""
@@ -115,26 +117,28 @@ class InitiativeStore:
             try:
                 data = json.loads(line)
                 if data.get("status") == "pending":
-                    initiatives.append(Initiative(
-                        id=data["id"],
-                        type=InitiativeType(data["type"]),
-                        title=data["title"],
-                        context=data["context"],
-                        reasoning=data["reasoning"],
-                        action=data["action"],
-                        priority=Priority(data["priority"]),
-                        execution_mode=ExecutionMode(data["execution_mode"]),
-                        draft_content=data.get("draft_content"),
-                        mission_description=data.get("mission_description"),
-                        status=data["status"],
-                        created_at=datetime.fromisoformat(data["created_at"])
-                    ))
+                    initiatives.append(
+                        Initiative(
+                            id=data["id"],
+                            type=InitiativeType(data["type"]),
+                            title=data["title"],
+                            context=data["context"],
+                            reasoning=data["reasoning"],
+                            action=data["action"],
+                            priority=Priority(data["priority"]),
+                            execution_mode=ExecutionMode(data["execution_mode"]),
+                            draft_content=data.get("draft_content"),
+                            mission_description=data.get("mission_description"),
+                            status=data["status"],
+                            created_at=datetime.fromisoformat(data["created_at"]),
+                        )
+                    )
             except Exception:
                 pass
 
         return _dedup_initiatives(initiatives)
 
-    def get_by_id(self, initiative_id: str) -> "Initiative | None":
+    def get_by_id(self, initiative_id: str) -> Initiative | None:
         for i in self.load_pending():
             if i.id == initiative_id:
                 return i

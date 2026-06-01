@@ -138,12 +138,10 @@ class BrowserTool(Tool):
         """Retourne un message d'erreur si bs4 n'est pas installé."""
         try:
             import bs4  # noqa: F401
+
             return None
         except ImportError:
-            return (
-                "beautifulsoup4 non installé. "
-                "Lance : uv add beautifulsoup4 lxml"
-            )
+            return "beautifulsoup4 non installé. Lance : uv add beautifulsoup4 lxml"
 
     async def _get_text(self, url: str) -> ToolResult:
         bs4_err = self._require_bs4()

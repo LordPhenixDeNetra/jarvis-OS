@@ -16,6 +16,7 @@ class _ContentBody(BaseModel):
 
 def _mem_dir(request: Request) -> Path:  # noqa: ARG001
     from config.settings import settings
+
     return Path(settings.memory_dir)
 
 
@@ -41,11 +42,13 @@ async def list_memory_topics(request: Request) -> list[dict]:
     for p in sorted(topics_dir.glob("*.md")):
         stat = p.stat()
         mtime = datetime.fromtimestamp(stat.st_mtime, tz=UTC)
-        result.append({
-            "name":  p.name,
-            "size":  stat.st_size,
-            "mtime": mtime.isoformat(),
-        })
+        result.append(
+            {
+                "name": p.name,
+                "size": stat.st_size,
+                "mtime": mtime.isoformat(),
+            }
+        )
     return result
 
 
@@ -71,6 +74,7 @@ async def put_memory_topic(name: str, body: _ContentBody, request: Request) -> d
     # Synchronise le VectorIndex si disponible
     vector_index = getattr(request.app.state, "vector_index", None)
     if vector_index is not None:
+
         async def _update_vector() -> None:
             await vector_index.add(
                 doc_id=f"topic:{name}",
@@ -78,6 +82,7 @@ async def put_memory_topic(name: str, body: _ContentBody, request: Request) -> d
                 metadata={"source": "topic", "filename": name},
             )
             await vector_index.persist()
+
         asyncio.create_task(_update_vector(), name=f"vector-update-{name}")
 
     return {"ok": True}
@@ -95,10 +100,12 @@ async def delete_memory_topic(name: str, request: Request) -> dict:
     # Retire le document du VectorIndex si disponible
     vector_index = getattr(request.app.state, "vector_index", None)
     if vector_index is not None:
+
         async def _remove_vector() -> None:
             async with vector_index._lock:
                 vector_index._remove_doc_locked(f"topic:{name}")
             await vector_index.persist()
+
         asyncio.create_task(_remove_vector(), name=f"vector-remove-{name}")
 
     return {"ok": True}
@@ -107,6 +114,7 @@ async def delete_memory_topic(name: str, request: Request) -> dict:
 @router.post("/api/memory/autodream")
 async def trigger_autodream(request: Request) -> dict:
     import asyncio
+
     auto_dream = getattr(request.app.state, "auto_dream", None)
     if not auto_dream:
         raise HTTPException(503, "AutoDream non disponible")

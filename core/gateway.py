@@ -15,22 +15,24 @@ from core.session import Session, SessionManager
 if TYPE_CHECKING:
     from memory.consolidation import CrossSessionRecall
 
+
 # Import paresseux de l'orchestrateur — évite les imports circulaires
-def _get_orchestrator(app_state):  # type: ignore[return]
+def _get_orchestrator(app_state: object) -> object:  # type: ignore[return]
     return getattr(app_state, "orchestrator", None)
 
 
 # ── Singleton tool registry (pour les presets) ───────────────────────────────
-_tool_registry_instance = None
+_tool_registry_instance: object = None
 
 
-def set_tool_registry(registry) -> None:
+def set_tool_registry(registry: object) -> None:
     global _tool_registry_instance
     _tool_registry_instance = registry
 
 
-def get_tool_registry():
+def get_tool_registry() -> object:
     return _tool_registry_instance
+
 
 _FALLBACK = "Désolé chef, j'ai eu un souci — je regarde."
 

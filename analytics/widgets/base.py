@@ -1,26 +1,29 @@
 """Classe de base pour tous les widgets analytics Jarvis."""
+
 from __future__ import annotations
+
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
-from typing import Any
 
 
 @dataclass
 class WidgetConfig:
     """Configuration d'un widget activé."""
-    widget_id: str          # ex: "youtube", "jarvis_stats"
+
+    widget_id: str  # ex: "youtube", "jarvis_stats"
     enabled: bool = True
     settings: dict = field(default_factory=dict)  # config spécifique au widget
-    position: int = 0       # ordre d'affichage dans la grille
+    position: int = 0  # ordre d'affichage dans la grille
 
 
 @dataclass
 class WidgetData:
     """Données retournées par un widget pour affichage."""
+
     success: bool
-    data: dict              # données brutes
-    error: str = ""         # message d'erreur si success=False
-    cached: bool = False    # True si données depuis cache
+    data: dict  # données brutes
+    error: str = ""  # message d'erreur si success=False
+    cached: bool = False  # True si données depuis cache
 
 
 class WidgetBase(ABC):
@@ -38,11 +41,11 @@ class WidgetBase(ABC):
     id: str = ""
     label: str = ""
     description: str = ""
-    icon: str = ""          # emoji ou lettre pour l'avatar du widget
+    icon: str = ""  # emoji ou lettre pour l'avatar du widget
     requires_env: list[str] = []
-    size: str = "medium"    # small=1col, medium=2col, large=3col, full=4col
+    size: str = "medium"  # small=1col, medium=2col, large=3col, full=4col
 
-    def __init__(self, config: WidgetConfig = None):
+    def __init__(self, config: WidgetConfig = None) -> None:
         self.config = config or WidgetConfig(widget_id=self.id)
 
     @abstractmethod
@@ -53,15 +56,14 @@ class WidgetBase(ABC):
     def is_configured(self) -> bool:
         """Vérifie que toutes les requires_env sont renseignées."""
         import os
-        return all(bool(os.getenv(key, '').strip()) for key in self.requires_env)
+
+        return all(bool(os.getenv(key, "").strip()) for key in self.requires_env)
 
     def get_env_status(self) -> dict[str, bool]:
         """Retourne le statut de chaque variable requise."""
         import os
-        return {
-            key: bool(os.getenv(key, '').strip())
-            for key in self.requires_env
-        }
+
+        return {key: bool(os.getenv(key, "").strip()) for key in self.requires_env}
 
     def to_manifest(self) -> dict:
         """Metadata du widget pour l'UI (catalogue + setup flow)."""

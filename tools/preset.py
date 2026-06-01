@@ -1,4 +1,5 @@
 """Outil execute_preset — permet à Jarvis de lancer un preset."""
+
 from __future__ import annotations
 
 from tools.base import Tool, ToolResult
@@ -26,12 +27,12 @@ class ExecutePresetTool(Tool):
         "required": ["preset_name"],
     }
 
-    async def execute(self, preset_name: str, **_) -> ToolResult:
-        from skills.registry import skill_registry
-        from skills.executor import PresetExecutor
+    async def execute(self, preset_name: str, **_: object) -> ToolResult:
         from audio.tts import tts_engine
-        from core.gateway import get_tool_registry
         from background.notifications import broadcast_event
+        from core.gateway import get_tool_registry
+        from skills.executor import PresetExecutor
+        from skills.registry import skill_registry
 
         preset = skill_registry.get_preset(preset_name)
 

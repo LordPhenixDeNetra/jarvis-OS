@@ -9,35 +9,35 @@ from pathlib import Path
 @dataclass
 class UsageEntry:
     timestamp: str
-    provider: str          # "anthropic", "elevenlabs", "openai", "deepgram"
-    model: str             # "claude-sonnet-4-6", "eleven_turbo_v2_5", etc.
+    provider: str  # "anthropic", "elevenlabs", "openai", "deepgram"
+    model: str  # "claude-sonnet-4-6", "eleven_turbo_v2_5", etc.
     input_tokens: int = 0
     output_tokens: int = 0
-    characters: int = 0    # Pour TTS
+    characters: int = 0  # Pour TTS
     audio_minutes: float = 0  # Pour STT
-    images: int = 0        # Pour Vision
+    images: int = 0  # Pour Vision
     cost_usd: float = 0.0
-    context: str = ""      # "conversation", "memory", "proactive", "mission:<id>"
+    context: str = ""  # "conversation", "memory", "proactive", "mission:<id>"
 
 
 # Tarifs au 2026-05 (à mettre à jour selon les changements de pricing)
 PRICING: dict[str, dict[str, dict[str, float]]] = {
     "anthropic": {
-        "claude-sonnet-4-6":       {"input_per_1m": 3.00,  "output_per_1m": 15.00},
-        "claude-sonnet-4-5":       {"input_per_1m": 3.00,  "output_per_1m": 15.00},
+        "claude-sonnet-4-6": {"input_per_1m": 3.00, "output_per_1m": 15.00},
+        "claude-sonnet-4-5": {"input_per_1m": 3.00, "output_per_1m": 15.00},
         "claude-haiku-4-5-20251001": {"input_per_1m": 0.25, "output_per_1m": 1.25},
-        "claude-haiku-4-5":        {"input_per_1m": 0.25,  "output_per_1m": 1.25},
-        "claude-opus-4-7":         {"input_per_1m": 15.00, "output_per_1m": 75.00},
-        "claude-opus-4-5":         {"input_per_1m": 15.00, "output_per_1m": 75.00},
+        "claude-haiku-4-5": {"input_per_1m": 0.25, "output_per_1m": 1.25},
+        "claude-opus-4-7": {"input_per_1m": 15.00, "output_per_1m": 75.00},
+        "claude-opus-4-5": {"input_per_1m": 15.00, "output_per_1m": 75.00},
     },
     "elevenlabs": {
-        "eleven_turbo_v2_5":       {"per_1k_chars": 0.18},
-        "eleven_flash_v2_5":       {"per_1k_chars": 0.18},
-        "eleven_multilingual_v2":  {"per_1k_chars": 0.30},
+        "eleven_turbo_v2_5": {"per_1k_chars": 0.18},
+        "eleven_flash_v2_5": {"per_1k_chars": 0.18},
+        "eleven_multilingual_v2": {"per_1k_chars": 0.30},
     },
     "openai": {
-        "gpt-4o":       {"input_per_1m": 2.50,  "output_per_1m": 10.00, "per_image": 0.002},
-        "gpt-4o-mini":  {"input_per_1m": 0.15,  "output_per_1m": 0.60},
+        "gpt-4o": {"input_per_1m": 2.50, "output_per_1m": 10.00, "per_image": 0.002},
+        "gpt-4o-mini": {"input_per_1m": 0.15, "output_per_1m": 0.60},
     },
     "deepgram": {
         "nova-2": {"per_minute": 0.0059},
@@ -89,6 +89,7 @@ class UsageTracker:
         if entry.cost_usd > 0 and entry.context and entry.context.startswith("mission:"):
             try:
                 from core.budget import get_budget_guard
+
                 guard = get_budget_guard()
                 if guard is not None:
                     project_id = entry.context.split(":", 1)[1]
@@ -126,8 +127,7 @@ class UsageTracker:
             model = e.get("model", "unknown")
 
             if provider not in providers:
-                providers[provider] = {"models": {},
-                                       "total_cost": 0.0, "calls": 0}
+                providers[provider] = {"models": {}, "total_cost": 0.0, "calls": 0}
 
             prov = providers[provider]
             if model not in prov["models"]:
@@ -153,18 +153,17 @@ class UsageTracker:
             prov["calls"] += 1
             prov["total_cost"] += e.get("cost_usd", 0.0)
 
-            total_tokens += e.get("input_tokens", 0) + \
-                e.get("output_tokens", 0)
+            total_tokens += e.get("input_tokens", 0) + e.get("output_tokens", 0)
             total_calls += 1
             total_cost += e.get("cost_usd", 0.0)
             total_tts_chars += e.get("characters", 0)
 
         return {
-            "total_tokens":    total_tokens,
+            "total_tokens": total_tokens,
             "total_api_calls": total_calls,
-            "total_cost_usd":  round(total_cost, 4),
+            "total_cost_usd": round(total_cost, 4),
             "total_tts_chars": total_tts_chars,
-            "providers":       providers,
+            "providers": providers,
         }
 
     def get_daily_totals(self, days: int = 7) -> list[dict]:
@@ -175,11 +174,13 @@ class UsageTracker:
             d = today - timedelta(days=i)
             entries = self._read_day(d)
             day_cost = sum(e.get("cost_usd", 0.0) for e in entries)
-            result.append({
-                "date":     d.isoformat(),
-                "day":      d.strftime("%a")[:3].upper(),
-                "cost_usd": round(day_cost, 4),
-            })
+            result.append(
+                {
+                    "date": d.isoformat(),
+                    "day": d.strftime("%a")[:3].upper(),
+                    "cost_usd": round(day_cost, 4),
+                }
+            )
         return result
 
     def get_recent_calls(self, limit: int = 200) -> list[dict]:
@@ -195,18 +196,17 @@ class UsageTracker:
             d = today - timedelta(days=i)
             entries = self._read_day(d)
             row: dict = {
-                "date":      d.isoformat(),
-                "day":       d.strftime("%a")[:3].upper(),
+                "date": d.isoformat(),
+                "day": d.strftime("%a")[:3].upper(),
                 "anthropic": 0,
-                "openai":    0,
+                "openai": 0,
                 "elevenlabs": 0,
-                "deepgram":  0,
+                "deepgram": 0,
             }
             for e in entries:
                 p = e.get("provider", "")
                 if p in row:
-                    row[p] += e.get("input_tokens", 0) + \
-                        e.get("output_tokens", 0)
+                    row[p] += e.get("input_tokens", 0) + e.get("output_tokens", 0)
             result.append(row)
         return result
 
@@ -216,26 +216,26 @@ class UsageTracker:
         first = today.replace(day=1)
         total_cost = 0.0
         total_tokens = 0
-        prov_acc: dict[str, dict] = {}   # {name: {cost, tokens, chars}}
+        prov_acc: dict[str, dict] = {}  # {name: {cost, tokens, chars}}
         type_acc: dict[str, float] = {}  # {type_key: cost}
 
         d = first
         while d <= today:
             for e in self._read_day(d):
-                cost  = e.get("cost_usd", 0.0)
-                tok   = e.get("input_tokens", 0) + e.get("output_tokens", 0)
-                prov  = e.get("provider", "other")
-                ctx   = e.get("context", "") or ""
+                cost = e.get("cost_usd", 0.0)
+                tok = e.get("input_tokens", 0) + e.get("output_tokens", 0)
+                prov = e.get("provider", "other")
+                ctx = e.get("context", "") or ""
                 chars = e.get("characters", 0)
 
-                total_cost   += cost
+                total_cost += cost
                 total_tokens += tok
 
                 if prov not in prov_acc:
                     prov_acc[prov] = {"cost": 0.0, "tokens": 0, "chars": 0}
-                prov_acc[prov]["cost"]   += cost
+                prov_acc[prov]["cost"] += cost
                 prov_acc[prov]["tokens"] += tok
-                prov_acc[prov]["chars"]  += chars
+                prov_acc[prov]["chars"] += chars
 
                 # Classify by usage type
                 if prov in ("elevenlabs", "deepgram"):
@@ -259,47 +259,68 @@ class UsageTracker:
         # Build providers list (sorted by cost desc)
         prov_list = [
             {
-                "name":     name,
+                "name": name,
                 "cost_usd": round(v["cost"], 4),
-                "tokens":   v["tokens"],
-                "chars":    v["chars"],
-                "pct":      round(v["cost"] / total_cost, 4) if total_cost else 0,
+                "tokens": v["tokens"],
+                "chars": v["chars"],
+                "pct": round(v["cost"] / total_cost, 4) if total_cost else 0,
             }
             for name, v in sorted(prov_acc.items(), key=lambda x: -x[1]["cost"])
         ]
 
         # Build usage type list
         TYPE_META = {
-            "conversation": {"label": "Échange direct",          "sub": "chat synchrone · Marc ↔ Jarvis", "color": "#4A9EFF"},
-            "mission":      {"label": "Agents en mission",  "sub": "missions autonomes · 24/7",       "color": "#D97757"},
-            "memory":       {"label": "Indexation & mémoire",    "sub": "lectures & écritures mémoire",    "color": "#B8963E"},
-            "proactive":    {"label": "Proactif",                "sub": "tâches proactives · auto",        "color": "#36D399"},
-            "voice":        {"label": "Voix · STT/TTS",          "sub": "synthèse & transcription",        "color": "#A78BFA"},
-            "other":        {"label": "Autre",                   "sub": "appels non classifiés",           "color": "#6B7280"},
+            "conversation": {
+                "label": "Échange direct",
+                "sub": "chat synchrone · Marc ↔ Jarvis",
+                "color": "#4A9EFF",
+            },
+            "mission": {
+                "label": "Agents en mission",
+                "sub": "missions autonomes · 24/7",
+                "color": "#D97757",
+            },
+            "memory": {
+                "label": "Indexation & mémoire",
+                "sub": "lectures & écritures mémoire",
+                "color": "#B8963E",
+            },
+            "proactive": {
+                "label": "Proactif",
+                "sub": "tâches proactives · auto",
+                "color": "#36D399",
+            },
+            "voice": {
+                "label": "Voix · STT/TTS",
+                "sub": "synthèse & transcription",
+                "color": "#A78BFA",
+            },
+            "other": {"label": "Autre", "sub": "appels non classifiés", "color": "#6B7280"},
         }
         type_list = []
         for key, meta in TYPE_META.items():
             c = type_acc.get(key, 0.0)
             if c == 0.0:
                 continue
-            type_list.append({
-                "type":     key,
-                "label":    meta["label"],
-                "sub":      meta["sub"],
-                "color":    meta["color"],
-                "cost_usd": round(c, 4),
-                "pct":      round(c / total_cost, 4) if total_cost else 0,
-            })
+            type_list.append(
+                {
+                    "type": key,
+                    "label": meta["label"],
+                    "sub": meta["sub"],
+                    "color": meta["color"],
+                    "cost_usd": round(c, 4),
+                    "pct": round(c / total_cost, 4) if total_cost else 0,
+                }
+            )
         type_list.sort(key=lambda x: -x["cost_usd"])
 
         return {
-            "month":     today.strftime("%Y-%m"),
-            "cost_usd":  total_cost,
-            "tokens":    total_tokens,
+            "month": today.strftime("%Y-%m"),
+            "cost_usd": total_cost,
+            "tokens": total_tokens,
             "providers": prov_list,
-            "by_type":   type_list,
+            "by_type": type_list,
         }
-
 
     def get_monthly_by_model(self) -> list[dict]:
         """Tokens et coût par modèle pour le mois courant, triés par coût."""

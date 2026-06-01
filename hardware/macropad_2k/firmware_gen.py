@@ -5,7 +5,12 @@ import unicodedata
 from pathlib import Path
 from typing import Any
 
-from hardware.macropad_2k.models import KeyChord, KeypadProfile, WorkspaceProfileBundle, get_active_profile
+from hardware.macropad_2k.models import (
+    KeyChord,
+    KeypadProfile,
+    WorkspaceProfileBundle,
+    get_active_profile,
+)
 from hardware.macropad_2k.paths import generated_dir, sketch_dir, usb_hid_dir
 
 MANUFACTURER_USB = "Techalchemy SI"
@@ -63,7 +68,7 @@ def _sanitize_ascii_text(s: str | None, max_len: int = 96) -> str:
     return printable[:max_len]
 
 
-def _clamp_int(value: Any, lo: int, hi: int, fallback: int) -> int:
+def _clamp_int(value: object, lo: int, hi: int, fallback: int) -> int:
     try:
         n = int(round(float(value)))
     except (TypeError, ValueError):
@@ -71,7 +76,7 @@ def _clamp_int(value: Any, lo: int, hi: int, fallback: int) -> int:
     return max(lo, min(hi, n))
 
 
-def _clamp01(value: Any, fallback: float = 1.0) -> float:
+def _clamp01(value: object, fallback: float = 1.0) -> float:
     try:
         n = float(value)
     except (TypeError, ValueError):
@@ -81,7 +86,9 @@ def _clamp01(value: Any, fallback: float = 1.0) -> float:
     return max(0.0, min(1.0, n))
 
 
-def _hex_to_rgb(hex_value: Any, fallback: tuple[int, int, int] = (128, 128, 128)) -> tuple[int, int, int]:
+def _hex_to_rgb(
+    hex_value: object, fallback: tuple[int, int, int] = (128, 128, 128)
+) -> tuple[int, int, int]:
     if not isinstance(hex_value, str):
         return fallback
     raw = hex_value.strip().lstrip("#")
@@ -177,7 +184,9 @@ def _lighting_for_firmware(profile: KeypadProfile) -> dict[str, Any]:
         ]
         if edge_pixels:
             edge_colors = [
-                _hex_to_rgb(edge_pixels[i] if i < len(edge_pixels) else edge_pixels[i % len(edge_pixels)])
+                _hex_to_rgb(
+                    edge_pixels[i] if i < len(edge_pixels) else edge_pixels[i % len(edge_pixels)]
+                )
                 for i in range(edge_count)
             ]
         else:
@@ -290,8 +299,10 @@ def generate(profile: KeypadProfile, workspace: Path) -> None:
             f"#define KEYPAD_EDGE_SPEED8 {edge_speed8}",
             f"#define KEYPAD_KEY_LED_COUNT {len(light['keyColors'])}",
             f"#define KEYPAD_EDGE_LED_COUNT {len(light['edgeColors'])}",
-            f"static const uint8_t KEYPAD_KEY_LED_RGB[KEYPAD_KEY_LED_COUNT * 3] = {{ {key_flat} }};",
-            f"static const uint8_t KEYPAD_EDGE_LED_RGB[KEYPAD_EDGE_LED_COUNT * 3] = {{ {edge_flat} }};",
+            "static const uint8_t KEYPAD_KEY_LED_RGB"
+            f"[KEYPAD_KEY_LED_COUNT * 3] = {{ {key_flat} }};",
+            "static const uint8_t KEYPAD_EDGE_LED_RGB"
+            f"[KEYPAD_EDGE_LED_COUNT * 3] = {{ {edge_flat} }};",
             "#endif",
             "",
         ]

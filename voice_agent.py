@@ -4,17 +4,8 @@ Process indépendant de main.py FastAPI.
 Lance avec : uv run python voice_agent.py dev
 Test console (sans browser) : uv run python voice_agent.py console
 """
+
 from __future__ import annotations
-from livekit.plugins import google as lk_google
-from livekit.plugins import deepgram, elevenlabs, silero
-from livekit.agents import (
-    Agent,
-    AgentSession,
-    WorkerOptions,
-    cli,
-    llm as lk_llm,
-)
-from livekit.agents.voice.room_io import RoomOptions, AudioInputOptions
 
 import logging
 import os
@@ -23,6 +14,18 @@ import warnings
 from pathlib import Path
 
 from dotenv import load_dotenv
+from livekit.agents import (
+    Agent,
+    AgentSession,
+    WorkerOptions,
+    cli,
+)
+from livekit.agents import (
+    llm as lk_llm,
+)
+from livekit.agents.voice.room_io import AudioInputOptions, RoomOptions
+from livekit.plugins import deepgram, elevenlabs, silero
+from livekit.plugins import google as lk_google
 
 load_dotenv(Path(__file__).parent / ".env")
 
@@ -30,11 +33,15 @@ load_dotenv(Path(__file__).parent / ".env")
 warnings.filterwarnings("ignore", category=UserWarning, module="pkg_resources")
 try:
     from loguru import logger as _loguru
+
     _loguru.remove()
     _loguru.add(
         sys.stderr,
         level="INFO",
-        format="<green>{time:HH:mm:ss}</green> | <level>{level: <8}</level> | <cyan>{name}</cyan> — {message}",
+        format=(
+            "<green>{time:HH:mm:ss}</green> | <level>{level: <8}</level>"
+            " | <cyan>{name}</cyan> — {message}"
+        ),
         colorize=True,
     )
 except Exception:
@@ -71,6 +78,7 @@ def _build_voice_instructions() -> str:
     """Prompt système = base + SYSTEM_PROMPT de chaque skill actif."""
     try:
         from skills.registry import SkillRegistry
+
         reg = SkillRegistry.get_instance()
         skill_prompt = reg.get_combined_system_prompt()
         if skill_prompt:
@@ -80,7 +88,7 @@ def _build_voice_instructions() -> str:
     return _VOICE_SYSTEM_BASE
 
 
-def _make_livekit_tool(jarvis_tool: object) -> "lk_llm.RawFunctionTool":
+def _make_livekit_tool(jarvis_tool: object) -> lk_llm.RawFunctionTool:
     """Wraps un Jarvis Tool comme LiveKit RawFunctionTool."""
     schema = jarvis_tool.to_claude_schema()  # type: ignore[attr-defined]
     raw_schema = {
@@ -98,15 +106,18 @@ def _make_livekit_tool(jarvis_tool: object) -> "lk_llm.RawFunctionTool":
 
 def _voice_broadcast(event: dict) -> None:
     """Envoie un événement UI via HTTP au serveur FastAPI (localhost)."""
+    import json as _json
     import threading
     import urllib.request
-    import json as _json
 
     def _post() -> None:
         from config.settings import settings
+
         url = f"http://localhost:{settings.port}/internal/broadcast"
         data = _json.dumps(event).encode()
-        req = urllib.request.Request(url, data=data, headers={"Content-Type": "application/json"}, method="POST")
+        req = urllib.request.Request(
+            url, data=data, headers={"Content-Type": "application/json"}, method="POST"
+        )
         try:
             urllib.request.urlopen(req, timeout=2)
         except Exception as e:
@@ -118,6 +129,7 @@ def _voice_broadcast(event: dict) -> None:
 def _build_voice_tools() -> list:
     """Retourne les LiveKit tools en miroir du mode texte (main.py)."""
     from pathlib import Path
+
     from config.settings import settings
 
     _root = Path(__file__).parent
@@ -129,35 +141,62 @@ def _build_voice_tools() -> list:
     jarvis_tools = []
 
     _tool_factories = [
-        ("weather",    lambda: __import__("tools.weather",    fromlist=["WeatherTool"]).WeatherTool()),
-        ("browser",    lambda: __import__("tools.browser",    fromlist=["BrowserTool"]).BrowserTool()),
-        ("vision",     lambda: __import__("tools.vision",     fromlist=["VisionTool"]).VisionTool()),
-        ("filesystem", lambda: [
-            __import__("tools.filesystem", fromlist=["ReadFileTool"]).ReadFileTool(allowed_roots=_allowed_roots),
-            __import__("tools.filesystem", fromlist=["FindFilesTool"]).FindFilesTool(allowed_roots=_allowed_roots),
-        ]),
-        ("cli", lambda: [
-            __import__("tools.cli", fromlist=["CLIRunnerTool"]).CLIRunnerTool(
-                whitelist_path=Path(settings.cli_whitelist_path)
-            ),
-            __import__("tools.cli", fromlist=["ExecuteCLITool"]).ExecuteCLITool(),
-        ]),
-        ("calendar", lambda: [
-            __import__("tools.calendar", fromlist=["CalendarListTool"]).CalendarListTool(
-                credentials_path=_google_creds, token_path=_calendar_token
-            ),
-            __import__("tools.calendar", fromlist=["CalendarCreateTool"]).CalendarCreateTool(
-                credentials_path=_google_creds, token_path=_calendar_token
-            ),
-        ]),
-        ("notion",  lambda: __import__("tools.notion",  fromlist=["NotionTasksTool"]).NotionTasksTool()),
-        ("memory",  lambda: __import__("tools.memory",  fromlist=["MemoryTopicWriteTool"]).MemoryTopicWriteTool()),
+        ("weather", lambda: __import__("tools.weather", fromlist=["WeatherTool"]).WeatherTool()),
+        ("browser", lambda: __import__("tools.browser", fromlist=["BrowserTool"]).BrowserTool()),
+        ("vision", lambda: __import__("tools.vision", fromlist=["VisionTool"]).VisionTool()),
+        (
+            "filesystem",
+            lambda: [
+                __import__("tools.filesystem", fromlist=["ReadFileTool"]).ReadFileTool(
+                    allowed_roots=_allowed_roots
+                ),
+                __import__("tools.filesystem", fromlist=["FindFilesTool"]).FindFilesTool(
+                    allowed_roots=_allowed_roots
+                ),
+            ],
+        ),
+        (
+            "cli",
+            lambda: [
+                __import__("tools.cli", fromlist=["CLIRunnerTool"]).CLIRunnerTool(
+                    whitelist_path=Path(settings.cli_whitelist_path)
+                ),
+                __import__("tools.cli", fromlist=["ExecuteCLITool"]).ExecuteCLITool(),
+            ],
+        ),
+        (
+            "calendar",
+            lambda: [
+                __import__("tools.calendar", fromlist=["CalendarListTool"]).CalendarListTool(
+                    credentials_path=_google_creds, token_path=_calendar_token
+                ),
+                __import__("tools.calendar", fromlist=["CalendarCreateTool"]).CalendarCreateTool(
+                    credentials_path=_google_creds, token_path=_calendar_token
+                ),
+            ],
+        ),
+        (
+            "notion",
+            lambda: __import__("tools.notion", fromlist=["NotionTasksTool"]).NotionTasksTool(),
+        ),
+        (
+            "memory",
+            lambda: __import__(
+                "tools.memory", fromlist=["MemoryTopicWriteTool"]
+            ).MemoryTopicWriteTool(),
+        ),
         ("spotify", lambda: __import__("tools.spotify", fromlist=["SpotifyTool"]).SpotifyTool()),
-        ("gmail",   lambda: __import__("tools.gmail",   fromlist=["GmailListTool"]).GmailListTool(
-            credentials_path=_google_creds, token_path=_gmail_token
-        )),
+        (
+            "gmail",
+            lambda: __import__("tools.gmail", fromlist=["GmailListTool"]).GmailListTool(
+                credentials_path=_google_creds, token_path=_gmail_token
+            ),
+        ),
         # show_view fourni par le skill globe-view
-        ("preset", lambda: __import__("tools.preset", fromlist=["ExecutePresetTool"]).ExecutePresetTool()),
+        (
+            "preset",
+            lambda: __import__("tools.preset", fromlist=["ExecutePresetTool"]).ExecutePresetTool(),
+        ),
     ]
 
     for name, factory in _tool_factories:
@@ -173,6 +212,7 @@ def _build_voice_tools() -> list:
     # Outils des skills installés (BambuLab, Fusion360…)
     try:
         from skills.registry import SkillRegistry
+
         reg = SkillRegistry.get_instance()
         jarvis_tools += reg.get_all_tools()
     except Exception as e:
@@ -222,11 +262,14 @@ def prewarm(proc: object) -> None:
 async def entrypoint(ctx: object) -> None:
     from dotenv import dotenv_values
     from livekit import rtc as lk_rtc
+
     _env = dotenv_values(Path(__file__).parent / ".env")
 
     _quebec = _env.get("QUEBEC_MODE", "false").strip().lower() in ("true", "1", "yes")
     _voice_id = _env.get("QUEBEC_VOICE_ID") if _quebec else _env.get("ELEVENLABS_VOICE_ID", "")
-    _tts_model = "eleven_multilingual_v2" if _quebec else _env.get("ELEVENLABS_MODEL", "eleven_turbo_v2_5")
+    _tts_model = (
+        "eleven_multilingual_v2" if _quebec else _env.get("ELEVENLABS_MODEL", "eleven_turbo_v2_5")
+    )
 
     logger.info("TTS config — quebec=%s model=%s voice=%s", _quebec, _tts_model, _voice_id)
 
@@ -237,7 +280,8 @@ async def entrypoint(ctx: object) -> None:
     if _info and not getattr(ctx, "_connected", False):
         try:
             await ctx.room.connect(
-                _info.url, _info.token,
+                _info.url,
+                _info.token,
                 options=lk_rtc.RoomOptions(auto_subscribe=True, connect_timeout=15.0),
             )
             ctx._connected = True  # empêche la double connexion dans session.start()

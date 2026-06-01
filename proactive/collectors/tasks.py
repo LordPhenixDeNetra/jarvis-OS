@@ -2,6 +2,7 @@
 TaskCollector — récupère les tâches Notion non cochées.
 Réutilise le tool notion existant.
 """
+
 from __future__ import annotations
 
 from datetime import datetime
@@ -30,14 +31,16 @@ class TaskCollector(CollectorBase):
             if not line or line.startswith("#"):
                 continue
 
-            items.append(ContextItem(
-                type=ItemType.TASK,
-                title=line,
-                summary=line,
-                raw=line,
-                source="notion",
-                timestamp=now,
-                priority=Priority.MEDIUM
-            ))
+            items.append(
+                ContextItem(
+                    type=ItemType.TASK,
+                    title=line,
+                    summary=line,
+                    raw=line,
+                    source="notion",
+                    timestamp=now,
+                    priority=Priority.MEDIUM,
+                )
+            )
 
         return items

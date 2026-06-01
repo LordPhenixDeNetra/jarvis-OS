@@ -6,32 +6,41 @@ from core.router import RouteEnum, SpeedRouter
 
 # ── heuristic ────────────────────────────────────────────────
 
-@pytest.mark.parametrize("message,expected", [
-    ("Quelle heure est-il ?", RouteEnum.INSTANT),
-    ("Qu'est-ce que tu penses de ça ?", RouteEnum.INSTANT),
-    ("Allume la lumière du salon.", RouteEnum.CONFIRM_FIRE),
-    ("Éteins le thermostat.", RouteEnum.CONFIRM_FIRE),
-    ("Lance un minuteur de 10 minutes.", RouteEnum.CONFIRM_FIRE),
-    ("Mémorise que j'ai rendez-vous demain.", RouteEnum.CONFIRM_FIRE),
-    ("Ouvre le volet de la chambre.", RouteEnum.CONFIRM_FIRE),
-])
+
+@pytest.mark.parametrize(
+    "message,expected",
+    [
+        ("Quelle heure est-il ?", RouteEnum.INSTANT),
+        ("Qu'est-ce que tu penses de ça ?", RouteEnum.INSTANT),
+        ("Allume la lumière du salon.", RouteEnum.CONFIRM_FIRE),
+        ("Éteins le thermostat.", RouteEnum.CONFIRM_FIRE),
+        ("Lance un minuteur de 10 minutes.", RouteEnum.CONFIRM_FIRE),
+        ("Mémorise que j'ai rendez-vous demain.", RouteEnum.CONFIRM_FIRE),
+        ("Ouvre le volet de la chambre.", RouteEnum.CONFIRM_FIRE),
+    ],
+)
 def test_heuristic(message: str, expected: RouteEnum) -> None:
     assert SpeedRouter.heuristic(message) == expected
 
 
 # ── strip_tag ─────────────────────────────────────────────────
 
-@pytest.mark.parametrize("raw,expected", [
-    ("[I] Réponse directe.", "Réponse directe."),
-    ("[CF] Je confirme.", "Je confirme."),
-    ("[BG] Ok je lance.", "Ok je lance."),
-    ("Pas de tag.", "Pas de tag."),
-])
+
+@pytest.mark.parametrize(
+    "raw,expected",
+    [
+        ("[I] Réponse directe.", "Réponse directe."),
+        ("[CF] Je confirme.", "Je confirme."),
+        ("[BG] Ok je lance.", "Ok je lance."),
+        ("Pas de tag.", "Pas de tag."),
+    ],
+)
 def test_strip_tag(raw: str, expected: str) -> None:
     assert SpeedRouter.strip_tag(raw) == expected
 
 
 # ── extract_route ─────────────────────────────────────────────
+
 
 async def _extract(
     chunks: list[str],
@@ -40,11 +49,13 @@ async def _extract(
     async def _gen() -> RouteEnum:  # type: ignore[valid-type]
         for c in chunks:
             yield c
+
     route, stream = await SpeedRouter.extract_route(_gen(), pre_route=pre_route)
     return route, "".join([c async for c in stream])
 
 
 # ── cas nominaux (existants) ──────────────────────────────────
+
 
 async def test_extract_route_instant_single() -> None:
     route, text = await _extract(["[I] Il est 14h23."])
@@ -90,6 +101,7 @@ async def test_extract_route_multi_chunks() -> None:
 
 # ── nouveaux cas : préambule avant le tag ─────────────────────
 
+
 async def test_extract_route_tag_after_short_preamble() -> None:
     """Tag précédé d'un court préambule dans le même chunk."""
     route, text = await _extract(["Voici : [CF] Lumière allumée."])
@@ -121,6 +133,7 @@ async def test_extract_route_bg_project_after_preamble() -> None:
 
 
 # ── nouveaux cas : fallback pre_route CF ─────────────────────
+
 
 async def test_extract_route_no_tag_cf_fallback() -> None:
     """Absence de tag + pre_route=CF → route CF conservée, texte intact."""

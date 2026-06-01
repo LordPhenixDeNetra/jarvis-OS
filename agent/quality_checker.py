@@ -1,6 +1,7 @@
 """
 QualityChecker — vérifications automatiques de qualité post-étape et fin de projet.
 """
+
 from __future__ import annotations
 
 import ast
@@ -11,7 +12,6 @@ from loguru import logger
 
 
 class QualityChecker:
-
     def __init__(self, workspace_path: str) -> None:
         self._workspace = Path(workspace_path).resolve()
 
@@ -27,17 +27,22 @@ class QualityChecker:
         for f in self._workspace.rglob("*"):
             if f.is_file() and ".jarvis" not in str(f):
                 rel = str(f.relative_to(self._workspace))
-                files.append({
-                    "path":      rel,
-                    "size":      f.stat().st_size,
-                    "extension": f.suffix,
-                })
+                files.append(
+                    {
+                        "path": rel,
+                        "size": f.stat().st_size,
+                        "extension": f.suffix,
+                    }
+                )
         return files
 
     # ── HTML reference check ──────────────────────────────────────────────────
 
     def check_html_references(self, html_path: str) -> list[str]:
-        """Vérifie que tous les fichiers référencés dans un HTML existent. Retourne les manquants."""
+        """Vérifie que tous les fichiers référencés dans un HTML existent.
+
+        Retourne les manquants.
+        """
         html_file = self._workspace / html_path
         if not html_file.exists():
             return [f"HTML introuvable: {html_path}"]

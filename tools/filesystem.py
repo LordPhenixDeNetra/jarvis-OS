@@ -19,9 +19,7 @@ _MDFIND_TIMEOUT = 10.0
 def _walk_filtered(root: Path) -> Generator[Path, None, None]:
     """os.walk avec exclusion des répertoires lourds et cachés."""
     for dirpath, dirnames, filenames in os.walk(str(root)):
-        dirnames[:] = [
-            d for d in dirnames if d not in _EXCLUDED_DIRS and not d.startswith(".")
-        ]
+        dirnames[:] = [d for d in dirnames if d not in _EXCLUDED_DIRS and not d.startswith(".")]
         for filename in filenames:
             yield Path(dirpath) / filename
 
@@ -84,8 +82,11 @@ class ReadFileTool(Tool):
 
     async def execute(self, path: str, **_: object) -> ToolResult:
         from core.permissions import permissions as _perms
+
         if not _perms.get("files"):
-            return ToolResult(content="Accès aux fichiers désactivé dans les permissions.", is_error=True)
+            return ToolResult(
+                content="Accès aux fichiers désactivé dans les permissions.", is_error=True
+            )
 
         p = Path(path).expanduser().resolve()
 
@@ -155,8 +156,11 @@ class FindFilesTool(Tool):
         **_: object,
     ) -> ToolResult:
         from core.permissions import permissions as _perms
+
         if not _perms.get("files"):
-            return ToolResult(content="Accès aux fichiers désactivé dans les permissions.", is_error=True)
+            return ToolResult(
+                content="Accès aux fichiers désactivé dans les permissions.", is_error=True
+            )
 
         root = Path(directory).expanduser().resolve() if directory else Path.home()
 

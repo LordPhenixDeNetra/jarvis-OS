@@ -95,12 +95,14 @@ def load_skills(skills_dir: Path) -> list[dict]:
             continue
 
         logger.debug("Skill chargé", name=skill["name"])
-        active.append({
-            "name": skill["name"],
-            "description": skill["description"],
-            "instructions": skill["instructions"],
-            "dir": skill["dir"],
-        })
+        active.append(
+            {
+                "name": skill["name"],
+                "description": skill["description"],
+                "instructions": skill["instructions"],
+                "dir": skill["dir"],
+            }
+        )
 
     logger.info("Skills chargés", count=len(active))
     return active

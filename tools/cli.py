@@ -13,25 +13,52 @@ from loguru import logger
 from tools.base import Tool, ToolResult
 
 # ── Whitelist binaires autorisés pour execute_cli ────────────────────────────
-CLI_WHITELIST: frozenset[str] = frozenset({
-    # Dev
-    "git", "python", "python3", "pip", "uv",
-    # Exploration fichiers
-    "ls", "cat", "head", "tail", "grep", "find",
-    "mv", "cp", "mkdir", "touch", "zip", "unzip", "rename",
-    # Médias
-    "yt-dlp", "ffmpeg",
-    # Images
-    "rembg", "convert", "magick", "sips",
-    # PDF
-    "pdftk", "pdftoppm",
-    # Métadonnées
-    "exiftool",
-    # macOS
-    "open", "osascript", "say", "screencapture", "afinfo",
-    # Énergie / système (approbation requise)
-    "pmset", "shutdown",
-})
+CLI_WHITELIST: frozenset[str] = frozenset(
+    {
+        # Dev
+        "git",
+        "python",
+        "python3",
+        "pip",
+        "uv",
+        # Exploration fichiers
+        "ls",
+        "cat",
+        "head",
+        "tail",
+        "grep",
+        "find",
+        "mv",
+        "cp",
+        "mkdir",
+        "touch",
+        "zip",
+        "unzip",
+        "rename",
+        # Médias
+        "yt-dlp",
+        "ffmpeg",
+        # Images
+        "rembg",
+        "convert",
+        "magick",
+        "sips",
+        # PDF
+        "pdftk",
+        "pdftoppm",
+        # Métadonnées
+        "exiftool",
+        # macOS
+        "open",
+        "osascript",
+        "say",
+        "screencapture",
+        "afinfo",
+        # Énergie / système (approbation requise)
+        "pmset",
+        "shutdown",
+    }
+)
 
 # Commandes nécessitant une confirmation explicite de l'utilisateur
 ALWAYS_REQUIRE_APPROVAL: list[str] = [
@@ -45,7 +72,7 @@ ALWAYS_REQUIRE_APPROVAL: list[str] = [
 _EXEC_BLOCKED_RE = re.compile(
     r"rm\s+(-[a-zA-Z]*f[a-zA-Z]*\s+)?/?(\.\./)*/?$"
     r"|rm\s+--no-preserve-root"
-    r"|:\(\)\s*\{.*\}"                       # fork bomb
+    r"|:\(\)\s*\{.*\}"  # fork bomb
     r"|\bmkfs\b|\bfdisk\b|\bparted\b"
     r"|dd\s+if=.*\bof=/dev/"
     r"|>\s*/dev/(sda|hda|nvme|loop|disk)\d*"
@@ -64,7 +91,7 @@ _APPROVAL_TTL = timedelta(minutes=5)
 _BLOCKED_PATTERNS: list[str] = [
     r"rm\s+(-[a-zA-Z]*f[a-zA-Z]*\s+)?/?(\.\./)*/?$",  # rm -rf / ou rm /
     r"rm\s+--no-preserve-root",
-    r":\(\)\s*\{.*\}",                    # fork bomb
+    r":\(\)\s*\{.*\}",  # fork bomb
     r"\bshutdown\b",
     r"\breboot\b",
     r"\bhalt\b",
@@ -73,10 +100,10 @@ _BLOCKED_PATTERNS: list[str] = [
     r"\bparted\b",
     r"dd\s+if=.*\bof=/dev/",
     r">\s*/dev/(sda|hda|nvme|loop|disk)\d*",
-    r"\|\s*(bash|sh|zsh|fish|dash)\b",    # piping to shell
+    r"\|\s*(bash|sh|zsh|fish|dash)\b",  # piping to shell
     r"curl\b[^|]*\|\s*sudo",
     r"wget\b[^|]*-O\s*-[^|]*\|\s*(bash|sh)",
-    r"\bsudo\b",                           # sudo bloqué par défaut
+    r"\bsudo\b",  # sudo bloqué par défaut
 ]
 _BLOCKED_RE = re.compile("|".join(_BLOCKED_PATTERNS), re.IGNORECASE | re.DOTALL)
 
@@ -133,7 +160,9 @@ class CLIRunnerTool(Tool):
             "properties": {
                 "alias": {
                     "type": "string",
-                    "description": f"Alias du script. Disponibles : {', '.join(self._scripts) or 'aucun'}",
+                    "description": (
+                        f"Alias du script. Disponibles : {', '.join(self._scripts) or 'aucun'}"
+                    ),
                 },
                 "action": {
                     "type": "string",
@@ -191,7 +220,10 @@ class CLIRunnerTool(Tool):
         if tier == "reject":
             logger.info("CLIRunner rejected by tier", alias=alias)
             return ToolResult(
-                content=f"Script '{alias}' désactivé (tier: reject). Modifie config/tools.yaml pour l'activer.",
+                content=(
+                    f"Script '{alias}' désactivé (tier: reject)."
+                    " Modifie config/tools.yaml pour l'activer."
+                ),
                 is_error=True,
             )
 
@@ -304,7 +336,9 @@ class ExecuteCLITool(Tool):
             },
             "confirmed": {
                 "type": "boolean",
-                "description": "true après confirmation explicite de l'utilisateur (commandes sensibles).",
+                "description": (
+                    "true après confirmation explicite de l'utilisateur (commandes sensibles)."
+                ),
             },
         },
         "required": ["command"],
@@ -335,7 +369,10 @@ class ExecuteCLITool(Tool):
         binary = self._binary(command)
         if binary not in CLI_WHITELIST:
             return ToolResult(
-                content=f"Binaire '{binary}' non autorisé. Whitelist : {', '.join(sorted(CLI_WHITELIST))}",
+                content=(
+                    f"Binaire '{binary}' non autorisé."
+                    f" Whitelist : {', '.join(sorted(CLI_WHITELIST))}"
+                ),
                 is_error=True,
             )
 

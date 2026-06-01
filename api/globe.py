@@ -1,4 +1,5 @@
 """Globe data API — flights (OpenSky), weather (Open-Meteo), config."""
+
 from __future__ import annotations
 
 import asyncio
@@ -23,34 +24,55 @@ WEATHER_TTL = 300
 
 # ── Cities for weather ─────────────────────────────────────────
 CITIES = {
-    "paris":  {"name": "Paris",    "lat": 48.85,  "lon":   2.35},
-    "nyc":    {"name": "New York", "lat": 40.71,  "lon": -74.01},
-    "tokyo":  {"name": "Tokyo",    "lat": 35.69,  "lon": 139.69},
-    "dubai":  {"name": "Dubai",    "lat": 25.20,  "lon":  55.27},
+    "paris": {"name": "Paris", "lat": 48.85, "lon": 2.35},
+    "nyc": {"name": "New York", "lat": 40.71, "lon": -74.01},
+    "tokyo": {"name": "Tokyo", "lat": 35.69, "lon": 139.69},
+    "dubai": {"name": "Dubai", "lat": 25.20, "lon": 55.27},
 }
 
 WMO: dict[int, str] = {
-    0: "Clair",  1: "Dégagé",  2: "Nuageux",  3: "Couvert",
-    45: "Brouillard",  48: "Verglas",
-    51: "Bruine légère",  53: "Bruine",  55: "Bruine forte",
-    61: "Pluie légère",  63: "Pluie",   65: "Pluie forte",
-    71: "Neige légère",  73: "Neige",   75: "Neige forte",
+    0: "Clair",
+    1: "Dégagé",
+    2: "Nuageux",
+    3: "Couvert",
+    45: "Brouillard",
+    48: "Verglas",
+    51: "Bruine légère",
+    53: "Bruine",
+    55: "Bruine forte",
+    61: "Pluie légère",
+    63: "Pluie",
+    65: "Pluie forte",
+    71: "Neige légère",
+    73: "Neige",
+    75: "Neige forte",
     77: "Grains de neige",
-    80: "Averses",  81: "Averses mod.",  82: "Averses fortes",
-    85: "Averses neige",  86: "Averses neige fortes",
-    95: "Orage",  96: "Orage+grêle",  99: "Orage+grêle forte",
+    80: "Averses",
+    81: "Averses mod.",
+    82: "Averses fortes",
+    85: "Averses neige",
+    86: "Averses neige fortes",
+    95: "Orage",
+    96: "Orage+grêle",
+    99: "Orage+grêle forte",
 }
 
 MAX_FLIGHTS = 2000
 
 
 def _region(lat: float, lon: float) -> str:
-    if lat > 15 and -140 < lon < -50:        return "NA"
-    if lat <= 20 and -85 < lon < -30:        return "SA"
-    if lat > 35 and -15 < lon < 45:          return "EU"
-    if -35 < lat <= 35 and -20 < lon < 55:   return "AF"
-    if lat > 10 and 45 < lon < 150:          return "AS"
-    if lat <= 15 and 95 < lon < 180:         return "OC"
+    if lat > 15 and -140 < lon < -50:
+        return "NA"
+    if lat <= 20 and -85 < lon < -30:
+        return "SA"
+    if lat > 35 and -15 < lon < 45:
+        return "EU"
+    if -35 < lat <= 35 and -20 < lon < 55:
+        return "AF"
+    if lat > 10 and 45 < lon < 150:
+        return "AS"
+    if lat <= 15 and 95 < lon < 180:
+        return "OC"
     return "OT"
 
 
@@ -76,18 +98,20 @@ async def get_flights() -> dict[str, Any]:
         if s[5] is None or s[6] is None or s[8]:
             continue
         callsign = (s[1] or "").strip() or s[0] or "???"
-        alt_m    = round(s[7] or 0)
+        alt_m = round(s[7] or 0)
         speed_kh = round((s[9] or 0) * 3.6)
-        heading  = round(s[10] or 0) if s[10] is not None else 0
-        flights.append({
-            "callsign": callsign,
-            "lat":      round(s[6], 4),
-            "lon":      round(s[5], 4),
-            "alt":      alt_m,
-            "speed":    speed_kh,
-            "heading":  heading,
-            "country":  s[2] or "—",
-        })
+        heading = round(s[10] or 0) if s[10] is not None else 0
+        flights.append(
+            {
+                "callsign": callsign,
+                "lat": round(s[6], 4),
+                "lon": round(s[5], 4),
+                "alt": alt_m,
+                "speed": speed_kh,
+                "heading": heading,
+                "country": s[2] or "—",
+            }
+        )
 
     import random as _rnd
 
@@ -120,7 +144,13 @@ async def get_flights() -> dict[str, Any]:
     result_flights = af_flights + geo_flights
     result = {"flights": result_flights, "total": len(flights)}
     _FLIGHTS_CACHE.update({"data": result, "ts": now})
-    logger.info(f"OpenSky: {len(flights)} vols, {len(result_flights)} affichés ({len(af_flights)} Air France + {len(geo_flights)} autres)")
+    logger.info(
+        "OpenSky: %d vols, %d affichés (%d Air France + %d autres)",
+        len(flights),
+        len(result_flights),
+        len(af_flights),
+        len(geo_flights),
+    )
     return result
 
 
@@ -131,7 +161,9 @@ async def get_weather() -> dict[str, Any]:
     if _WEATHER_CACHE["data"] and now - _WEATHER_CACHE["ts"] < WEATHER_TTL:
         return _WEATHER_CACHE["data"]
 
-    async def _fetch_city(key: str, city: dict[str, Any], client: httpx.AsyncClient) -> tuple[str, dict]:
+    async def _fetch_city(
+        key: str, city: dict[str, Any], client: httpx.AsyncClient
+    ) -> tuple[str, dict]:
         url = (
             "https://api.open-meteo.com/v1/forecast"
             f"?latitude={city['lat']}&longitude={city['lon']}"
@@ -142,16 +174,22 @@ async def get_weather() -> dict[str, Any]:
             r.raise_for_status()
             cur = r.json()["current"]
             return key, {
-                "name":  city["name"],
-                "lat":   city["lat"],
-                "lon":   city["lon"],
-                "temp":  round(cur["temperature_2m"]),
-                "code":  cur["weathercode"],
-                "desc":  WMO.get(cur["weathercode"], "—"),
+                "name": city["name"],
+                "lat": city["lat"],
+                "lon": city["lon"],
+                "temp": round(cur["temperature_2m"]),
+                "code": cur["weathercode"],
+                "desc": WMO.get(cur["weathercode"], "—"),
             }
         except Exception:
-            return key, {"name": city["name"], "lat": city["lat"], "lon": city["lon"],
-                         "temp": None, "code": 0, "desc": "—"}
+            return key, {
+                "name": city["name"],
+                "lat": city["lat"],
+                "lon": city["lon"],
+                "temp": None,
+                "code": 0,
+                "desc": "—",
+            }
 
     async with httpx.AsyncClient(timeout=10) as client:
         tasks = [_fetch_city(k, v, client) for k, v in CITIES.items()]
@@ -168,6 +206,6 @@ async def get_weather() -> dict[str, Any]:
 async def get_config() -> dict[str, Any]:
     return {
         "aisstream_key": settings.aisstream_key or "",
-        "maptiler_key":  settings.maptiler_key or "",
-        "mapbox_token":  settings.mapbox_token or "",
+        "maptiler_key": settings.maptiler_key or "",
+        "mapbox_token": settings.mapbox_token or "",
     }

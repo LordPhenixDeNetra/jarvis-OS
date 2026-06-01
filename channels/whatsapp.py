@@ -1,4 +1,5 @@
 """Stub WhatsApp pour Jarvis — à implémenter via Twilio ou WhatsApp Business API."""
+
 from __future__ import annotations
 
 from channels.base import ChannelAdapter, MessageTarget, Platform

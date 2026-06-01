@@ -26,13 +26,15 @@ _presence_last_notified: dict[bool, float] = {True: 0.0, False: 0.0}
 
 
 # ── /ws/logs — stream log buffer to the dashboard Système › Logs panel ────────
-# Format pushed to client: { lv: "ok"|"info"|"warn"|"err", parts: [{t: string, cls?: "accent"|"dim"}] }
+# Format pushed to client:
+# { lv: "ok"|"info"|"warn"|"err", parts: [{t: string, cls?: "accent"|"dim"}] }
 @router.websocket("/ws/logs")
 async def websocket_logs(websocket: WebSocket) -> None:
     """Streams the in-memory log ring buffer to the Système › Logs panel.
     Sends the last 50 entries on connect, then pushes new lines as they arrive.
     """
     from api.http import _log_buffer
+
     await websocket.accept()
     last_sent = 0
     try:
@@ -63,14 +65,20 @@ async def websocket_logs(websocket: WebSocket) -> None:
 def _format_log_line(raw: str) -> dict:
     """Wrap a plain loguru string line into the { lv, parts } schema."""
     import re
+
     # loguru format: "HH:MM:SS | LEVEL    | name — message"
     m = re.match(r"^(\d{2}:\d{2}:\d{2})\s*\|\s*(\w+)\s*\|\s*(.+?)(?:\s*—\s*(.*))?$", raw)
     if m:
         level_raw = m.group(2).lower().strip()
-        source    = m.group(3).strip()
-        message   = (m.group(4) or "").strip()
-        lv = {"info": "info", "warning": "warn", "error": "err",
-              "success": "ok",  "debug": "info"}.get(level_raw, "info")
+        source = m.group(3).strip()
+        message = (m.group(4) or "").strip()
+        lv = {
+            "info": "info",
+            "warning": "warn",
+            "error": "err",
+            "success": "ok",
+            "debug": "info",
+        }.get(level_raw, "info")
         parts: list[dict] = [
             {"t": source, "cls": "accent"},
         ]
@@ -80,19 +88,20 @@ def _format_log_line(raw: str) -> dict:
     # Fallback: treat whole line as plain message
     return {"lv": "info", "parts": [{"t": raw}]}
 
+
 _GESTURE_DIRECT_ACTIONS: dict[str, str] = {
     "Open_Palm": "toggle",
-    "Victory":   "next",
+    "Victory": "next",
 }
 
 _GESTURE_LLM_COMMANDS: dict[str, str] = {
-    "Thumb_Up":    "Oui, confirme",
-    "Thumb_Down":  "Non, annule",
+    "Thumb_Up": "Oui, confirme",
+    "Thumb_Down": "Non, annule",
     "Pointing_Up": "Hey Jarvis",
 }
 
 _PRESENCE_MSGS: dict[bool, str] = {
-    True:  "L'utilisateur est revenu devant l'ordinateur.",
+    True: "L'utilisateur est revenu devant l'ordinateur.",
     False: "L'utilisateur s'est éloigné de l'ordinateur.",
 }
 
@@ -120,7 +129,9 @@ async def _handle_vision_event(
         action = _GESTURE_DIRECT_ACTIONS.get(gesture)
         if action:
             result = await _spotify_tool.execute(action=action)
-            logger.info("Vision gesture direct", gesture=gesture, action=action, ok=not result.is_error)
+            logger.info(
+                "Vision gesture direct", gesture=gesture, action=action, ok=not result.is_error
+            )
         return
 
     if event == "gesture_volume":
@@ -276,15 +287,21 @@ async def websocket_chat(websocket: WebSocket) -> None:
             elif route is RouteEnum.PROJECT:
                 orchestrator = getattr(websocket.app.state, "orchestrator", None)
                 if orchestrator:
-                    async def _run_project(msg: str = message) -> None:
+
+                    async def _run_project(
+                        msg: str = message, _orch: object = orchestrator
+                    ) -> None:
                         try:
-                            await orchestrator.create_and_run(msg)
+                            await _orch.create_and_run(msg)
                         except Exception as exc:
                             logger.error("Project creation failed", error=str(exc))
-                            proactive.broadcast_event({
-                                "type": "notification",
-                                "content": f"Erreur création projet : {exc}",
-                            })
+                            proactive.broadcast_event(
+                                {
+                                    "type": "notification",
+                                    "content": f"Erreur création projet : {exc}",
+                                }
+                            )
+
                     asyncio.create_task(_run_project(), name=f"project-{str(session.id)[:8]}")
                     logger.info("Project task launched", session_id=str(session.id))
 

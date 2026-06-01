@@ -27,9 +27,9 @@ class VisionTool(Tool):
         "Utilise quand l'utilisateur dit : 'regarde', 'tu vois ça ?', 'décris ce que tu vois'.\n"
         "- 'read_document' : extrait et transcrit le texte d'un document physique "
         "(livre, facture, datasheet, note manuscrite). "
-        "Utilise quand l'utilisateur dit : 'lis ça', 'qu'est-ce qu'il y a écrit', 'transcris'.\n"
-        "- 'analyze_schema' : analyse un schéma électronique, PCB ou diagramme technique. "
-        "Utilise quand l'utilisateur dit : 'regarde ce schéma', 'analyse ce PCB', 'c'est quoi ce circuit'.\n"
+        "Utilise quand l'utilisateur dit : 'lis ça', 'qu'est-ce qu'il y a écrit'.\n"
+        "- 'analyze_schema' : analyse un schéma électronique, PCB ou diagramme. "
+        "Utilise quand l'utilisateur dit : 'regarde ce schéma', 'analyse ce PCB'.\n"
         "- 'recall' : retrouve un souvenir visuel passé dans la mémoire. "
         "Utilise quand l'utilisateur dit : 'tu te souviens de ce que tu avais vu ?', "
         "'le schéma que je t'avais montré'. Dans ce cas, source n'est pas requis."
@@ -45,7 +45,10 @@ class VisionTool(Tool):
             "source": {
                 "type": "string",
                 "enum": ["webcam", "screen"],
-                "description": "Source de la capture. 'webcam' pour la caméra, 'screen' pour l'écran. Non requis pour 'recall'.",
+                "description": (
+                    "Source de la capture. 'webcam' pour la caméra,"
+                    " 'screen' pour l'écran. Non requis pour 'recall'."
+                ),
             },
             "question": {
                 "type": "string",
@@ -57,7 +60,10 @@ class VisionTool(Tool):
             "detail": {
                 "type": "string",
                 "enum": ["low", "high"],
-                "description": "Niveau de détail. 'high' pour code/texte fin. Défaut: 'low' (forcé 'high' pour read_document et analyze_schema).",
+                "description": (
+                    "Niveau de détail. 'high' pour code/texte fin. Défaut: 'low'"
+                    " (forcé 'high' pour read_document et analyze_schema)."
+                ),
             },
         },
         "required": ["question"],
@@ -105,7 +111,7 @@ class VisionTool(Tool):
             jpeg_bytes = await loop.run_in_executor(None, self._capture_screen)
         else:
             return ToolResult(
-                content=f"Source inconnue: '{source}'. Valeurs: 'webcam', 'screen'.",
+                content=f"Source inconnue: '{source}'. Utilise 'webcam' ou 'screen'.",
                 is_error=True,
             )
 
@@ -113,7 +119,7 @@ class VisionTool(Tool):
             return ToolResult(
                 content=(
                     "Capture échouée — webcam indisponible ou écran inaccessible. "
-                    "Vérifie : Préférences Système → Confidentialité → Caméra / Enregistrement d'écran."
+                    "Vérifie : Préférences Système → Confidentialité → Caméra / Enreg. écran."
                 ),
                 is_error=True,
             )

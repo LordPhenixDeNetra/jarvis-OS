@@ -4,7 +4,7 @@ import asyncio
 from pathlib import Path
 from typing import Any
 
-from fastapi import APIRouter, HTTPException, Request
+from fastapi import APIRouter, HTTPException
 from fastapi.responses import FileResponse
 from loguru import logger
 from pydantic import BaseModel
@@ -108,7 +108,9 @@ async def get_workspace() -> dict[str, Any]:
 async def set_workspace(body: WorkspaceBody) -> dict[str, Any]:
     ws = Path(body.path).expanduser().resolve()
     if not is_valid_workspace(ws):
-        raise HTTPException(status_code=400, detail="dossier invalide (CH552_HID_Keyboard manquant)")
+        raise HTTPException(
+            status_code=400, detail="dossier invalide (CH552_HID_Keyboard manquant)"
+        )
     save_default_workspace(ws)
     return {"workspace": str(ws), "valid": True}
 
@@ -216,6 +218,8 @@ async def post_launcher(body: LauncherBody) -> dict[str, Any]:
 @router.post("/open-device-manager")
 async def post_open_device_manager() -> dict[str, Any]:
     if not is_windows():
-        raise HTTPException(status_code=400, detail="device manager disponible uniquement sous Windows")
+        raise HTTPException(
+            status_code=400, detail="device manager disponible uniquement sous Windows"
+        )
     ok = await asyncio.to_thread(open_device_manager)
     return {"ok": ok}

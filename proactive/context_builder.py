@@ -2,25 +2,28 @@
 ContextBuilder — fusionne toutes les sources en un état du monde cohérent.
 Identifie les connexions entre les domaines (email ↔ calendar ↔ tasks ↔ missions).
 """
+
 from __future__ import annotations
 
 import asyncio
-from datetime import datetime
 from dataclasses import dataclass, field
+from datetime import datetime
 
-from proactive.schemas import CollectionResult, ContextItem, ItemType, Priority
+from loguru import logger
+
 from proactive.collectors.calendar import CalendarCollector
 from proactive.collectors.email import EmailCollector
 from proactive.collectors.jarvis import JarvisCollector
 from proactive.collectors.news import NewsCollector
 from proactive.collectors.tasks import TaskCollector
 from proactive.collectors.weather import WeatherCollector
-from loguru import logger
+from proactive.schemas import CollectionResult, ContextItem, ItemType, Priority
 
 
 @dataclass
 class WorldState:
     """L'état du monde à un instant T — prêt pour l'InitiativeGenerator."""
+
     collected_at: datetime
     collection: CollectionResult
 
@@ -59,7 +62,6 @@ class WorldState:
 
 
 class ContextBuilder:
-
     def __init__(self) -> None:
         self._collectors = [
             EmailCollector(),
@@ -80,23 +82,16 @@ class ContextBuilder:
         all_items: list[ContextItem] = []
         errors = {}
 
-        for collector, result in zip(self._collectors, results):
+        for collector, result in zip(self._collectors, results, strict=False):
             if isinstance(result, Exception):
                 errors[collector.name] = str(result)
                 logger.error(f"Collector {collector.name} error: {result}")
             else:
                 all_items.extend(result)
 
-        collection = CollectionResult(
-            items=all_items,
-            collected_at=datetime.now(),
-            errors=errors
-        )
+        collection = CollectionResult(items=all_items, collected_at=datetime.now(), errors=errors)
 
-        state = WorldState(
-            collected_at=datetime.now(),
-            collection=collection
-        )
+        state = WorldState(collected_at=datetime.now(), collection=collection)
 
         state.email_summary = self._summarize_emails(collection.by_type(ItemType.EMAIL))
         state.calendar_summary = self._summarize_calendar(collection.by_type(ItemType.EVENT))

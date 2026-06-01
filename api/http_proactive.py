@@ -14,24 +14,26 @@ class RectifyBody(BaseModel):
 
 # ── Initiatives API ───────────────────────────────────────────────────────────
 
+
 @router.get("/api/initiatives")
 async def get_initiatives() -> list[dict]:
     """Initiatives en attente (mode VALIDATE)."""
     from proactive.store import InitiativeStore
+
     store = InitiativeStore()
     initiatives = store.load_pending()
     return [
         {
-            "id":               i.id,
-            "type":             i.type,
-            "title":            i.title,
-            "context":          i.context,
-            "reasoning":        i.reasoning,
-            "action":           i.action,
-            "priority":         i.priority,
-            "execution_mode":   i.execution_mode,
-            "draft_content":    i.draft_content,
-            "created_at":       i.created_at.isoformat(),
+            "id": i.id,
+            "type": i.type,
+            "title": i.title,
+            "context": i.context,
+            "reasoning": i.reasoning,
+            "action": i.action,
+            "priority": i.priority,
+            "execution_mode": i.execution_mode,
+            "draft_content": i.draft_content,
+            "created_at": i.created_at.isoformat(),
         }
         for i in initiatives
     ]
@@ -47,7 +49,7 @@ async def approve_initiative(initiative_id: str, request: Request) -> dict:
     from proactive.store import InitiativeStore
 
     store = InitiativeStore()
-    init  = store.get_by_id(initiative_id)
+    init = store.get_by_id(initiative_id)
     if not init:
         raise HTTPException(404, "Initiative introuvable")
 
@@ -57,6 +59,7 @@ async def approve_initiative(initiative_id: str, request: Request) -> dict:
         if init.type == InitiativeType.DRAFT_RESPONSE:
             from config.settings import settings as _s
             from tools.gmail import send_gmail_draft
+
             msg_id = await send_gmail_draft(
                 draft_content=init.draft_content or "",
                 credentials_path=Path(_s.google_credentials_path),
@@ -93,6 +96,7 @@ async def approve_initiative(initiative_id: str, request: Request) -> dict:
 @router.post("/api/initiatives/{initiative_id}/reject")
 async def reject_initiative(initiative_id: str) -> dict:
     from proactive.store import InitiativeStore
+
     InitiativeStore().update_status(initiative_id, "rejected")
     return {"status": "rejected"}
 
@@ -102,48 +106,53 @@ async def rectify_initiative(initiative_id: str, body: RectifyBody) -> dict:
     from proactive.initiative_generator import InitiativeGenerator
     from proactive.store import InitiativeStore
 
-    store    = InitiativeStore()
-    init     = store.get_by_id(initiative_id)
+    store = InitiativeStore()
+    init = store.get_by_id(initiative_id)
     if not init:
         raise HTTPException(404, "Initiative introuvable")
 
     generator = InitiativeGenerator()
-    new_init  = await generator.rectify(init, body.correction)
+    new_init = await generator.rectify(init, body.correction)
     if not new_init:
         raise HTTPException(500, "Régénération échouée")
 
-    store.update_initiative(initiative_id, {
-        "title":               new_init.title,
-        "context":             new_init.context,
-        "reasoning":           new_init.reasoning,
-        "action":              new_init.action,
-        "priority":            new_init.priority,
-        "execution_mode":      new_init.execution_mode,
-        "draft_content":       new_init.draft_content,
-        "mission_description": new_init.mission_description,
-    })
+    store.update_initiative(
+        initiative_id,
+        {
+            "title": new_init.title,
+            "context": new_init.context,
+            "reasoning": new_init.reasoning,
+            "action": new_init.action,
+            "priority": new_init.priority,
+            "execution_mode": new_init.execution_mode,
+            "draft_content": new_init.draft_content,
+            "mission_description": new_init.mission_description,
+        },
+    )
 
     return {
-        "id":                  initiative_id,
-        "type":                new_init.type,
-        "title":               new_init.title,
-        "context":             new_init.context,
-        "reasoning":           new_init.reasoning,
-        "action":              new_init.action,
-        "priority":            new_init.priority,
-        "execution_mode":      new_init.execution_mode,
-        "draft_content":       new_init.draft_content,
+        "id": initiative_id,
+        "type": new_init.type,
+        "title": new_init.title,
+        "context": new_init.context,
+        "reasoning": new_init.reasoning,
+        "action": new_init.action,
+        "priority": new_init.priority,
+        "execution_mode": new_init.execution_mode,
+        "draft_content": new_init.draft_content,
         "mission_description": new_init.mission_description,
-        "created_at":          init.created_at.isoformat(),
+        "created_at": init.created_at.isoformat(),
     }
 
 
 # ── Proactive engine API ──────────────────────────────────────────────────────
 
+
 @router.post("/api/proactive/run")
 async def run_proactive_now(request: Request) -> dict:
     """Force un cycle proactif immédiat."""
     import asyncio
+
     engine = getattr(request.app.state, "proactive_engine", None)
     if not engine:
         raise HTTPException(503, "ProactiveEngine non disponible")
@@ -159,7 +168,7 @@ async def proactive_status(request: Request) -> dict:
         return {"running": False}
     last_run = engine._last_run.isoformat() if engine._last_run else None
     return {
-        "running":    engine._running,
+        "running": engine._running,
         "interval_s": engine._interval,
-        "last_run":   last_run,
+        "last_run": last_run,
     }

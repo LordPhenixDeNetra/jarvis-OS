@@ -7,40 +7,38 @@ from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
 from pathlib import Path
 
-from dotenv import load_dotenv
-load_dotenv()
-
 import uvicorn
+from dotenv import load_dotenv
 from fastapi import FastAPI
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 from loguru import logger
 
+import channels.telegram_bot as _tg_module
 from agent.orchestrator import ProjectOrchestrator
 from api.admin import _ui_router as admin_ui_router
 from api.admin import router as admin_router
-from api.http import router as http_router
-from api.projects import router as projects_router
-from api.voice_ws import router as voice_router
-from api.websocket import router as ws_router
-from api.globe import router as globe_router
-from api.spotify import router as spotify_router
 from api.deezer import router as deezer_router
+from api.globe import router as globe_router
+from api.google_oauth import router as google_oauth_router
+from api.http import _log_sink
+from api.http import router as http_router
 from api.local_music import router as local_music_router
-from api.music import router as music_router
-from api.widgets import router as widgets_router
 from api.macropad_2k import _ui_router as macropad_ui_router
 from api.macropad_2k import router as macropad_router
-from api.google_oauth import router as google_oauth_router
+from api.music import router as music_router
+from api.projects import router as projects_router
+from api.spotify import router as spotify_router
+from api.voice_ws import router as voice_router
+from api.websocket import router as ws_router
+from api.widgets import router as widgets_router
 from background.notifications import NotificationQueue, ProactiveQueue
-from proactive.engine import ProactiveEngine
 from background.scheduler import Scheduler
 from background.worker import BackgroundWorker
+from channels.telegram_bot import TelegramChannel, get_telegram_channel
 from config.settings import settings
 from core.agent import Agent
 from core.approval_checker import ApprovalChecker
-from channels.telegram_bot import TelegramChannel, get_telegram_channel
-import channels.telegram_bot as _tg_module
 from core.gateway import Gateway
 from core.session import SessionManager
 from llm.api import AnthropicProvider
@@ -52,14 +50,13 @@ from memory.search import FTSIndex, VectorIndex
 from memory.sessions import SessionStore
 from memory.topics import TopicStore
 from memory.user_model import UserModel
+from proactive.engine import ProactiveEngine
 from skills.registry import skill_registry
 from tools.browser import BrowserTool
-from tools.subagent import ScriptRPCTool, SpawnSubagentTool
-from tools.vision import VisionTool
 from tools.calendar import CalendarCreateTool, CalendarListTool
 from tools.cli import CLIRunnerTool, ExecuteCLITool
-from tools.gmail import GmailListTool
 from tools.filesystem import FindFilesTool, ReadFileTool
+from tools.gmail import GmailListTool
 from tools.memory import (
     CrossSessionRecallTool,
     MemoryLoadTopicTool,
@@ -67,18 +64,20 @@ from tools.memory import (
     MemoryTopicWriteTool,
 )
 from tools.notion import NotionTasksTool
-from tools.registry import ToolRegistry
 from tools.preset import ExecutePresetTool
+from tools.registry import ToolRegistry
 from tools.spotify import SpotifyTool
+from tools.subagent import ScriptRPCTool, SpawnSubagentTool
+from tools.vision import VisionTool
 from tools.weather import WeatherTool
+
+# load_dotenv() doit tourner avant toute logique module-level qui consomme os.environ
+load_dotenv()
 
 # ── Logging ──────────────────────────────────────────────────
 _LOG_FORMAT = (
-    "<green>{time:HH:mm:ss}</green> | "
-    "<level>{level: <8}</level> | "
-    "<cyan>{name}</cyan> — {message}"
+    "<green>{time:HH:mm:ss}</green> | <level>{level: <8}</level> | <cyan>{name}</cyan> — {message}"
 )
-from api.http import _log_sink
 
 logger.remove()
 logger.add(sys.stderr, level=settings.log_level, format=_LOG_FORMAT, colorize=True)
@@ -216,10 +215,12 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     # Expose singletons pour les presets (executor + tool)
     from background.notifications import set_proactive_queue
     from core.gateway import set_tool_registry
+
     set_proactive_queue(proactive_queue)
     set_tool_registry(tool_registry)
     # ── [BUDGET] ─────────────────────────────────────────────────────────────
     from core.budget import BudgetGuard, set_budget_guard
+
     if settings.budget_enabled:
         _budget_guard: BudgetGuard | None = BudgetGuard(
             notify_callback=proactive_queue.broadcast_event
@@ -275,6 +276,7 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
 
     if settings.vision_object_detection:
         from vision.daemon import run_vision_daemon
+
         asyncio.create_task(run_vision_daemon(), name="vision-daemon")
 
     if settings.clap_detection_enabled:
@@ -353,16 +355,18 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     app.state.fts_index = fts_index
     app.state.user_model = _user_model
     from core.approval_checker import set_approval_checker
+
     set_approval_checker(approval_checker)
 
     # Initialiser le registry analytics (charge la config sauvegardée)
     from analytics.registry import analytics_registry as _analytics_registry
+
     logger.info("AnalyticsRegistry initialisé", widgets=len(_analytics_registry.get_active()))
 
     # ── [GATEWAY] ────────────────────────────────────────────────────────────
-    from channels.gateway import MessagingGateway
-    from channels.discord_bot import DiscordChannel
     from api.channels import router as channels_router
+    from channels.discord_bot import DiscordChannel
+    from channels.gateway import MessagingGateway
 
     _messaging_gw: MessagingGateway | None = None
     if os.getenv("MESSAGING_GATEWAY_ENABLED", "false").lower() == "true":
@@ -442,9 +446,11 @@ app.include_router(macropad_router)
 app.include_router(macropad_ui_router)
 app.include_router(google_oauth_router)
 
+
 @app.get("/static/mapbox-style.json")
-async def mapbox_style():
+async def mapbox_style() -> FileResponse:
     return FileResponse("ui/static/mapbox-style.json", media_type="application/json")
+
 
 # UI statique montée en dernier pour ne pas masquer les routes API
 app.mount("/", StaticFiles(directory="ui/static", html=True), name="ui")
@@ -456,7 +462,20 @@ if __name__ == "__main__":
         host=settings.host,
         port=settings.port,
         reload=settings.environment == "development",
-        reload_dirs=["api", "agent", "audio", "background", "config", "core",
-                     "macropad_2k", "llm", "memory", "prompts", "skills", "tools", "ui"],
+        reload_dirs=[
+            "api",
+            "agent",
+            "audio",
+            "background",
+            "config",
+            "core",
+            "macropad_2k",
+            "llm",
+            "memory",
+            "prompts",
+            "skills",
+            "tools",
+            "ui",
+        ],
         log_level="warning",
     )

@@ -107,10 +107,13 @@ def _ensure_user_path_contains(directory: Path) -> None:
     script = (
         f"$target='{dir_s}';"
         " $cur=[Environment]::GetEnvironmentVariable('Path','User');"
-        " if([string]::IsNullOrWhiteSpace($cur)){[Environment]::SetEnvironmentVariable('Path',$target,'User');exit 0};"
-        " $parts=$cur -split ';' | ForEach-Object { $_.Trim() } | Where-Object { $_ -ne '' };"
+        " if([string]::IsNullOrWhiteSpace($cur))"
+        "{[Environment]::SetEnvironmentVariable('Path',$target,'User');exit 0};"
+        " $parts=$cur -split ';'"
+        " | ForEach-Object { $_.Trim() } | Where-Object { $_ -ne '' };"
         " $exists=$false;"
-        " foreach($p in $parts){if($p.TrimEnd('\\') -ieq $target.TrimEnd('\\')){$exists=$true;break}};"
+        " foreach($p in $parts)"
+        "{if($p.TrimEnd('\\') -ieq $target.TrimEnd('\\')){$exists=$true;break}};"
         " if(-not $exists){$new=($cur.TrimEnd(';') + ';' + $target);"
         " [Environment]::SetEnvironmentVariable('Path',$new,'User')}"
     )

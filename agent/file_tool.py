@@ -1,4 +1,5 @@
 """Outil fichiers sandboxé — toutes les opérations confinées au workspace du projet."""
+
 from __future__ import annotations
 
 from pathlib import Path
@@ -7,7 +8,6 @@ from loguru import logger
 
 
 class SandboxedFileTool:
-
     def __init__(self, workspace_path: str) -> None:
         self._workspace = Path(workspace_path).resolve()
 
@@ -16,9 +16,7 @@ class SandboxedFileTool:
         target = (self._workspace / relative_path).resolve()
         if not str(target).startswith(str(self._workspace)):
             logger.error("SANDBOX VIOLATION", path=relative_path, target=str(target))
-            raise ValueError(
-                f"ACCÈS REFUSÉ : '{relative_path}' sort du workspace autorisé."
-            )
+            raise ValueError(f"ACCÈS REFUSÉ : '{relative_path}' sort du workspace autorisé.")
         return target
 
     def read_file(self, path: str) -> str:

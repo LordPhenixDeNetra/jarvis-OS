@@ -1,4 +1,5 @@
 """ABC ExecutionBackend — contrat partagé par tous les backends d'exécution."""
+
 from __future__ import annotations
 
 from abc import ABC, abstractmethod

@@ -1,6 +1,7 @@
 """
 EmailCollector — récupère les emails non lus avec le corps complet du thread.
 """
+
 from __future__ import annotations
 
 import asyncio
@@ -18,13 +19,25 @@ _SCOPES = ["https://www.googleapis.com/auth/gmail.readonly"]
 _GMAIL_BASE = "https://gmail.googleapis.com/gmail/v1/users/me"
 
 LOW_PRIORITY_PATTERNS = [
-    "noreply", "no-reply", "newsletter", "notification",
-    "donotreply", "unsubscribe", "automated",
+    "noreply",
+    "no-reply",
+    "newsletter",
+    "notification",
+    "donotreply",
+    "unsubscribe",
+    "automated",
 ]
 
 HIGH_SUBJECT_KEYWORDS = [
-    "urgent", "asap", "important", "deadline", "payment",
-    "invoice", "facture", "contrat", "partenariat",
+    "urgent",
+    "asap",
+    "important",
+    "deadline",
+    "payment",
+    "invoice",
+    "facture",
+    "contrat",
+    "partenariat",
 ]
 
 HIGH_SENDER_DOMAINS = ["@anthropic", "@pcbway", "@nextpcb"]
@@ -74,6 +87,7 @@ class EmailCollector(CollectorBase):
 
     async def _collect(self) -> list[ContextItem]:
         from config.settings import settings
+
         creds_path = Path(settings.google_credentials_path)
         token_path = Path(settings.google_token_path).parent / "google_gmail_token.json"
 
@@ -114,10 +128,10 @@ class EmailCollector(CollectorBase):
         for msg in metas:
             payload = msg.get("payload", {})
             hdrs = {h["name"]: h["value"] for h in payload.get("headers", [])}
-            sender  = hdrs.get("From", "")
+            sender = hdrs.get("From", "")
             subject = hdrs.get("Subject", "Sans sujet")
-            date    = hdrs.get("Date", "")
-            msg_id  = hdrs.get("Message-ID", "")
+            date = hdrs.get("Date", "")
+            msg_id = hdrs.get("Message-ID", "")
             thread_id = msg.get("threadId", "")
             snippet = msg.get("snippet", "")
 
@@ -136,22 +150,24 @@ class EmailCollector(CollectorBase):
                 f"{body or snippet}"
             )
 
-            items.append(ContextItem(
-                type=ItemType.EMAIL,
-                title=subject,
-                summary=snippet[:200],
-                raw=raw,
-                source="gmail",
-                timestamp=datetime.now(),
-                priority=priority,
-                metadata={
-                    "from": sender,
-                    "date": date,
-                    "id": msg.get("id", ""),
-                    "thread_id": thread_id,
-                    "message_id": msg_id,
-                }
-            ))
+            items.append(
+                ContextItem(
+                    type=ItemType.EMAIL,
+                    title=subject,
+                    summary=snippet[:200],
+                    raw=raw,
+                    source="gmail",
+                    timestamp=datetime.now(),
+                    priority=priority,
+                    metadata={
+                        "from": sender,
+                        "date": date,
+                        "id": msg.get("id", ""),
+                        "thread_id": thread_id,
+                        "message_id": msg_id,
+                    },
+                )
+            )
 
         return items
 

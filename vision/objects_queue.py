@@ -1,4 +1,5 @@
 """Queue pub/sub pour les détections d'objets YOLO → WebSocket browser."""
+
 from __future__ import annotations
 
 import asyncio

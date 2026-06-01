@@ -1,7 +1,10 @@
 from __future__ import annotations
+
 from abc import ABC, abstractmethod
-from proactive.schemas import ContextItem
+
 from loguru import logger
+
+from proactive.schemas import ContextItem
 
 
 class CollectorBase(ABC):

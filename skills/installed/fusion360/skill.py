@@ -1,10 +1,11 @@
 """Skill Fusion 360 — CAO via MCP."""
+
 from __future__ import annotations
+
 from skills.base import SkillBase
 
 
 class Fusion360Skill(SkillBase):
-
     SYSTEM_PROMPT = """
 ## Fusion 360 — CAO
 
@@ -30,4 +31,5 @@ Demander confirmation avant d'exécuter un script qui modifie la géométrie.
 
     def get_tools(self) -> list:
         from tools.fusion import FusionTool
+
         return [FusionTool()]

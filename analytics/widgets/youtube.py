@@ -1,11 +1,13 @@
 """Widget YouTube Analytics — nécessite YOUTUBE_API_KEY."""
+
 import os
+
 import httpx
-from analytics.widgets.base import WidgetBase, WidgetConfig, WidgetData
+
+from analytics.widgets.base import WidgetBase, WidgetData
 
 
 class YouTubeWidget(WidgetBase):
-
     id = "youtube"
     label = "YouTube Analytics"
     description = "Vues, abonnés et performances via YouTube Data API v3."
@@ -16,9 +18,7 @@ class YouTubeWidget(WidgetBase):
     async def fetch(self) -> WidgetData:
         if not self.is_configured():
             return WidgetData(
-                success=False,
-                data={},
-                error="YOUTUBE_API_KEY ou YOUTUBE_CHANNEL_ID manquant"
+                success=False, data={}, error="YOUTUBE_API_KEY ou YOUTUBE_CHANNEL_ID manquant"
             )
 
         api_key = os.getenv("YOUTUBE_API_KEY")
@@ -29,11 +29,7 @@ class YouTubeWidget(WidgetBase):
                 # Stats de la chaîne
                 r = await client.get(
                     "https://www.googleapis.com/youtube/v3/channels",
-                    params={
-                        "part": "statistics,snippet",
-                        "id": channel_id,
-                        "key": api_key
-                    }
+                    params={"part": "statistics,snippet", "id": channel_id, "key": api_key},
                 )
                 channel_data = r.json()
                 stats = channel_data["items"][0]["statistics"]
@@ -47,8 +43,8 @@ class YouTubeWidget(WidgetBase):
                         "order": "date",
                         "maxResults": 5,
                         "type": "video",
-                        "key": api_key
-                    }
+                        "key": api_key,
+                    },
                 )
                 videos_data = r2.json()
 
@@ -62,11 +58,11 @@ class YouTubeWidget(WidgetBase):
                             {
                                 "title": v["snippet"]["title"],
                                 "published": v["snippet"]["publishedAt"][:10],
-                                "video_id": v["id"]["videoId"]
+                                "video_id": v["id"]["videoId"],
                             }
                             for v in videos_data.get("items", [])
-                        ]
-                    }
+                        ],
+                    },
                 )
         except Exception as e:
             return WidgetData(success=False, data={}, error=str(e))

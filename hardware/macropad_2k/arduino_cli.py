@@ -243,7 +243,9 @@ def ensure_ch55x_core(cli: Path, progress: ProgressCallback | None = None) -> st
         raise RuntimeError(f"arduino-cli core update-index failed:\n{log}")
     if progress:
         progress("Installing CH55xDuino core")
-    code, out = run_cli(cli, ["core", "install", "CH55xDuino:mcs51", "--additional-urls", BOARD_INDEX])
+    code, out = run_cli(
+        cli, ["core", "install", "CH55xDuino:mcs51", "--additional-urls", BOARD_INDEX]
+    )
     log += out
     if code != 0:
         raise RuntimeError(f"arduino-cli core install failed:\n{log}")

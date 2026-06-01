@@ -5,6 +5,7 @@ Chaque catégorie peut être : "always", "ask", "never"
   ask    → Demande confirmation avant d'exécuter
   never  → Refuse d'exécuter cette catégorie
 """
+
 from __future__ import annotations
 
 import json
@@ -15,8 +16,8 @@ from pathlib import Path
 
 class ApprovalMode(StrEnum):
     ALWAYS = "always"
-    ASK    = "ask"
-    NEVER  = "never"
+    ASK = "ask"
+    NEVER = "never"
 
 
 @dataclass
@@ -25,39 +26,39 @@ class ApprovalConfig:
 
     # Système
     system_shutdown: ApprovalMode = ApprovalMode.ASK
-    system_restart:  ApprovalMode = ApprovalMode.ASK
+    system_restart: ApprovalMode = ApprovalMode.ASK
 
     # Fichiers
-    file_read:   ApprovalMode = ApprovalMode.ALWAYS
-    file_write:  ApprovalMode = ApprovalMode.ASK
+    file_read: ApprovalMode = ApprovalMode.ALWAYS
+    file_write: ApprovalMode = ApprovalMode.ASK
     file_delete: ApprovalMode = ApprovalMode.ASK
 
     # Applications
     app_launch: ApprovalMode = ApprovalMode.ALWAYS
-    app_close:  ApprovalMode = ApprovalMode.ALWAYS
+    app_close: ApprovalMode = ApprovalMode.ALWAYS
 
     # Web
-    web_search:   ApprovalMode = ApprovalMode.ALWAYS
+    web_search: ApprovalMode = ApprovalMode.ALWAYS
     web_navigate: ApprovalMode = ApprovalMode.ALWAYS
-    web_agent:    ApprovalMode = ApprovalMode.ASK
+    web_agent: ApprovalMode = ApprovalMode.ASK
 
     # Communications
     email_draft: ApprovalMode = ApprovalMode.ALWAYS
-    email_send:  ApprovalMode = ApprovalMode.ASK
+    email_send: ApprovalMode = ApprovalMode.ASK
 
     # Code / Agent
-    code_write:    ApprovalMode = ApprovalMode.ASK
+    code_write: ApprovalMode = ApprovalMode.ASK
     agent_mission: ApprovalMode = ApprovalMode.ALWAYS
 
     # Matériel
-    printer_slice:  ApprovalMode = ApprovalMode.ASK
-    printer_print:  ApprovalMode = ApprovalMode.ASK
-    fusion_create:  ApprovalMode = ApprovalMode.ALWAYS
-    fusion_modify:  ApprovalMode = ApprovalMode.ASK
-    fusion_delete:  ApprovalMode = ApprovalMode.ASK
+    printer_slice: ApprovalMode = ApprovalMode.ASK
+    printer_print: ApprovalMode = ApprovalMode.ASK
+    fusion_create: ApprovalMode = ApprovalMode.ALWAYS
+    fusion_modify: ApprovalMode = ApprovalMode.ASK
+    fusion_delete: ApprovalMode = ApprovalMode.ASK
 
     # Domotique
-    smart_home_read:  ApprovalMode = ApprovalMode.ALWAYS
+    smart_home_read: ApprovalMode = ApprovalMode.ALWAYS
     smart_home_write: ApprovalMode = ApprovalMode.ALWAYS
 
 
@@ -73,11 +74,13 @@ def load_approval_config() -> ApprovalConfig:
 
     try:
         data = json.loads(CONFIG_FILE.read_text(encoding="utf-8"))
-        return ApprovalConfig(**{
-            k: ApprovalMode(v)
-            for k, v in data.items()
-            if hasattr(ApprovalConfig, k) and isinstance(v, str)
-        })
+        return ApprovalConfig(
+            **{
+                k: ApprovalMode(v)
+                for k, v in data.items()
+                if hasattr(ApprovalConfig, k) and isinstance(v, str)
+            }
+        )
     except Exception:
         return ApprovalConfig()
 

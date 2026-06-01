@@ -1,12 +1,13 @@
 """Widget Jarvis Stats — données internes, aucune API externe."""
+
 import json
-from pathlib import Path
 from datetime import date, timedelta
-from analytics.widgets.base import WidgetBase, WidgetConfig, WidgetData
+from pathlib import Path
+
+from analytics.widgets.base import WidgetBase, WidgetData
 
 
 class JarvisStatsWidget(WidgetBase):
-
     id = "jarvis_stats"
     label = "Jarvis Stats"
     description = "Conversations, missions, tokens et coûts Jarvis."
@@ -56,7 +57,7 @@ class JarvisStatsWidget(WidgetBase):
                     "missions_done": len([p for p in projects if p.get("status") == "completed"]),
                     "cost_today": round(total_cost, 4),
                     "tokens_today": total_tokens,
-                }
+                },
             )
         except Exception as e:
             return WidgetData(success=False, data={}, error=str(e))

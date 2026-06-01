@@ -1,4 +1,5 @@
 """Package backends — abstraction d'exécution multi-environnement pour Jarvis."""
+
 from __future__ import annotations
 
 from agent.backends.base import BackendResult, ExecutionBackend

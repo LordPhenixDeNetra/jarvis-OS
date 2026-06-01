@@ -13,12 +13,7 @@ if TYPE_CHECKING:
 
 def _is_invalid_filename(filename: str) -> bool:
     """Vérifie qu'un nom de fichier topic est sûr (pas de path traversal)."""
-    return (
-        "/" in filename
-        or "\\" in filename
-        or ".." in filename
-        or not filename.endswith(".md")
-    )
+    return "/" in filename or "\\" in filename or ".." in filename or not filename.endswith(".md")
 
 
 class MemoryTopicWriteTool(Tool):
@@ -63,7 +58,10 @@ class MemoryTopicWriteTool(Tool):
         if not path.exists():
             existing = [p.name for p in self._dir.glob("*.md")]
             return ToolResult(
-                content=f"Fichier '{filename}' introuvable. Fichiers disponibles : {', '.join(existing)}",
+                content=(
+                    f"Fichier '{filename}' introuvable."
+                    f" Fichiers disponibles : {', '.join(existing)}"
+                ),
                 is_error=True,
             )
         path.write_text(content, encoding="utf-8")

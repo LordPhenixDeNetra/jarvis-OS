@@ -6,24 +6,30 @@ from core.router import RouteEnum, SpeedRouter
 
 # ── strip_tag (sync) ──────────────────────────────────────────
 
-@pytest.mark.parametrize("raw,expected", [
-    ("[I] Il est 14h23.", "Il est 14h23."),
-    ("[CF] Mode Batman, chef.", "Mode Batman, chef."),
-    ("[BG] Ok, je lance ça.", "Ok, je lance ça."),
-    ("Pas de tag.", "Pas de tag."),
-    ("[I]Sans espace.", "Sans espace."),
-    ("[I]  Double espace.", " Double espace."),
-])
+
+@pytest.mark.parametrize(
+    "raw,expected",
+    [
+        ("[I] Il est 14h23.", "Il est 14h23."),
+        ("[CF] Mode Batman, chef.", "Mode Batman, chef."),
+        ("[BG] Ok, je lance ça.", "Ok, je lance ça."),
+        ("Pas de tag.", "Pas de tag."),
+        ("[I]Sans espace.", "Sans espace."),
+        ("[I]  Double espace.", " Double espace."),
+    ],
+)
 def test_strip_tag_sync(raw: str, expected: str) -> None:
     assert SpeedRouter.strip_tag(raw) == expected
 
 
 # ── extract_route (async stream) ─────────────────────────────
 
+
 async def _collect_route(chunks: list[str]) -> tuple[RouteEnum, str]:
     async def _gen() -> RouteEnum:  # type: ignore[valid-type]
         for c in chunks:
             yield c
+
     route, stream = await SpeedRouter.extract_route(_gen())
     return route, "".join([c async for c in stream])
 

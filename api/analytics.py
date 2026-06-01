@@ -1,17 +1,18 @@
 """Analytics — stats Jarvis locales + YouTube Data API v3."""
+
 from __future__ import annotations
 
 import json
 import os
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
-
 
 # ── Jarvis stats ──────────────────────────────────────────────────────────────
 
+
 async def get_jarvis_stats(days: int = 30) -> dict:
     """Stats d'usage Jarvis depuis les fichiers locaux."""
-    cutoff = datetime.now(timezone.utc) - timedelta(days=days)
+    cutoff = datetime.now(UTC) - timedelta(days=days)
 
     # Sessions
     sessions_dir = Path("memory_data/sessions")
@@ -20,7 +21,7 @@ async def get_jarvis_stats(days: int = 30) -> dict:
         for f in sessions_dir.iterdir():
             if f.suffix == ".jsonl":
                 try:
-                    mtime = datetime.fromtimestamp(f.stat().st_mtime, tz=timezone.utc)
+                    mtime = datetime.fromtimestamp(f.stat().st_mtime, tz=UTC)
                     if mtime >= cutoff:
                         session_count += 1
                 except OSError:
@@ -30,6 +31,7 @@ async def get_jarvis_stats(days: int = 30) -> dict:
     mission_count = 0
     try:
         from agent.project_store import ProjectStore
+
         store = ProjectStore()
         projects = store.list_all() if hasattr(store, "list_all") else []
         for p in projects:
@@ -54,7 +56,7 @@ async def get_jarvis_stats(days: int = 30) -> dict:
     if conso_dir.exists():
         for f in sorted(conso_dir.glob("*.jsonl")):
             try:
-                file_date = datetime.strptime(f.stem, "%Y-%m-%d").replace(tzinfo=timezone.utc)
+                file_date = datetime.strptime(f.stem, "%Y-%m-%d").replace(tzinfo=UTC)
                 if file_date < cutoff:
                     continue
             except ValueError:
@@ -85,6 +87,7 @@ async def get_jarvis_stats(days: int = 30) -> dict:
 
 
 # ── YouTube stats ─────────────────────────────────────────────────────────────
+
 
 async def get_youtube_stats(days: int = 7) -> dict:
     """Stats YouTube via Data API v3 (YOUTUBE_API_KEY requis dans .env)."""
@@ -127,11 +130,13 @@ async def get_youtube_stats(days: int = 7) -> dict:
             vid_data = vid_resp.json()
             videos = []
             for item in vid_data.get("items", []):
-                videos.append({
-                    "id": item.get("id", {}).get("videoId", ""),
-                    "title": item.get("snippet", {}).get("title", ""),
-                    "published": item.get("snippet", {}).get("publishedAt", ""),
-                })
+                videos.append(
+                    {
+                        "id": item.get("id", {}).get("videoId", ""),
+                        "title": item.get("snippet", {}).get("title", ""),
+                        "published": item.get("snippet", {}).get("publishedAt", ""),
+                    }
+                )
 
             # Stats individuelles des vidéos récentes
             if videos:
@@ -165,6 +170,7 @@ async def get_youtube_stats(days: int = 7) -> dict:
 
 async def get_analytics_summary() -> dict:
     import asyncio
+
     jarvis_task = asyncio.create_task(get_jarvis_stats(30))
     yt_task = asyncio.create_task(get_youtube_stats(7))
     jarvis, youtube = await asyncio.gather(jarvis_task, yt_task, return_exceptions=True)

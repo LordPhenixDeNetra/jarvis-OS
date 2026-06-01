@@ -5,6 +5,7 @@ Lance l'environnement stream : OBS, Ne pas déranger, Twitch, recommandation de 
 Déclencheurs : "lance le mode streameur", "démarre le stream", "on stream"
 Plateformes : mac, windows
 """
+
 from skills.base import PresetSkill
 
 

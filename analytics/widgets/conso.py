@@ -1,12 +1,13 @@
 """Widget Consommation & Coûts — depuis memory_data/conso/."""
+
 import json
-from pathlib import Path
 from datetime import date, timedelta
-from analytics.widgets.base import WidgetBase, WidgetConfig, WidgetData
+from pathlib import Path
+
+from analytics.widgets.base import WidgetBase, WidgetData
 
 
 class ConsoWidget(WidgetBase):
-
     id = "conso"
     label = "Conso & Coûts"
     description = "Coûts et tokens Jarvis sur 7 et 30 jours."
@@ -42,7 +43,7 @@ class ConsoWidget(WidgetBase):
                     "daily": daily_costs,
                     "total_7d": round(total_7d, 4),
                     "total_30d": round(total_30d, 4),
-                }
+                },
             )
         except Exception as e:
             return WidgetData(success=False, data={}, error=str(e))

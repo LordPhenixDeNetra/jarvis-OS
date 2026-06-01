@@ -7,6 +7,7 @@ Couvre :
   - Mode dual de TelegramChannel (legacy vs dispatch_cb)
   - Router FastAPI /api/channels/{platform}/webhook
 """
+
 from __future__ import annotations
 
 import json
@@ -172,10 +173,12 @@ async def test_continuite_session_meme_user_cross_plateforme(tmp_path: Path) -> 
     sess_tg.id = "sess-telegram"
     sess_dc = MagicMock()
     sess_dc.id = "sess-discord"
-    jarvis_gw.handle = AsyncMock(side_effect=[
-        (sess_tg, "chat", "tg-resp"),
-        (sess_dc, "chat", "dc-resp"),
-    ])
+    jarvis_gw.handle = AsyncMock(
+        side_effect=[
+            (sess_tg, "chat", "tg-resp"),
+            (sess_dc, "chat", "dc-resp"),
+        ]
+    )
 
     gw = MessagingGateway(jarvis_gateway=jarvis_gw, session_map_path=tmp_path / "sessions.json")
 

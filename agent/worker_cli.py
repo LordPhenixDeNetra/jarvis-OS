@@ -1,4 +1,5 @@
 """CLI sandboxé pour le WorkerAgent — whitelist stricte + exécution dans le workspace."""
+
 from __future__ import annotations
 
 import re
@@ -7,40 +8,76 @@ from pathlib import Path
 from loguru import logger
 
 WORKER_CLI_WHITELIST: list[str] = [
-    "python", "python3",
-    "node", "npm", "npx",
-    "git clone", "git init", "git add", "git status", "git log", "git diff",
-    "pip install", "pip3 install",
-    "mkdir", "touch", "cp", "mv",
-    "ls", "cat", "head", "tail", "grep", "find", "wc",
-    "echo", "printf",
-    "curl -s", "curl --silent",
+    "python",
+    "python3",
+    "node",
+    "npm",
+    "npx",
+    "git clone",
+    "git init",
+    "git add",
+    "git status",
+    "git log",
+    "git diff",
+    "pip install",
+    "pip3 install",
+    "mkdir",
+    "touch",
+    "cp",
+    "mv",
+    "ls",
+    "cat",
+    "head",
+    "tail",
+    "grep",
+    "find",
+    "wc",
+    "echo",
+    "printf",
+    "curl -s",
+    "curl --silent",
     "wget",
-    "ffmpeg", "convert",
-    "zip", "unzip", "tar",
-    "uv", "uv run", "uv add",
-    "pandoc", "pdftotext",
-    "stat", "diff", "du", "sort", "uniq", "cut", "tr", "sed", "awk",
-    "test", "true", "false",
+    "ffmpeg",
+    "convert",
+    "zip",
+    "unzip",
+    "tar",
+    "uv",
+    "uv run",
+    "uv add",
+    "pandoc",
+    "pdftotext",
+    "stat",
+    "diff",
+    "du",
+    "sort",
+    "uniq",
+    "cut",
+    "tr",
+    "sed",
+    "awk",
+    "test",
+    "true",
+    "false",
 ]
 
 # Patterns bloqués inconditionnellement dans chaque segment de commande
 _BLOCKED_RE = re.compile(
-    r"rm\s+-[a-z]*r"                          # suppression récursive
-    r"|rm\s+-[a-z]*f"                         # suppression forcée
-    r"|>>?\s*/[a-zA-Z]"                       # redirection vers chemin absolu
+    r"rm\s+-[a-z]*r"  # suppression récursive
+    r"|rm\s+-[a-z]*f"  # suppression forcée
+    r"|>>?\s*/[a-zA-Z]"  # redirection vers chemin absolu
     r"|\bsudo\b"
     r"|chmod\s+777"
     r"|curl\s+-X\s+POST"
     r"|curl\s+-X\s+DELETE"
     r"|git\s+push"
     r"|git\s+commit"
-    r"|:\(\)\s*\{"                            # fork bomb
-    r"|\bos\.system\s*\("                     # appel système Python
-    r"|\bsubprocess\b"                        # module subprocess Python
-    r"|\beval\s*\("                           # évaluation dynamique
-    r"|\bexec\s*\("                           # exécution dynamique
-    r"|base64\s+(?:-d|--decode)"              # décodage base64 (obfuscation)
+    r"|:\(\)\s*\{"  # fork bomb
+    r"|\bos\.system\s*\("  # appel système Python
+    r"|\bsubprocess\b"  # module subprocess Python
+    r"|\beval\s*\("  # évaluation dynamique
+    r"|\bexec\s*\("  # exécution dynamique
+    r"|base64\s+(?:-d|--decode)"  # décodage base64 (obfuscation)
     r"|\|\s*(?:sh|bash|python3?|zsh|ksh)\b",  # pipe vers interpréteur shell
     re.IGNORECASE,
 )
@@ -53,14 +90,13 @@ _PYTHON_INLINE_RE = re.compile(r"\s+-c\b|['\"`]")
 
 
 class WorkerCLITool:
-
     def __init__(
         self,
         workspace_path: str,
         docker_executor: object | None = None,
     ) -> None:
         self._workspace = Path(workspace_path).resolve()
-        self._docker    = docker_executor  # None = V1 direct, DockerExecutor = V2
+        self._docker = docker_executor  # None = V1 direct, DockerExecutor = V2
 
     def _check_segment(self, segment: str) -> dict | None:
         """Valide un segment de commande individuel ; retourne un dict d'erreur ou None."""
@@ -71,7 +107,8 @@ class WorkerCLITool:
         if _BLOCKED_RE.search(stripped):
             logger.error("WorkerCLI blocked", command=stripped[:80])
             return {
-                "success": False, "stdout": "",
+                "success": False,
+                "stdout": "",
                 "stderr": f"Commande bloquée par la politique de sécurité : {stripped[:60]}",
                 "returncode": -1,
             }
@@ -79,7 +116,8 @@ class WorkerCLITool:
         if not any(stripped.startswith(w) for w in WORKER_CLI_WHITELIST):
             logger.warning("WorkerCLI not whitelisted", command=stripped[:80])
             return {
-                "success": False, "stdout": "",
+                "success": False,
+                "stdout": "",
                 "stderr": (
                     f"Commande non autorisée. Commandes permises : "
                     f"{', '.join(WORKER_CLI_WHITELIST[:8])}..."
@@ -91,7 +129,8 @@ class WorkerCLITool:
         if re.match(r"python3?\s", stripped) and _PYTHON_INLINE_RE.search(stripped):
             logger.error("WorkerCLI python inline bloqué", command=stripped[:80])
             return {
-                "success": False, "stdout": "",
+                "success": False,
+                "stdout": "",
                 "stderr": (
                     "Exécution Python en ligne (-c / guillemets) interdite. "
                     "Utilisez un fichier .py : python3 script.py"

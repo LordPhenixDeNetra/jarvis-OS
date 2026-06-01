@@ -4,6 +4,7 @@ MessagingGateway orchestre N ChannelAdapters, assure la continuité de session
 cross-plateforme en persistant un mapping (platform:user_id → session_id) sur
 disque, et route chaque message entrant vers le core.Gateway Jarvis.
 """
+
 from __future__ import annotations
 
 import json

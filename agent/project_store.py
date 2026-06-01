@@ -1,4 +1,5 @@
 """Persistance des projets sur disque — JSONL pour les logs, JSON pour l'état."""
+
 from __future__ import annotations
 
 import fcntl
@@ -13,13 +14,10 @@ WORKSPACE_DIR = Path("workspace/projects")
 
 
 class ProjectStore:
-
     def __init__(self) -> None:
         WORKSPACE_DIR.mkdir(parents=True, exist_ok=True)
 
-    def create_project(
-        self, mission: str, title: str, timeout_minutes: int = 30
-    ) -> Project:
+    def create_project(self, mission: str, title: str, timeout_minutes: int = 30) -> Project:
         project_id = f"proj_{uuid.uuid4().hex[:6]}"
         workspace = WORKSPACE_DIR / project_id
         (workspace / ".jarvis").mkdir(parents=True, exist_ok=True)
@@ -62,13 +60,18 @@ class ProjectStore:
     def append_log(self, project: Project, entry: LogEntry) -> None:
         log_file = Path(project.workspace_path) / ".jarvis" / "logs.jsonl"
         with log_file.open("a", encoding="utf-8") as f:
-            f.write(json.dumps({
-                "ts":      entry.timestamp.isoformat(),
-                "level":   entry.level,
-                "msg":     entry.message,
-                "step_id": entry.step_id,
-                "data":    entry.data,
-            }) + "\n")
+            f.write(
+                json.dumps(
+                    {
+                        "ts": entry.timestamp.isoformat(),
+                        "level": entry.level,
+                        "msg": entry.message,
+                        "step_id": entry.step_id,
+                        "data": entry.data,
+                    }
+                )
+                + "\n"
+            )
 
     def get_logs(self, project: Project, last_n: int = 200) -> list[LogEntry]:
         log_file = Path(project.workspace_path) / ".jarvis" / "logs.jsonl"
@@ -79,13 +82,15 @@ class ProjectStore:
         for line in lines[-last_n:]:
             try:
                 d = json.loads(line)
-                entries.append(LogEntry(
-                    timestamp=datetime.fromisoformat(d["ts"]),
-                    level=d["level"],
-                    message=d["msg"],
-                    step_id=d.get("step_id"),
-                    data=d.get("data"),
-                ))
+                entries.append(
+                    LogEntry(
+                        timestamp=datetime.fromisoformat(d["ts"]),
+                        level=d["level"],
+                        message=d["msg"],
+                        step_id=d.get("step_id"),
+                        data=d.get("data"),
+                    )
+                )
             except Exception:
                 pass
         return entries
@@ -101,7 +106,7 @@ class ProjectStore:
         jarvis_dir = WORKSPACE_DIR / project_id / ".jarvis"
         jarvis_dir.mkdir(parents=True, exist_ok=True)
         claims_file = jarvis_dir / "step_claims.json"
-        lock_path   = jarvis_dir / "claims.lock"
+        lock_path = jarvis_dir / "claims.lock"
 
         with lock_path.open("w") as lf:
             fcntl.flock(lf, fcntl.LOCK_EX)
@@ -117,9 +122,7 @@ class ProjectStore:
                     return False  # déjà réclamée
 
                 claims[step_id] = worker_id
-                claims_file.write_text(
-                    json.dumps(claims, indent=2), encoding="utf-8"
-                )
+                claims_file.write_text(json.dumps(claims, indent=2), encoding="utf-8")
                 return True
             finally:
                 fcntl.flock(lf, fcntl.LOCK_UN)
@@ -127,7 +130,7 @@ class ProjectStore:
     def release_step_claim(self, project_id: str, step_id: str) -> None:
         """Libère le claim d'une étape (budget pause ou fin normale)."""
         claims_file = WORKSPACE_DIR / project_id / ".jarvis" / "step_claims.json"
-        lock_path   = WORKSPACE_DIR / project_id / ".jarvis" / "claims.lock"
+        lock_path = WORKSPACE_DIR / project_id / ".jarvis" / "claims.lock"
         if not claims_file.exists():
             return
 
@@ -154,9 +157,9 @@ class ProjectStore:
         """
         for step in project.steps:
             if step.id == current_step_id and step.status == StepStatus.RUNNING:
-                step.status     = StepStatus.PENDING
+                step.status = StepStatus.PENDING
                 step.started_at = None
-                step.error      = None
+                step.error = None
                 break
 
         project.status = ProjectStatus.PAUSED
@@ -175,29 +178,29 @@ class ProjectStore:
 
     def _to_dict(self, project: Project) -> dict:
         return {
-            "id":              project.id,
-            "title":           project.title,
-            "mission":         project.mission,
-            "status":          project.status,
-            "workspace_path":  project.workspace_path,
+            "id": project.id,
+            "title": project.title,
+            "mission": project.mission,
+            "status": project.status,
+            "workspace_path": project.workspace_path,
             "timeout_minutes": project.timeout_minutes,
-            "created_at":      project.created_at.isoformat(),
-            "started_at":      project.started_at.isoformat() if project.started_at else None,
-            "completed_at":    project.completed_at.isoformat() if project.completed_at else None,
-            "llm_calls":       project.llm_calls,
-            "files_created":   project.files_created,
+            "created_at": project.created_at.isoformat(),
+            "started_at": project.started_at.isoformat() if project.started_at else None,
+            "completed_at": project.completed_at.isoformat() if project.completed_at else None,
+            "llm_calls": project.llm_calls,
+            "files_created": project.files_created,
             "requires_network": project.requires_network,
             "steps": [
                 {
-                    "id":               s.id,
-                    "title":            s.title,
-                    "description":      s.description,
-                    "status":           s.status,
+                    "id": s.id,
+                    "title": s.title,
+                    "description": s.description,
+                    "status": s.status,
                     "requires_approval": s.requires_approval,
-                    "output":           s.output,
-                    "error":            s.error,
-                    "started_at":       s.started_at.isoformat() if s.started_at else None,
-                    "completed_at":     s.completed_at.isoformat() if s.completed_at else None,
+                    "output": s.output,
+                    "error": s.error,
+                    "started_at": s.started_at.isoformat() if s.started_at else None,
+                    "completed_at": s.completed_at.isoformat() if s.completed_at else None,
                 }
                 for s in project.steps
             ],
@@ -214,7 +217,9 @@ class ProjectStore:
                 output=s.get("output"),
                 error=s.get("error"),
                 started_at=datetime.fromisoformat(s["started_at"]) if s.get("started_at") else None,
-                completed_at=datetime.fromisoformat(s["completed_at"]) if s.get("completed_at") else None,
+                completed_at=datetime.fromisoformat(s["completed_at"])
+                if s.get("completed_at")
+                else None,
             )
             for s in d.get("steps", [])
         ]
@@ -228,7 +233,9 @@ class ProjectStore:
             timeout_minutes=d.get("timeout_minutes", 30),
             created_at=datetime.fromisoformat(d["created_at"]),
             started_at=datetime.fromisoformat(d["started_at"]) if d.get("started_at") else None,
-            completed_at=datetime.fromisoformat(d["completed_at"]) if d.get("completed_at") else None,
+            completed_at=datetime.fromisoformat(d["completed_at"])
+            if d.get("completed_at")
+            else None,
             llm_calls=d.get("llm_calls", 0),
             files_created=d.get("files_created", []),
             requires_network=d.get("requires_network", False),

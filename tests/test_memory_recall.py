@@ -1,19 +1,18 @@
 """Tests du rappel cross-session et du modèle utilisateur."""
+
 from __future__ import annotations
 
 import asyncio
 import json
-import sqlite3
 from pathlib import Path
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock
 
-import numpy as np
 import pytest
 
 from memory.search import FTSIndex, VectorIndex
 
-
 # ── 1. FTSIndex ───────────────────────────────────────────────────────────────
+
 
 class TestFTSIndex:
     """FTSIndex : CRUD + recherche plein texte."""
@@ -87,14 +86,17 @@ class TestFTSIndex:
 
 # ── 2. VectorIndex.transcript_to_text ────────────────────────────────────────
 
+
 class TestTranscriptToText:
     """transcript_to_text est désormais public — vérifie la méthode."""
 
     def test_extrait_messages(self, tmp_path: Path) -> None:
         jsonl = tmp_path / "session.jsonl"
         jsonl.write_text(
-            json.dumps({"role": "user", "content": "Bonjour"}) + "\n"
-            + json.dumps({"role": "assistant", "content": "Salut chef"}) + "\n",
+            json.dumps({"role": "user", "content": "Bonjour"})
+            + "\n"
+            + json.dumps({"role": "assistant", "content": "Salut chef"})
+            + "\n",
             encoding="utf-8",
         )
         text = VectorIndex.transcript_to_text(jsonl)
@@ -108,8 +110,7 @@ class TestTranscriptToText:
     def test_ignore_lignes_invalides(self, tmp_path: Path) -> None:
         jsonl = tmp_path / "session.jsonl"
         jsonl.write_text(
-            "pas du json\n"
-            + json.dumps({"role": "user", "content": "Message valide"}) + "\n",
+            "pas du json\n" + json.dumps({"role": "user", "content": "Message valide"}) + "\n",
             encoding="utf-8",
         )
         text = VectorIndex.transcript_to_text(jsonl)
@@ -117,6 +118,7 @@ class TestTranscriptToText:
 
 
 # ── 3. CrossSessionRecall ────────────────────────────────────────────────────
+
 
 class TestCrossSessionRecall:
     """CrossSessionRecall combine FTS + vecteur et résume via LLM."""
@@ -195,14 +197,18 @@ class TestCrossSessionRecall:
 
         # VectorIndex retourne le même doc_id
         mock_vector = MagicMock()
-        mock_vector.search = AsyncMock(return_value=[
-            {"doc_id": "s1.jsonl", "text": "Texte vecteur", "score": 0.9},
-        ])
+        mock_vector.search = AsyncMock(
+            return_value=[
+                {"doc_id": "s1.jsonl", "text": "Texte vecteur", "score": 0.9},
+            ]
+        )
 
         captured_prompts: list[str] = []
-        async def _capture_complete(**kwargs) -> str:
+
+        async def _capture_complete(**kwargs: object) -> str:
             captured_prompts.append(kwargs.get("messages", [{}])[0].get("content", ""))
             return "Résumé."
+
         mock_llm = MagicMock()
         mock_llm.complete = AsyncMock(side_effect=_capture_complete)
 
@@ -214,6 +220,7 @@ class TestCrossSessionRecall:
 
 
 # ── 4. UserModel ─────────────────────────────────────────────────────────────
+
 
 class TestUserModel:
     """UserModel : lecture, mise à jour fire-and-forget."""
@@ -275,6 +282,7 @@ class TestUserModel:
 
 # ── 5. CrossSessionRecallTool ─────────────────────────────────────────────────
 
+
 class TestCrossSessionRecallTool:
     """CrossSessionRecallTool : délègue à FTS + VectorIndex, formate le résultat."""
 
@@ -286,9 +294,11 @@ class TestCrossSessionRecallTool:
         await fts.add("s1.jsonl", "user: Je veux du café")
 
         mock_vector = MagicMock()
-        mock_vector.search = AsyncMock(return_value=[
-            {"doc_id": "s2.jsonl", "text": "assistant: Bon café", "score": 0.8},
-        ])
+        mock_vector.search = AsyncMock(
+            return_value=[
+                {"doc_id": "s2.jsonl", "text": "assistant: Bon café", "score": 0.8},
+            ]
+        )
 
         tool = CrossSessionRecallTool(fts_index=fts, vector_index=mock_vector)
         result = await tool.execute(query="café")
@@ -326,6 +336,7 @@ class TestCrossSessionRecallTool:
 
 
 # ── 6. SessionStore.list_all ─────────────────────────────────────────────────
+
 
 class TestSessionStoreListAll:
     """SessionStore.list_all() retourne tous les fichiers JSONL."""

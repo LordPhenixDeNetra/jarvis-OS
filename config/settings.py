@@ -5,12 +5,28 @@ from typing import Literal
 from pydantic import Field, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
-_VALID_WHISPER = frozenset({
-    "tiny.en", "tiny", "base.en", "base", "small.en", "small",
-    "medium.en", "medium", "large-v1", "large-v2", "large-v3", "large",
-    "distil-large-v2", "distil-medium.en", "distil-small.en", "distil-large-v3",
-    "large-v3-turbo", "turbo",
-})
+_VALID_WHISPER = frozenset(
+    {
+        "tiny.en",
+        "tiny",
+        "base.en",
+        "base",
+        "small.en",
+        "small",
+        "medium.en",
+        "medium",
+        "large-v1",
+        "large-v2",
+        "large-v3",
+        "large",
+        "distil-large-v2",
+        "distil-medium.en",
+        "distil-small.en",
+        "distil-large-v3",
+        "large-v3-turbo",
+        "turbo",
+    }
+)
 
 
 class Settings(BaseSettings):
@@ -34,8 +50,7 @@ class Settings(BaseSettings):
     )
 
     # Anthropic
-    anthropic_api_key: str = Field(
-        default="", description="Clé API Anthropic.")
+    anthropic_api_key: str = Field(default="", description="Clé API Anthropic.")
     anthropic_model: str = Field(
         default="claude-sonnet-4-6",
         description="Modèle Anthropic à utiliser.",
@@ -61,14 +76,12 @@ class Settings(BaseSettings):
         default="http://localhost:11434",
         description="URL du serveur Ollama.",
     )
-    ollama_model: str = Field(
-        default="mistral", description="Modèle Ollama à utiliser.")
+    ollama_model: str = Field(default="mistral", description="Modèle Ollama à utiliser.")
 
     # ── Serveur ───────────────────────────────────────────────
     host: str = Field(default="0.0.0.0")
     port: int = Field(default=8000)
-    environment: Literal["development", "production"] = Field(
-        default="development")
+    environment: Literal["development", "production"] = Field(default="development")
 
     # ── Mémoire ───────────────────────────────────────────────
     memory_dir: str = Field(
@@ -134,7 +147,8 @@ class Settings(BaseSettings):
         description="Backend STT : 'deepgram' (cloud, rapide) ou 'whisper' (local, hors-ligne).",
     )
     deepgram_api_key: str = Field(
-        default="", description="Clé API Deepgram (STT Nova-2 streaming).")
+        default="", description="Clé API Deepgram (STT Nova-2 streaming)."
+    )
     whisper_model: str = Field(
         default="tiny",
         description="Taille du modèle faster-whisper : tiny, base, small, medium, large.",
@@ -146,6 +160,7 @@ class Settings(BaseSettings):
         if v not in _VALID_WHISPER:
             return "tiny"
         return v
+
     tts_voice: str = Field(
         default="alloy",
         description="Voix OpenAI TTS : alloy, echo, fable, onyx, nova, shimmer.",
@@ -158,44 +173,41 @@ class Settings(BaseSettings):
         default="models/piper/fr_FR-upmc-medium.onnx",
         description="Chemin vers le modèle Piper ONNX.",
     )
-    elevenlabs_api_key: str = Field(
-        default="", description="Clé API ElevenLabs.")
-    elevenlabs_voice_id: str = Field(
-        default="", description="ID de la voix ElevenLabs.")
+    elevenlabs_api_key: str = Field(default="", description="Clé API ElevenLabs.")
+    elevenlabs_voice_id: str = Field(default="", description="ID de la voix ElevenLabs.")
     elevenlabs_model: str = Field(
         default="eleven_flash_v2_5",
         description="Modèle ElevenLabs : eleven_flash_v2_5 (~75ms) ou eleven_turbo_v2_5 (~300ms).",
     )
 
     # ── Notion ────────────────────────────────────────────────
-    notion_token: str = Field(
-        default="", description="Token d'intégration Notion.")
+    notion_token: str = Field(default="", description="Token d'intégration Notion.")
     notion_page_id: str = Field(
         default="",
         description="ID de la page Notion des tâches (depuis l'URL).",
     )
 
     # ── AIS Stream (navires) ─────────────────────────────────
-    aisstream_key: str = Field(
-        default="", description="Clé API AISstream.io (navires temps réel).")
+    aisstream_key: str = Field(default="", description="Clé API AISstream.io (navires temps réel).")
 
     # ── Mapbox (globe natif) ──────────────────────────────────
     mapbox_token: str = Field(
-        default="", description="Token Mapbox GL JS (projection globe native).")
+        default="", description="Token Mapbox GL JS (projection globe native)."
+    )
 
     # ── MapTiler (carte détaillée) ────────────────────────────
     maptiler_key: str = Field(
-        default="", description="Clé API MapTiler (free tier, carte détaillée globe V2).")
+        default="", description="Clé API MapTiler (free tier, carte détaillée globe V2)."
+    )
 
     # ── Musique ───────────────────────────────────────────────
     music_provider: str = Field(
-        default="", description="Fournisseur de musique actif: spotify | deezer | local")
+        default="", description="Fournisseur de musique actif: spotify | deezer | local"
+    )
 
     # ── Spotify ───────────────────────────────────────────────
-    spotify_client_id: str = Field(
-        default="", description="Spotify app Client ID.")
-    spotify_client_secret: str = Field(
-        default="", description="Spotify app Client Secret.")
+    spotify_client_id: str = Field(default="", description="Spotify app Client ID.")
+    spotify_client_secret: str = Field(default="", description="Spotify app Client Secret.")
     spotify_redirect_uri: str = Field(
         default="http://127.0.0.1:8000/api/spotify/callback",
         description="URI de callback OAuth Spotify.",
@@ -218,20 +230,15 @@ class Settings(BaseSettings):
     )
 
     # ── Proactivité ───────────────────────────────────────────
-    home_city: str = Field(
-        default="Paris", description="Ville pour la météo du briefing.")
-    briefing_hour: int = Field(
-        default=9, description="Heure du morning briefing (0-23).")
+    home_city: str = Field(default="Paris", description="Ville pour la météo du briefing.")
+    briefing_hour: int = Field(default=9, description="Heure du morning briefing (0-23).")
     calendar_reminder_minutes: int = Field(
         default=10,
         description="Délai de rappel avant un event calendar (minutes).",
     )
-    proactive_lat: float = Field(
-        default=45.75, description="Latitude pour la météo proactive.")
-    proactive_lon: float = Field(
-        default=4.85, description="Longitude pour la météo proactive.")
-    proactive_city: str = Field(
-        default="Lyon", description="Nom de ville pour la météo proactive.")
+    proactive_lat: float = Field(default=45.75, description="Latitude pour la météo proactive.")
+    proactive_lon: float = Field(default=4.85, description="Longitude pour la météo proactive.")
+    proactive_city: str = Field(default="Lyon", description="Nom de ville pour la météo proactive.")
 
     # ── Docker V2 ────────────────────────────────────────────
     docker_enabled: bool = Field(
@@ -350,8 +357,7 @@ class Settings(BaseSettings):
     )
 
     # ── Logging ───────────────────────────────────────────────
-    log_level: Literal["DEBUG", "INFO", "WARNING",
-                       "ERROR"] = Field(default="INFO")
+    log_level: Literal["DEBUG", "INFO", "WARNING", "ERROR"] = Field(default="INFO")
 
 
 # Singleton — importé partout via `from config.settings import settings`

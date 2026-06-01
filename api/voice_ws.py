@@ -11,9 +11,9 @@ from loguru import logger
 from audio.chunker import StreamChunker
 from audio.receiver import VoiceReceiver
 from audio.tts import tts_engine
-from config.settings import settings
 from background.notifications import ProactiveQueue
 from background.worker import BackgroundTask, BackgroundWorker
+from config.settings import settings
 from core.gateway import _FALLBACK, Gateway
 from core.router import RouteEnum
 from memory.auto_dream import AutoDream
@@ -25,6 +25,7 @@ router = APIRouter()
 @dataclass
 class VoiceSession:
     """État d'une connexion voix — partagé entre le receive-loop et le process-loop."""
+
     interrupt_event: asyncio.Event = field(default_factory=asyncio.Event)
 
 
@@ -118,6 +119,7 @@ async def voice_ws(websocket: WebSocket) -> None:
     loop = asyncio.get_running_loop()
     if settings.stt_provider == "deepgram":
         from audio.deepgram_receiver import DeepgramReceiver
+
         receiver: VoiceReceiver | DeepgramReceiver = DeepgramReceiver()
     else:
         receiver = VoiceReceiver()

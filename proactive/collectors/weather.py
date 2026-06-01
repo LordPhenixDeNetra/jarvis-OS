@@ -43,7 +43,7 @@ class WeatherCollector(CollectorBase):
 
         # Heures avec forte probabilité de pluie (> 60%)
         rain_alerts: list[str] = []
-        for t, p, temp in zip(times, precip, temps):
+        for t, p, temp in zip(times, precip, temps, strict=False):
             if p and p > 60:
                 rain_alerts.append(f"{t[-5:]} : {p}% pluie, {temp}°C")
 
@@ -54,18 +54,20 @@ class WeatherCollector(CollectorBase):
             summary = f"Pluie probable à {city} : " + ", ".join(rain_alerts[:4])
             priority = Priority.MEDIUM
 
-        return [ContextItem(
-            type=ItemType.NEWS,
-            title=f"Météo {city} — 24h",
-            summary=summary,
-            raw=summary,
-            source="weather",
-            timestamp=datetime.now(),
-            priority=priority,
-            metadata={
-                "rain_hours": rain_alerts,
-                "lat": lat,
-                "lon": lon,
-                "city": city,
-            },
-        )]
+        return [
+            ContextItem(
+                type=ItemType.NEWS,
+                title=f"Météo {city} — 24h",
+                summary=summary,
+                raw=summary,
+                source="weather",
+                timestamp=datetime.now(),
+                priority=priority,
+                metadata={
+                    "rain_hours": rain_alerts,
+                    "lat": lat,
+                    "lon": lon,
+                    "city": city,
+                },
+            )
+        ]

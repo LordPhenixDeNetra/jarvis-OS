@@ -1,4 +1,5 @@
 """WorkerAgent — exécute les étapes d'un projet avec un vrai tool_loop Anthropic."""
+
 from __future__ import annotations
 
 import asyncio
@@ -10,18 +11,18 @@ from pathlib import Path
 
 from loguru import logger
 
-_QUALITY_RULES_PATH = Path(__file__).parent.parent / "prompts" / "worker_system.md"
-try:
-    _QUALITY_RULES = _QUALITY_RULES_PATH.read_text(encoding="utf-8")
-except FileNotFoundError:
-    _QUALITY_RULES = ""
-
 from agent.file_tool import SandboxedFileTool
 from agent.project_store import ProjectStore
 from agent.quality_checker import QualityChecker
 from agent.schemas import LogEntry, Project, ProjectStatus, Step, StepStatus
 from agent.worker_cli import WorkerCLITool
 from core.budget import BudgetGuard
+
+_QUALITY_RULES_PATH = Path(__file__).parent.parent / "prompts" / "worker_system.md"
+try:
+    _QUALITY_RULES = _QUALITY_RULES_PATH.read_text(encoding="utf-8")
+except FileNotFoundError:
+    _QUALITY_RULES = ""
 
 _WORKER_SYSTEM = """\
 Tu es un agent autonome expert qui exécute une étape précise d'un projet dans un workspace isolé.
@@ -36,17 +37,17 @@ Outils disponibles :
   - action="execute_script", script="..." : exécuter un script Python Fusion API
   - action="read", query_type="screenshot" : capturer la vue actuelle
   - action="undo" / action="redo"
-  IMPORTANT Fusion 360 : les scripts doivent contenir def run(context): et utiliser adsk.core/adsk.fusion.
-  Fusion utilise les centimètres (3 cm → createByReal(3)). Toujours vérifier avec un screenshot après.
-  OBLIGATOIRE en début de chaque script Fusion : chercher un doc avec bRepBodies.count > 0 et l'activer.
-  Si aucun body trouvé, travailler sur l'actif — JAMAIS app.documents.add() (crée un fichier vide à chaque fois !).
+  IMPORTANT : les scripts doivent contenir def run(context): et utiliser adsk.core/adsk.fusion.
+  Fusion utilise les centimètres (3 cm → createByReal(3)). Vérifier avec un screenshot après.
+  OBLIGATOIRE : chercher un doc avec bRepBodies.count > 0 et l'activer en début de script.
+  Si aucun body trouvé, travailler sur l'actif — JAMAIS app.documents.add() !
   Ne jamais supposer que app.activeProduct est le bon document.
-  INTERDIT : root.name, rootComponent.name (lecture seule), addNewComponent() (mode Part pas Assemblage).
-  Nommer avec body.name = "..." uniquement. Mode Pièce : travailler sur rootComponent directement.
-  Shell : top_face = max(body.faces, key=lambda f: f.centroid.z) — jamais par index brut.
-  Cut (CutFeatureOperation) : "Aucun corps cible" = sketch sur mauvais plan ou participantBodies absent.
-    Sketch TOUJOURS sur une face du body (root.sketches.add(face)), pas sur xYConstructionPlane.
-    Définir inp.participantBodies = ObjectCollection contenant le body cible — OBLIGATOIRE pour Cut.
+  INTERDIT : root.name, rootComponent.name (lecture seule), addNewComponent() (mode Part).
+  Nommer avec body.name = "..." uniquement. Mode Pièce : travailler sur rootComponent.
+  Shell : top_face = max(body.faces, key=lambda f: f.centroid.z) — jamais par index.
+  Cut (CutFeatureOperation) : "Aucun corps cible" = sketch sur mauvais plan ou
+    participantBodies absent. Sketch sur une face du body, pas xYConstructionPlane.
+    inp.participantBodies = ObjectCollection contenant le body cible — OBLIGATOIRE.
 
 Règles absolues :
 - Exécute UNIQUEMENT l'étape demandée
@@ -56,7 +57,7 @@ Règles absolues :
 - Retourne UN RÉSUMÉ D'UNE LIGNE maximum — pas de markdown, pas de tableaux, pas de sections
 - Ne relis pas les fichiers que tu viens de créer sauf si tu as besoin de leur contenu pour la suite
 - Ne recrée pas des répertoires qui existent déjà
-- Commence directement par l'action principale (write_file, execute_cli, fusion_360) sans explorer inutilement
+- Commence directement par l'action principale (write_file, execute_cli, fusion_360)
 - INTERDIT : générer des rapports, tableaux markdown, ou analyses détaillées dans ta réponse finale
 
 Contexte projet :
@@ -69,7 +70,9 @@ _WORKER_TOOLS: list[dict] = [
         "description": "Lire le contenu d'un fichier dans le workspace",
         "input_schema": {
             "type": "object",
-            "properties": {"path": {"type": "string", "description": "Chemin relatif au workspace"}},
+            "properties": {
+                "path": {"type": "string", "description": "Chemin relatif au workspace"}
+            },
             "required": ["path"],
         },
     },
@@ -79,7 +82,7 @@ _WORKER_TOOLS: list[dict] = [
         "input_schema": {
             "type": "object",
             "properties": {
-                "path":    {"type": "string"},
+                "path": {"type": "string"},
                 "content": {"type": "string"},
             },
             "required": ["path", "content"],
@@ -132,7 +135,10 @@ _WORKER_TOOLS: list[dict] = [
                 },
                 "script": {
                     "type": "string",
-                    "description": "Script Python Fusion API complet avec def run(context): (requis pour execute_script)",
+                    "description": (
+                        "Script Python Fusion API complet avec def run(context):"
+                        " (requis pour execute_script)"
+                    ),
                 },
                 "query_type": {
                     "type": "string",
@@ -141,7 +147,16 @@ _WORKER_TOOLS: list[dict] = [
                 },
                 "direction": {
                     "type": "string",
-                    "enum": ["current", "front", "back", "top", "bottom", "left", "right", "iso-top-right"],
+                    "enum": [
+                        "current",
+                        "front",
+                        "back",
+                        "top",
+                        "bottom",
+                        "left",
+                        "right",
+                        "iso-top-right",
+                    ],
                     "description": "Direction caméra pour screenshot",
                 },
                 "name": {
@@ -160,7 +175,6 @@ class _BudgetExceeded(Exception):
 
 
 class WorkerAgent:
-
     def __init__(
         self,
         project: Project,
@@ -169,17 +183,17 @@ class WorkerAgent:
         approval_callback: Callable[[str, str, str], Awaitable[bool]],
         budget_guard: BudgetGuard | None = None,
     ) -> None:
-        self._project   = project
-        self._store     = store
+        self._project = project
+        self._store = store
         self._broadcast = broadcast_event
         self._approval_cb = approval_callback
-        self._budget    = budget_guard
+        self._budget = budget_guard
         self._worker_id = uuid.uuid4().hex[:8]  # identifiant unique pour les claims
-        self._file_tool       = SandboxedFileTool(project.workspace_path)
-        self._cli_tool        = WorkerCLITool(project.workspace_path)
-        self._docker          = None
-        self._killed          = False
-        self._quality         = QualityChecker(project.workspace_path)
+        self._file_tool = SandboxedFileTool(project.workspace_path)
+        self._cli_tool = WorkerCLITool(project.workspace_path)
+        self._docker = None
+        self._killed = False
+        self._quality = QualityChecker(project.workspace_path)
         self._pending_issues: list[str] = []
         self._files_snapshot: list[str] = []
 
@@ -190,8 +204,10 @@ class WorkerAgent:
     async def _setup_environment(self) -> None:
         """Configure l'environnement d'exécution : Docker V2 ou direct V1."""
         from config.settings import settings
+
         if settings.docker_enabled:
             from agent.docker_executor import DockerExecutor
+
             available = await DockerExecutor.is_available()
             if not available:
                 await self._log("warning", "Docker non disponible — fallback V1 direct")
@@ -215,7 +231,7 @@ class WorkerAgent:
 
     async def run(self) -> None:
         project = self._project
-        project.status     = ProjectStatus.RUNNING
+        project.status = ProjectStatus.RUNNING
         project.started_at = datetime.now()
         self._store.save_project(project)
         await self._log("info", f"Démarrage : {project.title}")
@@ -236,21 +252,29 @@ class WorkerAgent:
                     await self._log("error", f"Étape échouée : {step.title}")
                     break
             else:
-                project.status       = ProjectStatus.DONE
+                project.status = ProjectStatus.DONE
                 project.completed_at = datetime.now()
                 report = self._quality.generate_report()
                 if report["valid"]:
-                    await self._log("info", f"✓ Qualité finale : {len(report['files'])} fichier(s), aucun problème")
+                    await self._log(
+                        "info",
+                        f"✓ Qualité finale : {len(report['files'])} fichier(s), aucun problème",
+                    )
                 else:
-                    await self._log("warning", f"Qualité finale : {len(report['issues'])} problème(s) détecté(s)")
+                    await self._log(
+                        "warning",
+                        f"Qualité finale : {len(report['issues'])} problème(s) détecté(s)",
+                    )
                     for issue in report["issues"][:5]:
                         await self._log("warning", issue)
                 await self._log("info", "✓ Projet terminé avec succès")
-                self._broadcast({
-                    "type":       "project_done",
-                    "project_id": project.id,
-                    "title":      project.title,
-                })
+                self._broadcast(
+                    {
+                        "type": "project_done",
+                        "project_id": project.id,
+                        "title": project.title,
+                    }
+                )
         except Exception as e:
             project.status = ProjectStatus.FAILED
             await self._log("error", f"Erreur inattendue : {e}")
@@ -265,10 +289,14 @@ class WorkerAgent:
     async def _execute_step(self, step: Step) -> None:
         # Claim atomique — évite la double-exécution si plusieurs workers tournent
         if not self._store.claim_step(self._project.id, step.id, self._worker_id):
-            await self._log("warning", f"Étape déjà réclamée par un autre worker : {step.title}", step_id=step.id)
+            await self._log(
+                "warning",
+                f"Étape déjà réclamée par un autre worker : {step.title}",
+                step_id=step.id,
+            )
             return
 
-        step.status     = StepStatus.RUNNING
+        step.status = StepStatus.RUNNING
         step.started_at = datetime.now()
         self._store.save_project(self._project)
         await self._log("info", f"→ {step.title}", step_id=step.id)
@@ -293,34 +321,45 @@ class WorkerAgent:
 
         # Exécution via LLM tool-loop
         self._files_snapshot = self._file_tool.list_files()
-        is_fusion = "fusion" in self._project.mission.lower() or "fusion" in self._project.title.lower()
+        is_fusion = (
+            "fusion" in self._project.mission.lower() or "fusion" in self._project.title.lower()
+        )
         try:
             result = await asyncio.wait_for(self._run_step_llm(step), timeout=300)
-            step.status       = StepStatus.DONE
-            step.output       = result
+            step.status = StepStatus.DONE
+            step.output = result
             step.completed_at = datetime.now()
             if not is_fusion:  # quality check inutile pour Fusion (pas de fichiers)
                 await self._post_step_check(step)
-            await self._log("info", f"✓ {step.title}", step_id=step.id, data={"output": result[:300]})
+            await self._log(
+                "info", f"✓ {step.title}", step_id=step.id, data={"output": result[:300]}
+            )
         except _BudgetExceeded:
             # Hard-stop budget : on met le projet en pause (reprise possible)
-            await self._log("warning", f"Budget épuisé — pause du projet : {step.title}", step_id=step.id)
+            await self._log(
+                "warning", f"Budget épuisé — pause du projet : {step.title}", step_id=step.id
+            )
             self._store.pause_for_budget(self._project, step.id)
             self._push_update()
-            self._broadcast({
-                "type":       "budget_hard_stop",
-                "project_id": self._project.id,
-                "step_id":    step.id,
-                "message":    "Budget atteint — projet mis en pause. Reprise possible après recharge.",
-            })
+            self._broadcast(
+                {
+                    "type": "budget_hard_stop",
+                    "project_id": self._project.id,
+                    "step_id": step.id,
+                    "message": (
+                        "Budget atteint — projet mis en pause."
+                        " Reprise possible après recharge."
+                    ),
+                }
+            )
             return  # on sort proprement sans marquer le step FAILED
         except TimeoutError:
             step.status = StepStatus.FAILED
-            step.error  = "Timeout (5 min) dépassé."
+            step.error = "Timeout (5 min) dépassé."
             await self._log("error", f"Timeout : {step.title}", step_id=step.id)
         except Exception as e:
             step.status = StepStatus.FAILED
-            step.error  = str(e)
+            step.error = str(e)
             await self._log("error", f"Erreur : {step.title} — {e}", step_id=step.id)
 
         self._store.save_project(self._project)
@@ -335,7 +374,7 @@ class WorkerAgent:
         # Vérification budget avant l'appel LLM (estimation conservatrice : 0.02 USD / step)
         _est_usd = 0.02
         if self._budget is not None:
-            global_ok  = await self._budget.reserve("global", _est_usd)
+            global_ok = await self._budget.reserve("global", _est_usd)
             project_ok = await self._budget.reserve(f"project:{self._project.id}", _est_usd)
             if not global_ok or not project_ok:
                 raise _BudgetExceeded(
@@ -365,7 +404,10 @@ class WorkerAgent:
         )
         if self._pending_issues:
             issues_text = "\n".join(f"  • {i}" for i in self._pending_issues[-5:])
-            prompt += f"\n\nProblèmes qualité détectés aux étapes précédentes (à corriger) :\n{issues_text}"
+            prompt += (
+                f"\n\nProblèmes qualité détectés aux étapes précédentes"
+                f" (à corriger) :\n{issues_text}"
+            )
             self._pending_issues.clear()
 
         if _QUALITY_RULES:
@@ -401,17 +443,25 @@ class WorkerAgent:
         try:
             if name == "read_file":
                 content = self._file_tool.read_file(inputs["path"])
-                await self._log("tool", f"read_file: {inputs['path']}", data={"chars": len(content)})
+                await self._log(
+                    "tool", f"read_file: {inputs['path']}", data={"chars": len(content)}
+                )
                 return content
 
             if name == "write_file":
                 result = self._file_tool.write_file(inputs["path"], inputs["content"])
-                await self._log("tool", f"write_file: {inputs['path']}", data={"chars": len(inputs['content'])})
+                await self._log(
+                    "tool", f"write_file: {inputs['path']}", data={"chars": len(inputs["content"])}
+                )
                 return result
 
             if name == "list_files":
                 files = self._file_tool.list_files(inputs.get("directory", "."))
-                await self._log("tool", f"list_files: {inputs.get('directory', '.')}", data={"count": len(files)})
+                await self._log(
+                    "tool",
+                    f"list_files: {inputs.get('directory', '.')}",
+                    data={"count": len(files)},
+                )
                 return json.dumps(files)
 
             if name == "create_directory":
@@ -430,6 +480,7 @@ class WorkerAgent:
 
             if name == "fusion_360":
                 from tools.fusion import FusionTool
+
                 action = inputs.get("action", "")
                 await self._log("tool", f"fusion_360: {action}", data={"inputs": str(inputs)[:120]})
                 tool = FusionTool()
@@ -468,19 +519,21 @@ class WorkerAgent:
         logger.debug("WorkerAgent log", level=level, msg=message[:80])
 
     def _push_update(self) -> None:
-        self._broadcast({
-            "type":       "project_update",
-            "project_id": self._project.id,
-            "status":     self._project.status,
-            "steps": [
-                {
-                    "id":               s.id,
-                    "title":            s.title,
-                    "status":           s.status,
-                    "requires_approval": s.requires_approval,
-                    "output":           s.output,
-                    "error":            s.error,
-                }
-                for s in self._project.steps
-            ],
-        })
+        self._broadcast(
+            {
+                "type": "project_update",
+                "project_id": self._project.id,
+                "status": self._project.status,
+                "steps": [
+                    {
+                        "id": s.id,
+                        "title": s.title,
+                        "status": s.status,
+                        "requires_approval": s.requires_approval,
+                        "output": s.output,
+                        "error": s.error,
+                    }
+                    for s in self._project.steps
+                ],
+            }
+        )

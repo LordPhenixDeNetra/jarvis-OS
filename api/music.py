@@ -12,12 +12,15 @@ async def _get_state() -> dict:
     provider = settings.music_provider or ""
     if provider == "spotify":
         from api.spotify import _get_player_state
+
         state = await _get_player_state()
     elif provider == "deezer":
         from api.deezer import _get_player_state
+
         state = await _get_player_state()
     elif provider == "local":
         from api.local_music import _get_player_state
+
         state = await _get_player_state()
     else:
         return {"provider": None, "connected": False}
@@ -31,13 +34,25 @@ async def _action(action: str) -> JSONResponse:
         return JSONResponse({"ok": False, "error": "no_provider"}, status_code=400)
 
     if provider == "spotify":
-        from api.spotify import play as sp_play, pause as sp_pause, next_track as sp_next, previous_track as sp_prev
+        from api.spotify import next_track as sp_next
+        from api.spotify import pause as sp_pause
+        from api.spotify import play as sp_play
+        from api.spotify import previous_track as sp_prev
+
         mapping = {"play": sp_play, "pause": sp_pause, "next": sp_next, "prev": sp_prev}
     elif provider == "deezer":
-        from api.deezer import play as dz_play, pause as dz_pause, next_track as dz_next, previous_track as dz_prev
+        from api.deezer import next_track as dz_next
+        from api.deezer import pause as dz_pause
+        from api.deezer import play as dz_play
+        from api.deezer import previous_track as dz_prev
+
         mapping = {"play": dz_play, "pause": dz_pause, "next": dz_next, "prev": dz_prev}
     elif provider == "local":
-        from api.local_music import play as lm_play, pause as lm_pause, next_track as lm_next, previous_track as lm_prev
+        from api.local_music import next_track as lm_next
+        from api.local_music import pause as lm_pause
+        from api.local_music import play as lm_play
+        from api.local_music import previous_track as lm_prev
+
         mapping = {"play": lm_play, "pause": lm_pause, "next": lm_next, "prev": lm_prev}
     else:
         return JSONResponse({"ok": False, "error": "unknown_provider"}, status_code=400)

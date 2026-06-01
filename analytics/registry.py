@@ -1,18 +1,18 @@
 """Gestionnaire des widgets analytics activés."""
+
 from __future__ import annotations
 
 import json
 from pathlib import Path
-from typing import Optional
+
 from loguru import logger
 
 from analytics.widgets.base import WidgetBase, WidgetConfig, WidgetData
-from analytics.widgets.jarvis_stats import JarvisStatsWidget
 from analytics.widgets.conso import ConsoWidget
-from analytics.widgets.youtube import YouTubeWidget
-from analytics.widgets.github import GitHubWidget
 from analytics.widgets.discord import DiscordWidget
-
+from analytics.widgets.github import GitHubWidget
+from analytics.widgets.jarvis_stats import JarvisStatsWidget
+from analytics.widgets.youtube import YouTubeWidget
 
 # Catalogue de tous les widgets disponibles
 ALL_WIDGETS: dict[str, type[WidgetBase]] = {
@@ -30,12 +30,11 @@ CONFIG_FILE = Path("memory_data/analytics_config.json")
 
 
 class AnalyticsRegistry:
-
     _instance = None
     _active: dict[str, WidgetBase] = {}
 
     @classmethod
-    def get_instance(cls) -> "AnalyticsRegistry":
+    def get_instance(cls) -> AnalyticsRegistry:
         if cls._instance is None:
             cls._instance = cls()
             cls._instance.load()
@@ -78,7 +77,7 @@ class AnalyticsRegistry:
                     "widget_id": wid,
                     "enabled": w.config.enabled,
                     "position": w.config.position,
-                    "settings": w.config.settings
+                    "settings": w.config.settings,
                 }
                 for wid, w in self._active.items()
             ]
@@ -97,10 +96,7 @@ class AnalyticsRegistry:
 
     def get_active(self) -> list[WidgetBase]:
         """Retourne les widgets actifs triés par position."""
-        return sorted(
-            self._active.values(),
-            key=lambda w: w.config.position
-        )
+        return sorted(self._active.values(), key=lambda w: w.config.position)
 
     def add(self, widget_id: str, settings: dict = None) -> dict:
         """Active un widget."""
@@ -109,14 +105,8 @@ class AnalyticsRegistry:
         if widget_id in self._active:
             return {"success": False, "message": f"Widget '{widget_id}' déjà actif"}
 
-        position = max(
-            (w.config.position for w in self._active.values()), default=-1
-        ) + 1
-        config = WidgetConfig(
-            widget_id=widget_id,
-            position=position,
-            settings=settings or {}
-        )
+        position = max((w.config.position for w in self._active.values()), default=-1) + 1
+        config = WidgetConfig(widget_id=widget_id, position=position, settings=settings or {})
         self._active[widget_id] = ALL_WIDGETS[widget_id](config=config)
         self._save()
         logger.info(f"Widget ajouté : {widget_id}")
@@ -143,16 +133,16 @@ class AnalyticsRegistry:
     async def fetch_all(self) -> dict[str, WidgetData]:
         """Fetch les données de tous les widgets actifs en parallèle."""
         import asyncio
+
         tasks = {
-            wid: widget.fetch()
-            for wid, widget in self._active.items()
-            if widget.config.enabled
+            wid: widget.fetch() for wid, widget in self._active.items() if widget.config.enabled
         }
         results = await asyncio.gather(*tasks.values(), return_exceptions=True)
         return {
-            wid: result if not isinstance(result, Exception)
+            wid: result
+            if not isinstance(result, Exception)
             else WidgetData(success=False, data={}, error=str(result))
-            for wid, result in zip(tasks.keys(), results)
+            for wid, result in zip(tasks.keys(), results, strict=False)
         }
 
 

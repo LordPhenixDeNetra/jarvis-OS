@@ -2,6 +2,7 @@
 Face recognition avec face_recognition (ageitgey/dlib).
 Compare chaque frame webcam avec les photos de référence dans vision/faces/.
 """
+
 from __future__ import annotations
 
 import shutil
@@ -11,15 +12,14 @@ from pathlib import Path
 import numpy as np
 from loguru import logger
 
-
 FACES_DIR = Path("vision/faces")
 
 
 @dataclass
 class RecognitionResult:
-    recognized: bool        # True si Barth est reconnu
-    confidence: float       # 0.0-1.0 (1 - distance)
-    name: str               # "barth" ou "unknown"
+    recognized: bool  # True si Barth est reconnu
+    confidence: float  # 0.0-1.0 (1 - distance)
+    name: str  # "barth" ou "unknown"
     face_locations: list = field(default_factory=list)  # Coordonnées (1/4 scale)
 
 
@@ -29,10 +29,10 @@ class FaceRecognizer:
     Charge toutes les images dans vision/faces/ au démarrage.
     """
 
-    RECOGNITION_THRESHOLD = 0.45   # Distance max pour une correspondance (plus bas = plus strict)
-    PROCESS_EVERY_N_FRAMES = 4     # Traiter 1 frame sur 4 pour les perfs
+    RECOGNITION_THRESHOLD = 0.45  # Distance max pour une correspondance (plus bas = plus strict)
+    PROCESS_EVERY_N_FRAMES = 4  # Traiter 1 frame sur 4 pour les perfs
 
-    def __init__(self):
+    def __init__(self) -> None:
         self._known_encodings: list[np.ndarray] = []
         self._known_names: list[str] = []
         self._frame_count = 0
@@ -71,7 +71,7 @@ class FaceRecognizer:
         )
         return True
 
-    def process(self, frame_bgr) -> RecognitionResult:
+    def process(self, frame_bgr: object) -> RecognitionResult:
         """
         Analyse une frame BGR (OpenCV).
         Retourne le dernier résultat si pas le bon frame (optimisation).
