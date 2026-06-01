@@ -9,12 +9,12 @@ import pytest
 # ── OllamaProvider — chat-only ────────────────────────────────────────────────
 
 
-def test_ollama_supports_tools_false() -> None:
-    """OllamaProvider est chat-only : supports_tools doit valoir False."""
+def test_ollama_supports_tools_true() -> None:
+    """OllamaProvider supporte les outils (function calling Ollama) : supports_tools=True."""
     from llm.local import OllamaProvider
 
     provider = OllamaProvider()
-    assert provider.supports_tools is False
+    assert provider.supports_tools is True
 
 
 # ── AnthropicProvider — régression ───────────────────────────────────────────
