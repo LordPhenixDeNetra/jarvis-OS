@@ -122,7 +122,12 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
 
     llm = get_llm_provider()
     background_llm = create_background_llm()
-    voice_llm = AnthropicProvider(model=settings.voice_anthropic_model, max_tokens=1024)
+    # En mode local, la voix utilise le même provider Ollama (pas d'Anthropic disponible)
+    voice_llm = (
+        get_llm_provider()
+        if settings.llm_provider == "local"
+        else AnthropicProvider(model=settings.voice_anthropic_model, max_tokens=1024)
+    )
 
     # ── Skill registry ───────────────────────────────────────
     # singleton chargé à l'import — reload() pour forcer un rechargement

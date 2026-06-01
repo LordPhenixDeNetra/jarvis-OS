@@ -300,16 +300,20 @@ async def update_setting(request: Request, body: SettingUpdateBody) -> dict:
             new_bg_llm = create_background_llm()
             gw = getattr(request.app.state, "gateway", None)
             if gw is not None:
+                # Chat principal + voice gateway
                 object.__setattr__(gw._agent, "_llm", new_llm)
+                vgw = getattr(request.app.state, "voice_gateway", None)
+                if vgw is not None:
+                    object.__setattr__(vgw._agent, "_llm", new_llm)
 
-                # Swap aussi les LLMs background (consolidation, auto_dream…)
+                # LLMs background (consolidation, auto_dream…)
                 for attr in ("consolidation", "auto_dream", "user_model"):
                     obj = getattr(request.app.state, attr, None)
                     if obj is not None and hasattr(obj, "_llm"):
                         object.__setattr__(obj, "_llm", new_bg_llm)
 
                 logger.info(
-                    "LLM provider hot-swapped (main + background)",
+                    "LLM provider hot-swapped (main + voice + background)",
                     provider=_s.llm_provider,
                     model=getattr(new_llm, "_model", "?"),
                 )
