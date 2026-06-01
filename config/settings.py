@@ -79,9 +79,41 @@ class Settings(BaseSettings):
     ollama_model: str = Field(default="mistral", description="Modèle Ollama à utiliser.")
 
     # ── Serveur ───────────────────────────────────────────────
-    host: str = Field(default="0.0.0.0")
+    host: str = Field(
+        default="127.0.0.1",
+        description=(
+            "Adresse d'écoute du serveur. '127.0.0.1' (défaut) = localhost uniquement. "
+            "Mettre explicitement '0.0.0.0' pour exposer l'API hors de la machine "
+            "(Tailscale, VPN, VPS). Ne jamais exposer sans API_AUTH_ENABLED=true."
+        ),
+    )
     port: int = Field(default=8000)
     environment: Literal["development", "production"] = Field(default="development")
+
+    # ── Sécurité réseau ───────────────────────────────────────
+    api_auth_enabled: bool = Field(
+        default=False,
+        description=(
+            "Active l'authentification Bearer sur toutes les routes API. "
+            "Désactivé par défaut pour ne pas casser l'usage local. "
+            "Obligatoire dès que l'API est exposée hors localhost (Tailscale, VPS)."
+        ),
+    )
+    api_token: str = Field(
+        default="",
+        description=(
+            "Token Bearer attendu si api_auth_enabled=True. "
+            "Générer avec : openssl rand -hex 32"
+        ),
+    )
+    cors_allow_origins: list[str] = Field(
+        default_factory=list,
+        description=(
+            "Origines CORS autorisées (ex: [\"http://mon-pc.tailscale:8000\"]). "
+            "Vide + auth désactivée = localhost par défaut. "
+            "Ne jamais laisser vide avec auth activée et exposition réseau."
+        ),
+    )
 
     # ── Mémoire ───────────────────────────────────────────────
     memory_dir: str = Field(
