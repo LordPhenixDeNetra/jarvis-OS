@@ -562,6 +562,18 @@ body[data-mode="home"] {
   z-index: 1;       /* below .atmo grain/vignette (z-index:2) */
   pointer-events: none;
 }
+.home-orb-wrap::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(
+    ellipse 38% 38% at 50% 50%,
+    rgba(40, 100, 255, 0.22) 0%,
+    rgba(20, 60, 200, 0.08) 50%,
+    transparent 100%
+  );
+  pointer-events: none;
+}
 #orb-canvas {
   display: block;
   width: 100%;

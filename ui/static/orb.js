@@ -82,53 +82,6 @@
     const points = new THREE.Points(geo, mat);
     scene.add(points);
 
-    // ── Core glow — large diffuse fill, quasi-flat gradient ──────────
-    const glowTex = (() => {
-      const c = document.createElement("canvas");
-      c.width = 256; c.height = 256;
-      const ctx = c.getContext("2d");
-      const g = ctx.createRadialGradient(128, 128, 0, 128, 128, 128);
-      g.addColorStop(0,    "rgba(30, 110, 255, 0.22)");
-      g.addColorStop(0.28, "rgba(30, 110, 255, 0.16)");
-      g.addColorStop(0.55, "rgba(30, 110, 255, 0.07)");
-      g.addColorStop(0.80, "rgba(30, 110, 255, 0.02)");
-      g.addColorStop(1,    "rgba(30, 110, 255, 0)");
-      ctx.fillStyle = g;
-      ctx.fillRect(0, 0, 256, 256);
-      return new THREE.CanvasTexture(c);
-    })();
-    const glowMat = new THREE.SpriteMaterial({
-      map: glowTex,
-      blending: THREE.AdditiveBlending,
-      depthWrite: false,
-      transparent: true,
-    });
-    const glowSprite = new THREE.Sprite(glowMat);
-    scene.add(glowSprite);
-
-    // ── Key light — off-center top-left, pure blue, very diffuse ─────
-    const keyTex = (() => {
-      const c = document.createElement("canvas");
-      c.width = 256; c.height = 256;
-      const ctx = c.getContext("2d");
-      const g = ctx.createRadialGradient(128, 128, 0, 128, 128, 128);
-      g.addColorStop(0,    "rgba(30, 110, 255, 0.14)");
-      g.addColorStop(0.35, "rgba(30, 110, 255, 0.07)");
-      g.addColorStop(0.70, "rgba(30, 110, 255, 0.02)");
-      g.addColorStop(1,    "rgba(30, 110, 255, 0)");
-      ctx.fillStyle = g;
-      ctx.fillRect(0, 0, 256, 256);
-      return new THREE.CanvasTexture(c);
-    })();
-    const keyMat = new THREE.SpriteMaterial({
-      map: keyTex,
-      blending: THREE.AdditiveBlending,
-      depthWrite: false,
-      transparent: true,
-    });
-    const keySprite = new THREE.Sprite(keyMat);
-    keySprite.position.set(-14, 14, 2);
-    scene.add(keySprite);
 
     // ── Lines ────────────────────────────────────────────────────────
     const MAX_LINES = 8000;
@@ -417,17 +370,6 @@
       electronGeo.setDrawRange(0, ek);
       electronGeo.attributes.position.needsUpdate = true;
 
-      // ── Core glow — large atmospheric fill ────────────────────────
-      const glowPulse = 1 + Math.sin(t * 0.9) * 0.05;
-      const glowSize  = currentRadius * 2.2 * glowPulse;
-      glowSprite.scale.set(glowSize, glowSize, 1);
-      glowMat.opacity = Math.min(0.90, currentGlow * 1.10 * glowPulse + beatMod * beatAmp * 1.2);
-
-      // ── Key light (top-left directional) ──────────────────────────
-      const keySize = currentRadius * 3.2;
-      keySprite.scale.set(keySize, keySize, 1);
-      keyMat.opacity = Math.min(0.60, currentGlow * 0.65 * glowPulse);
-      glowSprite.position.z = cloudZ;
 
       // ── Breath Z — amplitudes très faibles, pas de zoom visible ─────
       let zTarget = Math.sin(t * 0.10) * 0.8;
@@ -441,6 +383,7 @@
       points.position.z       = cloudZ;
       lines.position.z        = cloudZ;
       electronPoints.position.z = cloudZ;
+
 
       // ── Rotation (auto + drag) ────────────────────────────────────
       const rotY = dragRotY + autoRotY;
@@ -499,10 +442,6 @@
         electronGeo.dispose();
         electronMat.dispose();
         sprite.dispose();
-        glowTex.dispose();
-        glowMat.dispose();
-        keyTex.dispose();
-        keyMat.dispose();
       },
     };
   }
