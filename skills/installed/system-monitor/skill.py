@@ -3,7 +3,8 @@ from skills.base import SkillBase
 
 class SystemMonitorSkill(SkillBase):
     SYSTEM_PROMPT = (
-        "Vue \"system-monitor\" : Cockpit système temps réel — jauges CPU/RAM/disque, cerveau LLM, services, missions\n"
+        "Vue \"system-monitor\" : Cockpit système temps réel — "
+        "jauges CPU/RAM/disque, cerveau LLM, services, missions\n"
         "Afficher : show_view(action=\"show\", view_id=\"system-monitor\").\n"
         "Masquer : show_view(action=\"hide\", view_id=\"system-monitor\").\n"
         "\n"

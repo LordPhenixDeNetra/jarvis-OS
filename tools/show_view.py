@@ -77,7 +77,8 @@ class ShowViewTool(Tool):
     description = (
         "Affiche ou contrôle une vue visuelle sur l'écran principal de Jarvis.\n\n"
         "ACTIONS GLOBALES :\n"
-        '- show : afficher une vue par son ID (le SYSTEM_PROMPT de chaque vue donne son view_id exact)\n'
+        '- show : afficher une vue par son ID '
+        '(le SYSTEM_PROMPT de chaque vue donne son view_id exact)\n'
         '- hide : masquer une vue précise\n'
         '- home : retour à la sphère d\'accueil — pour "reviens", "retour", "ferme", "sphère"\n\n'
         "ACTIONS GLOBE UNIQUEMENT (lieux terrestres réels) :\n"
@@ -94,7 +95,8 @@ class ShowViewTool(Tool):
         '- view_command : envoyer une commande à une vue active.\n'
         "  Utilise ceci quand l'utilisateur demande quelque chose qui correspond à une\n"
         "  commande exposée par la vue active (le SYSTEM_PROMPT de la vue les liste).\n"
-        '  Ex. astronomie : view_command(view_id="astronomy", command="focus_constellation", params={"name": "Orion"})\n\n'
+        '  Ex. astronomie : view_command(view_id="astronomy", '
+        'command="focus_constellation", params={"name": "Orion"})\n\n'
         "Pour fly_to, le globe s'affiche automatiquement."
     )
     input_schema: dict = {

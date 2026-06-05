@@ -3,7 +3,8 @@ from skills.base import SkillBase
 
 class WeatherSkill(SkillBase):
     SYSTEM_PROMPT = (
-        "Vue \"weather\" : Météo immersive — scène de ciel animée, conditions et prévisions horaires (Open-Meteo)\n"
+        "Vue \"weather\" : Météo immersive — scène de ciel animée, "
+        "conditions et prévisions horaires (Open-Meteo)\n"
         "Afficher : show_view(action=\"show\", view_id=\"weather\").\n"
         "Masquer : show_view(action=\"hide\", view_id=\"weather\").\n"
         "\n"

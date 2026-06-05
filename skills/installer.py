@@ -146,7 +146,9 @@ class SkillInstaller:
                         if r.status_code == 200:
                             (static_dst / fname).write_bytes(r.content)
                         else:
-                            logger.warning(f"Fichier statique manquant : {fname} (HTTP {r.status_code})")
+                            logger.warning(
+                                f"Fichier statique manquant : {fname} (HTTP {r.status_code})"
+                            )
 
     async def _install_view(
         self, skill_name: str, skill_meta: dict, skill_dir: Path, path: str
