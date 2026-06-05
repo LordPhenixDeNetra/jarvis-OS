@@ -192,7 +192,6 @@ def _build_voice_tools() -> list:
                 credentials_path=_google_creds, token_path=_gmail_token
             ),
         ),
-        # show_view fourni par le skill globe-view
         (
             "preset",
             lambda: __import__("tools.preset", fromlist=["ExecutePresetTool"]).ExecutePresetTool(),
