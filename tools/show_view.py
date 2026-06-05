@@ -111,8 +111,11 @@ class ShowViewTool(Tool):
             },
             "view_id": {
                 "type": "string",
-                "description": "ID de la vue (défaut: globe).",
-                "default": "globe",
+                "description": (
+                    "ID de la vue. Requis pour show / hide / view_command. "
+                    "Ignoré pour fly_to / zoom_in / zoom_out / globe_view / home "
+                    "(ces actions ciblent le globe)."
+                ),
             },
             "location": {
                 "type": "string",
@@ -144,13 +147,18 @@ class ShowViewTool(Tool):
     async def execute(
         self,
         action: str,
-        view_id: str = "globe",
+        view_id: str | None = None,
         location: str | None = None,
         zoom: int = 10,
         command: str | None = None,
         params: dict | None = None,
         **_: object,
     ) -> ToolResult:
+        if action in ("show", "hide", "view_command") and not view_id:
+            return ToolResult(
+                content=f"Paramètre view_id requis pour action={action}.", is_error=True
+            )
+
         if action == "show":
             self._broadcast({"type": "show_view", "view_id": view_id})
             return ToolResult(content=f"Vue {view_id} affichée.")
