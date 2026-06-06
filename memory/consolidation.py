@@ -13,6 +13,7 @@ from memory.index import MemoryIndex
 from memory.topics import TopicStore
 
 if TYPE_CHECKING:
+    from memory.ingest import MemoryIngest
     from memory.search import FTSIndex, VectorIndex
 
 _PROMPT_PATH = Path(__file__).parent.parent / "prompts" / "consolidation.md"
@@ -31,11 +32,15 @@ class ConsolidationAgent:
         llm: LLMProvider,
         memory_index: MemoryIndex,
         topic_store: TopicStore,
+        memory_ingest: MemoryIngest | None = None,
     ) -> None:
         self._llm = llm
         self._memory_index = memory_index
         self._topic_store = topic_store
         self._prompt_template = _PROMPT_PATH.read_text(encoding="utf-8")
+        # PHASE 3 — Q3=a : ingestion en parallèle dans le Kernel SQLite.
+        # Doublon temporaire ; topics/*.md restent écrits comme avant.
+        self._ingest = memory_ingest
 
     def fire(self, user_message: str, assistant_message: str) -> None:
         """Lance la consolidation en fire-and-forget. Ne bloque jamais."""
@@ -68,6 +73,17 @@ class ConsolidationAgent:
         )
 
         self._apply(str(response))
+
+        # PHASE 3 — Ingestion parallèle dans le Kernel SQLite (best-effort, ne bloque pas).
+        if self._ingest is not None:
+            try:
+                await self._ingest.ingest(
+                    content=f"Barth : {user_message}\nJarvis : {assistant_message}",
+                    source="consolidation_agent",
+                    event_type="exchange",
+                )
+            except Exception as exc:  # noqa: BLE001
+                logger.warning("Consolidation: ingest Kernel error", error=str(exc))
 
     def _apply(self, raw: str) -> None:
         # Strip markdown code fences (```json ... ``` or ``` ... ```)

@@ -2,10 +2,14 @@ from __future__ import annotations
 
 import asyncio
 from pathlib import Path
+from typing import TYPE_CHECKING
 
 from loguru import logger
 
 from llm.base import LLMProvider
+
+if TYPE_CHECKING:
+    from memory.ingest import MemoryIngest
 
 _DEFAULT_PREFS = "# Préférences Barth\n\nAucune préférence enregistrée.\n"
 
@@ -33,11 +37,15 @@ class AutoDream:
         llm: LLMProvider,
         prefs_path: Path,
         sessions_dir: Path,
+        memory_ingest: MemoryIngest | None = None,
     ) -> None:
         self._llm = llm
         self._prefs_path = prefs_path
         self._sessions_dir = sessions_dir
         self._ensure_prefs()
+        # PHASE 3 — Q3=a : ingestion parallèle dans le Kernel SQLite.
+        # Doublon temporaire avec user_prefs.md ; tout reste écrit comme avant.
+        self._ingest = memory_ingest
 
     def _ensure_prefs(self) -> None:
         if not self._prefs_path.exists():
@@ -79,6 +87,17 @@ class AutoDream:
         if updated and updated != prefs.strip():
             self._write_prefs(updated)
             logger.info("AutoDream micro: préférences mises à jour")
+
+        # PHASE 3 — Ingestion parallèle dans le Kernel (best-effort, ne bloque pas).
+        if self._ingest is not None:
+            try:
+                await self._ingest.ingest(
+                    content=f"Barth : {user_message}\nJarvis : {assistant_message}",
+                    source="auto_dream_micro",
+                    event_type="exchange",
+                )
+            except Exception as exc:  # noqa: BLE001
+                logger.warning("AutoDream micro: ingest Kernel error", error=str(exc))
 
     # ── Deep (nocturne, appelé par le scheduler à 3h) ─────────
 
