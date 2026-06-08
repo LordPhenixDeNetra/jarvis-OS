@@ -210,6 +210,14 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     _memory_kernel = MemoryKernel(memory_dir / "jarvis_memory.db")
     _memory_ingest = MemoryIngest(kernel=_memory_kernel, llm=background_llm)
     _deep_ingest = _memory_ingest if settings.ingest_deep_enabled else None
+
+    # Miroir Markdown du Kernel (§6.7) — régénéré en passe nocturne deep,
+    # SQLite → MD strictement unidirectionnel. Lisible via Atelier/Mémoire/Facts.
+    from memory.mirror import MemoryMirror
+
+    _memory_mirror = MemoryMirror(_memory_kernel, memory_dir / "mirror")
+    app.state.memory_kernel = _memory_kernel
+    app.state.memory_mirror = _memory_mirror
     if settings.ingest_deep_enabled:
         logger.warning(
             "Memory Kernel DEEP INGEST activé : "
@@ -233,6 +241,7 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
         prefs_path=user_prefs_path,
         sessions_dir=memory_dir / "sessions",
         memory_ingest=_deep_ingest,  # consommé UNIQUEMENT par _run_deep.
+        mirror=_memory_mirror,  # régénéré après ingest deep (§6.7).
     )
 
     notifications = NotificationQueue()
