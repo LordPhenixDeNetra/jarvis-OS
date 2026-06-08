@@ -279,19 +279,43 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
         _budget_guard = None
     # ── [/BUDGET] ────────────────────────────────────────────────────────────
 
-    # ── [SKILLS] ─────────────────────────────────────────────────────────────
+    # ── [SKILL LAB] PHASE 4 — porte unique d'entrée pour les skills générées
+    # Le Lab doit être construit AVANT le SkillCreateTool car celui-ci passe
+    # désormais par lab.propose_from_trajectory() (aucune installation directe
+    # possible — pas de backdoor pour le voice agent).
+    from skills.lab import SkillLab
+    from skills.lifecycle import SkillLifecycle
     from skills.synthesizer import SkillSynthesizer
     from tools.skills import SkillCreateTool, SkillImproveTool, SkillListTool
 
     _synthesizer = SkillSynthesizer(llm=llm)
     app.state.skill_synthesizer = _synthesizer
+
+    _skill_lifecycle = SkillLifecycle(db_path=memory_dir / "jarvis_memory.db")
+    _skill_lab = SkillLab(
+        kernel=_memory_kernel,
+        lifecycle=_skill_lifecycle,
+        synthesizer=_synthesizer,
+        registry_reload=skill_registry.reload,
+    )
+    app.state.skill_lab = _skill_lab
+    app.state.skill_lifecycle = _skill_lifecycle
+
+    # SkillCreateTool est obligatoirement câblé au Lab : il ne peut PAS
+    # installer directement, il propose une candidate qui doit passer par
+    # le sandbox + validation humaine.
     tool_registry.register(
-        SkillCreateTool(synthesizer=_synthesizer),
+        SkillCreateTool(lab=_skill_lab),
         SkillImproveTool(synthesizer=_synthesizer),
         SkillListTool(),
     )
-    logger.info("Skills tools enregistrés (skill_create, skill_improve, skill_list)")
-    # ── [/SKILLS] ────────────────────────────────────────────────────────────
+    logger.info(
+        "Skills tools enregistrés (skill_create→Lab, skill_improve, skill_list)"
+    )
+    logger.info(
+        "Skill Lab activé — polling Kernel skill_candidate_proposal nocturne (3h05)"
+    )
+    # ── [/SKILL LAB] ─────────────────────────────────────────────────────────
 
     # ── [BACKENDS] ───────────────────────────────────────────────────────────
     # Agent doit être créé AVANT cet bloc (SpawnSubagentTool référence l'agent).
@@ -362,6 +386,7 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
         proactive=proactive_queue,
         auto_dream=auto_dream,
         calendar_tool=calendar_list_tool,
+        skill_lab=_skill_lab,
     )
     scheduler.start()
 
