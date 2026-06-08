@@ -402,3 +402,15 @@ body[data-mode="workspace"] { overflow-y: auto; overflow-x: hidden; }
   color: var(--fg-3);
   margin-right: 8px;
 }
+
+/* ─────────────────────────────────────────────────────────────
+   Inbox unifiée — section "Skills à valider" (Skill Lab PHASE 4)
+   Badge violet pour distinguer visuellement les candidates d'une
+   initiative proactive classique.
+───────────────────────────────────────────────────────────── */
+
+.badge--skills {
+  background: rgba(155, 89, 182, 0.12);
+  color: #c193e2;
+  border: 1px solid rgba(155, 89, 182, 0.32);
+}

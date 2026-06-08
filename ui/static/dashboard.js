@@ -193,9 +193,16 @@
     root.appendChild(page);
   }
 
-  /* ───────── Initiatives ───────── */
+  /* ───────── Initiatives + Skills à valider (inbox unifiée) ─────────
+     Un seul écran d'arbitrage : initiatives proactives en haut, puis
+     candidates du Skill Lab à promouvoir/rejeter en dessous. */
   async function renderInitiatives() {
-    const inits = await loadInitiatives();
+    const [inits, skills] = await Promise.all([
+      loadInitiatives(),
+      _loadSkillsPending(),
+    ]);
+
+    /* ── Section 1 — Initiatives ── */
     const list = el("div");
     if (!inits.length) {
       list.appendChild(el("div", { class: "j-empty", text: "Aucune initiative en attente" }));
@@ -211,14 +218,83 @@
       list
     ));
 
+    /* ── Section 2 — Skills à valider (Skill Lab PHASE 4) ── */
+    if (skills.length) {
+      const skillsList = el("div");
+      skills.forEach(c => skillsList.appendChild(_renderSkillRow(c)));
+      wrap.appendChild(ghostSec(
+        "Skills à valider",
+        skills.length + " candidate" + (skills.length>1?"s":"") + " · sandbox vert, attend ta décision",
+        el("span", { class: "badge badge--skills", text: "SKILLS" }),
+        skillsList
+      ));
+    }
+
     const page = pageWrapper(
       "initiatives",
       "Ce qui mérite ton arbitrage",
-      '<span class="v">' + inits.length + '</span> à traiter',
+      '<span class="v">' + inits.length + '</span> à traiter'
+        + (skills.length ? ' · <span class="v">' + skills.length + '</span> skill' + (skills.length>1?'s':'') : ''),
       wrap
     );
     root.innerHTML = "";
     root.appendChild(page);
+  }
+
+  /* ───────── Skills à valider (Skill Lab) ───────── */
+
+  async function _loadSkillsPending() {
+    try {
+      return await J.api.get("/api/skills/lab/candidates?status=sandboxed_pass") || [];
+    } catch (_) { return []; }
+  }
+
+  function _renderSkillRow(c) {
+    const row = el("div", { class: "row-stripe skill-row" });
+    const bar = el("div", { class: "row-stripe-bar med" });
+    row.appendChild(bar);
+
+    const inner = el("div", { class: "row-stripe-inner" });
+    inner.appendChild(el("div", { class: "row-stripe-title", text: c.name }));
+    const meta = el("div", { class: "row-stripe-meta" });
+    meta.appendChild(el("span", { class: "badge badge--solid", text: "SKILL" }));
+    if (c.sandbox_notes) {
+      meta.appendChild(el("span", { text: (c.sandbox_notes || "").slice(0, 80) }));
+    }
+    inner.appendChild(meta);
+    row.appendChild(inner);
+
+    const right = el("div", { class: "row-stripe-right" });
+    const promote = el("button", { class: "m-btn", text: "✓ Promouvoir" });
+    promote.addEventListener("click", async (e) => {
+      e.stopPropagation();
+      promote.disabled = true; promote.textContent = "…";
+      try {
+        await J.api.post("/api/skills/lab/" + encodeURIComponent(c.name) + "/promote");
+        J.notify({ kind: "success", text: c.name + " promue" });
+        renderInitiatives();
+      } catch (err) {
+        J.notify({ kind: "error", text: err.message });
+        promote.disabled = false; promote.textContent = "✓ Promouvoir";
+      }
+    });
+    const reject = el("button", { class: "m-btn danger", text: "✗ Rejeter" });
+    reject.addEventListener("click", async (e) => {
+      e.stopPropagation();
+      if (!confirm("Rejeter définitivement « " + c.name + " » ?")) return;
+      reject.disabled = true; reject.textContent = "…";
+      try {
+        await J.api.post("/api/skills/lab/" + encodeURIComponent(c.name) + "/reject");
+        J.notify({ kind: "info", text: c.name + " rejetée" });
+        renderInitiatives();
+      } catch (err) {
+        J.notify({ kind: "error", text: err.message });
+        reject.disabled = false; reject.textContent = "✗ Rejeter";
+      }
+    });
+    right.appendChild(promote); right.appendChild(reject);
+    row.appendChild(right);
+    return row;
   }
 
   /* PHASE 6 §10.1 — bloc gouvernance pour le panel détail.
