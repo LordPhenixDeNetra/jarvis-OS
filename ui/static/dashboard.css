@@ -348,3 +348,28 @@ body[data-mode="workspace"] { overflow-y: auto; overflow-x: hidden; }
 .add-bar:hover { border-color: var(--accent-line); background: var(--accent-soft); }
 .add-bar span { font-family: var(--mono); font-size: 10px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--fg-3); }
 .add-bar:hover span { color: var(--accent); }
+
+/* ─────────────────────────────────────────────────────────────
+   PHASE 6 §10.1 — Badge "NIVEAU 5 — VALIDATION FORCÉE"
+   Affiché sur les initiatives EXTERNAL_ACTION pour matérialiser
+   visuellement que la validation humaine est obligatoire par
+   principe (needs_human_validation), quel que soit le flag
+   requires_validation. Couleur rouge — signal d'alerte.
+───────────────────────────────────────────────────────────── */
+
+.row-stripe-title-row {
+  display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+}
+.lvl5-badge {
+  display: inline-block;
+  padding: 3px 9px;
+  font-family: var(--mono);
+  font-size: 10px;
+  letter-spacing: 0.06em;
+  font-weight: 600;
+  color: var(--red);
+  background: rgba(229, 72, 77, 0.10);
+  border: 1px solid rgba(229, 72, 77, 0.35);
+  border-radius: 3px;
+  white-space: nowrap;
+}

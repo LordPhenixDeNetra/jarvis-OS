@@ -17,6 +17,12 @@
   const root = document.getElementById("page-root");
 
 
+  /* ───────── Constantes PHASE 6 §10.1 ───────── */
+  const AUTONOMY_LABELS = {
+    0: "RESPOND_ONLY", 1: "SUGGEST", 2: "DRAFT",
+    3: "SANDBOX", 4: "MODIFY_PROJECT", 5: "EXTERNAL_ACTION",
+  };
+
   /* ───────── Loaders ───────── */
   async function loadInitiatives() {
     try {
@@ -29,6 +35,14 @@
         priority: pMap[String(i.priority||"").toLowerCase()] || "low",
         source:   i.context ? i.context.slice(0,40) : "Jarvis",
         due:      i.created_at ? J.fmt.relTime(i.created_at) : "—",
+        /* PHASE 6 §10.1 propagation */
+        autonomy_level:      i.autonomy_level,
+        permission_required: i.permission_required,
+        cost_max_usd:        i.cost_max_usd,
+        risk:                i.risk,
+        deadline:            i.deadline,
+        next_action:         i.next_action,
+        requires_validation: i.requires_validation,
         raw:      i,
       }));
     } catch (_) { return []; }
@@ -281,7 +295,17 @@
 
     // Content
     const inner = el("div", { class: "row-stripe-inner" });
-    inner.appendChild(el("div", { class: "row-stripe-title", text: i.title }));
+    const titleRow = el("div", { class: "row-stripe-title-row" });
+    titleRow.appendChild(el("div", { class: "row-stripe-title", text: i.title }));
+    /* PHASE 6 §10.1 — niveau 5 force validation par principe (cf. needs_human_validation) */
+    if (i.autonomy_level === 5) {
+      titleRow.appendChild(el("span", {
+        class: "lvl5-badge",
+        text: "🚨 NIVEAU 5 — VALIDATION FORCÉE",
+        title: "EXTERNAL_ACTION — validation humaine obligatoire (CDC §10)",
+      }));
+    }
+    inner.appendChild(titleRow);
     const meta = el("div", { class: "row-stripe-meta" });
     meta.appendChild(el("span", { class: "badge badge--solid", text: i.type || "Action" }));
     meta.appendChild(el("span", { text: i.source || "Jarvis" }));
