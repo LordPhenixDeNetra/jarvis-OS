@@ -7,8 +7,8 @@ from typing import TYPE_CHECKING
 from jarvis.capabilities.tools.base import Tool, ToolResult
 
 if TYPE_CHECKING:
-    from skills.lab import SkillLab
-    from skills.synthesizer import SkillSynthesizer
+    from jarvis.capabilities.skills.lab import SkillLab
+    from jarvis.capabilities.skills.synthesizer import SkillSynthesizer
 
 
 class SkillCreateTool(Tool):
@@ -141,7 +141,7 @@ class SkillImproveTool(Tool):
 
     def __init__(self, synthesizer: SkillSynthesizer | None = None) -> None:
         if synthesizer is None:
-            from skills.synthesizer import SkillSynthesizer
+            from jarvis.capabilities.skills.synthesizer import SkillSynthesizer
 
             synthesizer = SkillSynthesizer()
         self._synthesizer = synthesizer
@@ -181,7 +181,7 @@ class SkillListTool(Tool):
     }
 
     async def execute(self, filter_tag: str = "") -> ToolResult:  # type: ignore[override]
-        from skills.registry import skill_registry
+        from jarvis.capabilities.skills.registry import skill_registry
 
         skills = skill_registry.list_installed()
         if filter_tag:

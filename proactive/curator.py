@@ -31,13 +31,13 @@ from typing import TYPE_CHECKING
 from loguru import logger
 
 from jarvis.providers.memory.schemas import DecayPolicy, FactStatus
-from skills.lifecycle import SkillStatus
+from jarvis.capabilities.skills.lifecycle import SkillStatus
 
 if TYPE_CHECKING:
     from core.budget import BudgetGuard
     from jarvis.providers.memory.kernel import MemoryKernel
     from proactive.store import InitiativeStore
-    from skills.lifecycle import SkillLifecycle
+    from jarvis.capabilities.skills.lifecycle import SkillLifecycle
 
 
 # ── Constantes ──────────────────────────────────────────────────────────────

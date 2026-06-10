@@ -1,0 +1,25 @@
+name: web-research
+version: 1.0.0
+author: jarvis-synthesizer
+description: Recherche web multi-sources avec synthèse. Utiliser pour toute requête
+  nécessitant des informations récentes.
+tags:
+- research
+- web
+- search
+type: conversational
+system_prompt: |-
+  ## Skill actif : Recherche Web
+
+  ### Quand utiliser ce skill
+  Recherche d'informations récentes, vérification de faits, collecte de données multi-sources.
+
+  ### Instructions
+  1. Identifier les mots-clés pertinents
+  2. Lancer une recherche via `browser` ou `execute_cli`
+  3. Synthétiser les résultats en réponse structurée
+capabilities: []
+requires_env: []
+requires_tools: []
+license: MIT
+compatibility: ''

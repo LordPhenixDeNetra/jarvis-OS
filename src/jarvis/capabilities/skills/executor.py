@@ -7,7 +7,7 @@ import platform
 
 from loguru import logger
 
-from skills.base import PresetSkill, PresetStep
+from jarvis.capabilities.skills.base import PresetSkill, PresetStep
 
 
 class PresetExecutor:
@@ -28,7 +28,7 @@ class PresetExecutor:
         Exécute tous les steps d'un preset.
         broadcast_fn : coroutine async(dict) pour envoyer des events WebSocket.
         """
-        from skills.app_checker import check_all_apps
+        from jarvis.capabilities.skills.app_checker import check_all_apps
 
         requires_apps = preset.metadata.get("requires_apps", [])
         if requires_apps:

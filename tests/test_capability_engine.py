@@ -24,9 +24,9 @@ from agent.capability_engine import (
 )
 from jarvis.providers.llm.base import LLMProvider
 from jarvis.providers.memory.kernel import MemoryKernel
-from skills.lab import SkillLab
-from skills.lifecycle import SkillLifecycle, SkillStatus
-from skills.synthesizer import SkillSynthesizer
+from jarvis.capabilities.skills.lab import SkillLab
+from jarvis.capabilities.skills.lifecycle import SkillLifecycle, SkillStatus
+from jarvis.capabilities.skills.synthesizer import SkillSynthesizer
 
 # ── Fakes ──────────────────────────────────────────────────────────────────────
 

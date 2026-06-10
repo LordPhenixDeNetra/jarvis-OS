@@ -61,7 +61,7 @@ from proactive.schemas import (  # noqa: E402
     needs_human_validation,
 )
 from proactive.store import InitiativeStore  # noqa: E402
-from skills.lifecycle import SkillLifecycle, SkillStatus  # noqa: E402
+from jarvis.capabilities.skills.lifecycle import SkillLifecycle, SkillStatus  # noqa: E402
 
 
 def _separator(title: str) -> None:

@@ -9,7 +9,7 @@ from pathlib import Path
 import httpx
 from loguru import logger
 
-from skills.registry import SKILLS_INSTALLED_DIR, skill_registry
+from jarvis.capabilities.skills.registry import SKILLS_INSTALLED_DIR, skill_registry
 
 ENV_FILE = Path(".env")
 

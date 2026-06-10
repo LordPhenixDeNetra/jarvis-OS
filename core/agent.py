@@ -15,7 +15,7 @@ from jarvis.providers.llm.base import LLMProvider
 if TYPE_CHECKING:
     from jarvis.providers.memory.index import MemoryIndex
     from jarvis.providers.memory.topics import TopicStore
-    from skills.registry import SkillRegistry
+    from jarvis.capabilities.skills.registry import SkillRegistry
     from jarvis.capabilities.tools.registry import ToolRegistry
 
 _STATIC_PROMPT_PATH = Path(__file__).parent.parent / "prompts" / "system_static.md"

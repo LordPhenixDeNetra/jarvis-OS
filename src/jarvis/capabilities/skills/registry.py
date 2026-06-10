@@ -7,10 +7,10 @@ from pathlib import Path
 
 from loguru import logger
 
-from skills.base import PresetSkill, SkillBase
-from skills.dev_extensions import iter_dev_skills_and_presets
+from jarvis.capabilities.skills.base import PresetSkill, SkillBase
+from jarvis.capabilities.skills.dev_extensions import iter_dev_skills_and_presets
 
-SKILLS_INSTALLED_DIR = Path("skills/installed")
+SKILLS_INSTALLED_DIR = Path("skills_data/installed")
 
 
 class SkillRegistry:

@@ -34,11 +34,11 @@ import yaml
 from loguru import logger
 
 from jarvis.providers.memory.kernel import MemoryKernel
-from skills.lab import SkillLab
-from skills.lifecycle import SkillRecord, SkillStatus
+from jarvis.capabilities.skills.lab import SkillLab
+from jarvis.capabilities.skills.lifecycle import SkillRecord, SkillStatus
 
 if TYPE_CHECKING:
-    from skills.registry import SkillRegistry
+    from jarvis.capabilities.skills.registry import SkillRegistry
     from jarvis.capabilities.tools.registry import ToolRegistry
 
 # Seuil heuristique de matching textuel (sur jaccard normalisé).

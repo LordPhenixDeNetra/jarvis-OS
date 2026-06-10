@@ -26,7 +26,7 @@ if TYPE_CHECKING:
     from agent.project_store import ProjectStore
     from core.budget import BudgetGuard
     from proactive.store import InitiativeStore
-    from skills.lifecycle import SkillLifecycle
+    from jarvis.capabilities.skills.lifecycle import SkillLifecycle
 
 
 @dataclass
@@ -220,7 +220,7 @@ class CommandCenter:
     def _skills_summary(self) -> SkillSummary:
         if self._skills is None:
             return SkillSummary()
-        from skills.lifecycle import SkillStatus
+        from jarvis.capabilities.skills.lifecycle import SkillStatus
 
         by_status: dict[str, int] = {}
         for st in SkillStatus:

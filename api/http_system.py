@@ -92,7 +92,7 @@ async def jarvis_doctor() -> dict:
     checks["memory"] = {"status": "ok", "detail": f"{len(topics)} topics"}
 
     try:
-        from skills.registry import skill_registry
+        from jarvis.capabilities.skills.registry import skill_registry
 
         skills = skill_registry.list_installed()
         checks["skills"] = {"status": "ok", "detail": f"{len(skills)} installés"}

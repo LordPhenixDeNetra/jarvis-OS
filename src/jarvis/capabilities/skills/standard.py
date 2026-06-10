@@ -14,7 +14,7 @@ from pathlib import Path
 import yaml
 from loguru import logger
 
-SKILLS_INSTALLED_DIR = Path("skills/installed")
+SKILLS_INSTALLED_DIR = Path("skills_data/installed")
 
 # ── YAML Dumper avec block scalars ────────────────────────────────────────────
 
@@ -280,7 +280,7 @@ def _generate_skill_py(skill_name: str) -> str:
     class_name = "".join(part.capitalize() for part in skill_name.split("-")) + "Skill"
     return textwrap.dedent(f'''\
         from __future__ import annotations
-        from skills.base import SkillBase
+        from jarvis.capabilities.skills.base import SkillBase
 
 
         class {class_name}(SkillBase):

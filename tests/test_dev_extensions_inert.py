@@ -17,8 +17,8 @@ from pathlib import Path
 import pytest
 from fastapi import FastAPI
 
-from skills.dev_extensions import iter_dev_skills_and_presets, mount_dev_views
-from skills.registry import SKILLS_INSTALLED_DIR, SkillRegistry
+from jarvis.capabilities.skills.dev_extensions import iter_dev_skills_and_presets, mount_dev_views
+from jarvis.capabilities.skills.registry import SKILLS_INSTALLED_DIR, SkillRegistry
 
 
 def _installed_skill_names() -> set[str]:

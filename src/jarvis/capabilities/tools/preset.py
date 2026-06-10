@@ -31,8 +31,8 @@ class ExecutePresetTool(Tool):
         from jarvis.providers.audio.tts import tts_engine
         from background.notifications import broadcast_event
         from core.gateway import get_tool_registry
-        from skills.executor import PresetExecutor
-        from skills.registry import skill_registry
+        from jarvis.capabilities.skills.executor import PresetExecutor
+        from jarvis.capabilities.skills.registry import skill_registry
 
         preset = skill_registry.get_preset(preset_name)
 

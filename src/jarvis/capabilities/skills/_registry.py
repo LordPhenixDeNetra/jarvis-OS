@@ -5,7 +5,7 @@ from pathlib import Path
 
 from loguru import logger
 
-from skills._loader import load_skills
+from jarvis.capabilities.skills._loader import load_skills
 
 
 class SkillRegistry:

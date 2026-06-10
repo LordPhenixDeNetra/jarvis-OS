@@ -13,7 +13,7 @@ from loguru import logger
 if TYPE_CHECKING:
     from jarvis.providers.llm.base import LLMProvider
 
-SKILLS_INSTALLED_DIR = Path("skills/installed")
+SKILLS_INSTALLED_DIR = Path("skills_data/installed")
 SKILLS_CANDIDATES_DIR = Path("skills/candidates")
 
 # ── Prompts ───────────────────────────────────────────────────────────────────
@@ -305,7 +305,7 @@ class SkillSynthesizer:
         class_name = "".join(part.capitalize() for part in skill_name.split("-")) + "Skill"
         return textwrap.dedent(f'''\
             from __future__ import annotations
-            from skills.base import SkillBase
+            from jarvis.capabilities.skills.base import SkillBase
 
 
             class {class_name}(SkillBase):

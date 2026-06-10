@@ -6,7 +6,7 @@ from pathlib import Path
 
 import pytest
 
-from skills.lifecycle import CONFIDENCE_INITIAL, SkillLifecycle, SkillStatus
+from jarvis.capabilities.skills.lifecycle import CONFIDENCE_INITIAL, SkillLifecycle, SkillStatus
 
 
 @pytest.fixture

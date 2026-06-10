@@ -33,7 +33,7 @@ from proactive.schemas import (
     needs_human_validation,
 )
 from proactive.store import InitiativeStore
-from skills.lifecycle import SkillLifecycle
+from jarvis.capabilities.skills.lifecycle import SkillLifecycle
 
 # ── Helpers ────────────────────────────────────────────────────────────────
 
@@ -329,7 +329,7 @@ def test_is_protected_path() -> None:
         assert is_protected_path(f"/abs/path/{p}"), f"absolute path /abs/path/{p}"
     # Non-protégés
     assert not is_protected_path("random/file.txt")
-    assert not is_protected_path("skills/installed/my-skill/skill.py")
+    assert not is_protected_path("skills_data/installed/my-skill/skill.py")
 
 
 # ── 5. Curator produit un rapport persisté ──────────────────────────────────

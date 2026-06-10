@@ -77,7 +77,7 @@ Réponds en français sauf si Barth parle en anglais.
 def _build_voice_instructions() -> str:
     """Prompt système = base + SYSTEM_PROMPT de chaque skill actif."""
     try:
-        from skills.registry import SkillRegistry
+        from jarvis.capabilities.skills.registry import SkillRegistry
 
         reg = SkillRegistry.get_instance()
         skill_prompt = reg.get_combined_system_prompt()
@@ -210,7 +210,7 @@ def _build_voice_tools() -> list:
 
     # Outils des skills installés (BambuLab, Fusion360…)
     try:
-        from skills.registry import SkillRegistry
+        from jarvis.capabilities.skills.registry import SkillRegistry
 
         reg = SkillRegistry.get_instance()
         jarvis_tools += reg.get_all_tools()

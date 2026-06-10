@@ -39,8 +39,8 @@ from loguru import logger
 
 from agent.docker_executor import DockerExecutor
 from jarvis.providers.memory.kernel import MemoryKernel
-from skills.lifecycle import SkillLifecycle, SkillRecord, SkillStatus
-from skills.synthesizer import (
+from jarvis.capabilities.skills.lifecycle import SkillLifecycle, SkillRecord, SkillStatus
+from jarvis.capabilities.skills.synthesizer import (
     SKILLS_CANDIDATES_DIR,
     SKILLS_INSTALLED_DIR,
     SkillSynthesizer,
@@ -113,7 +113,7 @@ _SANDBOX_TEST_SCRIPT = textwrap.dedent(
     # skills réels étaient alors rejetés à la couche import.)
     sys.path.insert(0, "/jarvis_src")
     try:
-        from skills.base import SkillBase
+        from jarvis.capabilities.skills.base import SkillBase
     except Exception as exc:
         _fail("import", f"SkillBase indisponible dans la sandbox : {exc!r}")
 

@@ -58,7 +58,7 @@ from jarvis.providers.memory.sessions import SessionStore
 from jarvis.providers.memory.topics import TopicStore
 from jarvis.providers.memory.user_model import UserModel
 from proactive.engine import ProactiveEngine
-from skills.registry import skill_registry
+from jarvis.capabilities.skills.registry import skill_registry
 from jarvis.capabilities.tools.browser import BrowserTool
 from jarvis.capabilities.tools.calendar import CalendarCreateTool, CalendarListTool
 from jarvis.capabilities.tools.cli import CLIRunnerTool, ExecuteCLITool
@@ -292,9 +292,9 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     # Le Lab doit être construit AVANT le SkillCreateTool car celui-ci passe
     # désormais par lab.propose_from_trajectory() (aucune installation directe
     # possible — pas de backdoor pour le voice agent).
-    from skills.lab import SkillLab
-    from skills.lifecycle import SkillLifecycle
-    from skills.synthesizer import SkillSynthesizer
+    from jarvis.capabilities.skills.lab import SkillLab
+    from jarvis.capabilities.skills.lifecycle import SkillLifecycle
+    from jarvis.capabilities.skills.synthesizer import SkillSynthesizer
     from jarvis.capabilities.tools.skills import SkillCreateTool, SkillImproveTool, SkillListTool
 
     _synthesizer = SkillSynthesizer(llm=llm)
@@ -675,7 +675,7 @@ async def mapbox_style() -> FileResponse:
 
 # Vues dev (extensions liées) montées AVANT le mount global pour les servir
 # en priorité sous /static/skills/<name>. Inerte si la zone n'existe pas.
-from skills.dev_extensions import mount_dev_views  # noqa: E402
+from jarvis.capabilities.skills.dev_extensions import mount_dev_views  # noqa: E402
 
 mount_dev_views(app)
 
