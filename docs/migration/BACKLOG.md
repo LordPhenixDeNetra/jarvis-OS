@@ -26,7 +26,7 @@ _(à venir)_
 
 ## Phase F
 
-_(à venir)_
+- **GATE B9 (install à froid) BLOQUANT pour le merge final** — décalé de fin de B sur décision Barth, doit passer sur la lane CI complète avant le merge `refonte/architecture-couches` → `main`. Libellé verrouillé dans [gates_B8_B9.md](gates_B8_B9.md) : install Ubuntu propre + deps lourdes réelles + boot effectif via smoke_runtime --fake-llm.
 
 ## Post-refonte (hors §9 « Hors périmètre »)
 
