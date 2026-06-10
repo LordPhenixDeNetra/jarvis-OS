@@ -42,7 +42,7 @@ _ui_router = APIRouter()
 
 @_ui_router.get("/macropad", include_in_schema=False)
 async def keypad_ui() -> FileResponse:
-    return FileResponse("ui/static/macropad_2k.html")
+    return FileResponse("src/jarvis/interfaces/ui/static/macropad_2k.html")
 
 
 class WorkspaceBody(BaseModel):

@@ -16,28 +16,6 @@ from fastapi.staticfiles import StaticFiles
 from loguru import logger
 
 import jarvis.interfaces.channels.telegram_bot as _tg_module
-from jarvis.interfaces.api.admin import _ui_router as admin_ui_router
-from jarvis.interfaces.api.admin import router as admin_router
-from jarvis.interfaces.api.deezer import router as deezer_router
-from jarvis.interfaces.api.globe import router as globe_router
-from jarvis.interfaces.api.google_oauth import router as google_oauth_router
-from jarvis.interfaces.api.http import _log_sink
-from jarvis.interfaces.api.http import router as http_router
-from jarvis.interfaces.api.http_budget import router as budget_router
-from jarvis.interfaces.api.http_routines import router as routines_router
-from jarvis.interfaces.api.local_music import router as local_music_router
-from jarvis.interfaces.api.macropad_2k import _ui_router as macropad_ui_router
-from jarvis.interfaces.api.macropad_2k import router as macropad_router
-from jarvis.interfaces.api.music import router as music_router
-from jarvis.interfaces.api.projects import router as projects_router
-from jarvis.interfaces.api.spotify import router as spotify_router
-from jarvis.interfaces.api.voice_ws import router as voice_router
-from jarvis.interfaces.api.websocket import router as ws_router
-from jarvis.interfaces.api.widgets import router as widgets_router
-from jarvis.engine.background.notifications import NotificationQueue, ProactiveQueue
-from jarvis.engine.background.scheduler import Scheduler
-from jarvis.engine.background.worker import BackgroundWorker
-from jarvis.interfaces.channels.telegram_bot import TelegramChannel, get_telegram_channel
 from config.settings import settings
 from jarvis.capabilities.skills.registry import skill_registry
 from jarvis.capabilities.tools.browser import BrowserTool
@@ -62,10 +40,34 @@ from jarvis.capabilities.tools.weather import WeatherTool
 from jarvis.engine.agent import Agent
 from jarvis.engine.approval_checker import ApprovalChecker
 from jarvis.engine.auth import verify_api_token  # ── [AUTH] ──
+from jarvis.engine.background.notifications import NotificationQueue, ProactiveQueue
+from jarvis.engine.background.scheduler import Scheduler
+from jarvis.engine.background.worker import BackgroundWorker
 from jarvis.engine.gateway import Gateway
 from jarvis.engine.mission.orchestrator import ProjectOrchestrator
 from jarvis.engine.mission.reflexion import Reflexion
+from jarvis.engine.proactive.engine import ProactiveEngine
 from jarvis.engine.session import SessionManager
+from jarvis.interfaces.api.admin import _ui_router as admin_ui_router
+from jarvis.interfaces.api.admin import router as admin_router
+from jarvis.interfaces.api.deezer import router as deezer_router
+from jarvis.interfaces.api.globe import router as globe_router
+from jarvis.interfaces.api.google_oauth import router as google_oauth_router
+from jarvis.interfaces.api.http import _log_sink
+from jarvis.interfaces.api.http import router as http_router
+from jarvis.interfaces.api.http_budget import router as budget_router
+from jarvis.interfaces.api.http_routines import router as routines_router
+from jarvis.interfaces.api.local_music import router as local_music_router
+from jarvis.interfaces.api.macropad_2k import _ui_router as macropad_ui_router
+from jarvis.interfaces.api.macropad_2k import router as macropad_router
+from jarvis.interfaces.api.music import router as music_router
+from jarvis.interfaces.api.projects import router as projects_router
+from jarvis.interfaces.api.spotify import router as spotify_router
+from jarvis.interfaces.api.voice_ws import router as voice_router
+from jarvis.interfaces.api.websocket import router as ws_router
+from jarvis.interfaces.api.widgets import router as widgets_router
+from jarvis.interfaces.channels.telegram_bot import TelegramChannel, get_telegram_channel
+from jarvis.kernel.paths import UI_STATIC_DIR
 from jarvis.providers.llm.api import AnthropicProvider
 from jarvis.providers.llm.factory import create_background_llm, get_llm_provider
 from jarvis.providers.memory.auto_dream import AutoDream
@@ -77,7 +79,6 @@ from jarvis.providers.memory.search import FTSIndex, VectorIndex
 from jarvis.providers.memory.sessions import SessionStore
 from jarvis.providers.memory.topics import TopicStore
 from jarvis.providers.memory.user_model import UserModel
-from jarvis.engine.proactive.engine import ProactiveEngine
 
 # load_dotenv() doit tourner avant toute logique module-level qui consomme os.environ
 load_dotenv()
@@ -477,7 +478,11 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     asyncio.create_task(proactive_engine.start(), name="proactive-engine")
 
     # ── [ROUTINES] ────────────────────────────────────────────────────────────
-    from jarvis.engine.background.routines import ROUTINES_ENABLED, Routine, RoutineStore  # noqa: F401
+    from jarvis.engine.background.routines import (  # noqa: F401
+        ROUTINES_ENABLED,
+        Routine,
+        RoutineStore,
+    )
 
     if ROUTINES_ENABLED:
         _routine_store = RoutineStore()
@@ -537,10 +542,10 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     logger.info("AnalyticsRegistry initialisé", widgets=len(_analytics_registry.get_active()))
 
     # ── [GATEWAY] ────────────────────────────────────────────────────────────
+    from jarvis.engine.connectivity import is_offline_mode
     from jarvis.interfaces.api.channels import router as channels_router
     from jarvis.interfaces.channels.discord_bot import DiscordChannel
     from jarvis.interfaces.channels.gateway import MessagingGateway
-    from jarvis.engine.connectivity import is_offline_mode
 
     _messaging_gw: MessagingGateway | None = None
     _telegram_enabled = os.getenv("TELEGRAM_ENABLED", "false").lower() == "true"
@@ -670,7 +675,7 @@ app.include_router(connectors_router)
 
 @app.get("/static/mapbox-style.json")
 async def mapbox_style() -> FileResponse:
-    return FileResponse("ui/static/mapbox-style.json", media_type="application/json")
+    return FileResponse(str(UI_STATIC_DIR / "mapbox-style.json"), media_type="application/json")
 
 
 # Vues dev (extensions liées) montées AVANT le mount global pour les servir
@@ -680,7 +685,7 @@ from jarvis.capabilities.skills.dev_extensions import mount_dev_views  # noqa: E
 mount_dev_views(app)
 
 # UI statique montée en dernier pour ne pas masquer les routes API
-app.mount("/", StaticFiles(directory="ui/static", html=True), name="ui")
+app.mount("/", StaticFiles(directory=str(UI_STATIC_DIR), html=True), name="ui")
 
 
 if __name__ == "__main__":

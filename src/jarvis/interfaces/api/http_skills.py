@@ -178,9 +178,9 @@ async def get_installed_skills() -> dict:
 @router.post("/api/skills/install/{skill_name}")
 async def install_skill(skill_name: str, request: Request) -> dict:
     """Installe un skill depuis le repo jarvis-skills."""
-    from jarvis.engine.background.notifications import broadcast_event
     from jarvis.capabilities.skills.installer import skill_installer
     from jarvis.capabilities.skills.registry import skill_registry
+    from jarvis.engine.background.notifications import broadcast_event
 
     result = await skill_installer.install(skill_name)
     if result.get("success"):
@@ -194,9 +194,9 @@ async def install_skill(skill_name: str, request: Request) -> dict:
 @router.delete("/api/skills/uninstall/{skill_name}")
 async def uninstall_skill(skill_name: str, request: Request) -> dict:
     """Désinstalle un skill."""
-    from jarvis.engine.background.notifications import broadcast_event
     from jarvis.capabilities.skills.installer import skill_installer
     from jarvis.capabilities.skills.registry import skill_registry
+    from jarvis.engine.background.notifications import broadcast_event
 
     result = skill_installer.uninstall(skill_name)
     if result.get("success"):
@@ -214,7 +214,7 @@ async def get_view_scripts() -> dict:
 
     import yaml
 
-    base = Path("ui/static/skills")
+    base = Path("src/jarvis/interfaces/ui/static/skills")
     installed = Path("skills_data/installed")
     scripts, styles = [], []
     if not base.exists():
@@ -284,9 +284,9 @@ async def get_presets() -> dict:
 @router.post("/api/presets/{preset_name}/execute")
 async def execute_preset_endpoint(preset_name: str, request: Request) -> dict:
     """Lance un preset depuis l'UI (bouton ▶)."""
-    from jarvis.engine.background.notifications import broadcast_event
     from jarvis.capabilities.skills.executor import PresetExecutor
     from jarvis.capabilities.skills.registry import skill_registry
+    from jarvis.engine.background.notifications import broadcast_event
     from jarvis.engine.gateway import get_tool_registry
     from jarvis.providers.audio.tts import tts_engine
 

@@ -7,6 +7,8 @@ from datetime import UTC, datetime, timedelta
 
 from loguru import logger
 
+from config.settings import settings
+from jarvis.capabilities.tools.calendar import CalendarListTool
 from jarvis.engine.background.notifications import ProactiveQueue
 from jarvis.engine.background.routines import (
     ROUTINES_ENABLED,
@@ -18,8 +20,6 @@ from jarvis.engine.background.routines import (
     fire_routine,
     next_cron_datetime,
 )
-from config.settings import settings
-from jarvis.capabilities.tools.calendar import CalendarListTool
 from jarvis.providers.memory.auto_dream import AutoDream
 
 

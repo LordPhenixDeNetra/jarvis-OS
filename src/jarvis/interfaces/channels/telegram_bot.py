@@ -51,7 +51,12 @@ _tg_filter = _TelegramNetworkFilter()
 logging.getLogger("telegram").addFilter(_tg_filter)
 logging.getLogger("httpx").addFilter(_tg_filter)
 
-from jarvis.interfaces.channels.base import ChannelAdapter, IncomingMessage, MessageTarget, Platform  # noqa: E402
+from jarvis.interfaces.channels.base import (  # noqa: E402
+    ChannelAdapter,
+    IncomingMessage,
+    MessageTarget,
+    Platform,
+)
 
 try:
     from telegram import Update

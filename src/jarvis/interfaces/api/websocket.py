@@ -7,9 +7,9 @@ import time
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect
 from loguru import logger
 
+from jarvis.capabilities.tools.spotify import SpotifyTool
 from jarvis.engine.background.notifications import NotificationQueue, ProactiveQueue
 from jarvis.engine.background.worker import BackgroundTask, BackgroundWorker
-from jarvis.capabilities.tools.spotify import SpotifyTool
 from jarvis.engine.gateway import _FALLBACK, Gateway
 from jarvis.engine.router import RouteEnum
 from jarvis.providers.memory.auto_dream import AutoDream

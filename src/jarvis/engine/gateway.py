@@ -6,9 +6,9 @@ from typing import TYPE_CHECKING
 
 from loguru import logger
 
+from jarvis.engine.agent import Agent
 from jarvis.engine.background.notifications import NotificationQueue
 from jarvis.engine.background.worker import BackgroundWorker
-from jarvis.engine.agent import Agent
 from jarvis.engine.router import RouteEnum, SpeedRouter
 from jarvis.engine.session import Session, SessionManager
 

@@ -36,8 +36,8 @@ from jarvis.providers.memory.schemas import DecayPolicy, FactStatus
 if TYPE_CHECKING:
     from jarvis.capabilities.skills.lifecycle import SkillLifecycle
     from jarvis.engine.budget import BudgetGuard
-    from jarvis.providers.memory.kernel import MemoryKernel
     from jarvis.engine.proactive.store import InitiativeStore
+    from jarvis.providers.memory.kernel import MemoryKernel
 
 
 # ── Constantes ──────────────────────────────────────────────────────────────

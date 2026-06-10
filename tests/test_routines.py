@@ -34,7 +34,12 @@ from jarvis.engine.background.routines import (  # noqa: E402
     fire_routine,
     next_cron_datetime,
 )
-from jarvis.engine.proactive.schemas import ExecutionMode, Initiative, InitiativeType, Priority  # noqa: E402
+from jarvis.engine.proactive.schemas import (  # noqa: E402
+    ExecutionMode,
+    Initiative,
+    InitiativeType,
+    Priority,
+)
 
 # ── Helpers ───────────────────────────────────────────────────────────────────
 

@@ -24,7 +24,7 @@ from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 from fastapi.responses import FileResponse, HTMLResponse, Response
 
 REPO = Path(__file__).parent.parent
-SHARED_JS = REPO / "ui" / "static" / "_shared.js"
+SHARED_JS = REPO / "src" / "jarvis" / "interfaces" / "ui" / "static" / "_shared.js"
 
 
 def _index_html(view_id: str) -> str:

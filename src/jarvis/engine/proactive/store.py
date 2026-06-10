@@ -10,8 +10,8 @@ import re
 from datetime import datetime
 from pathlib import Path
 
-from jarvis.engine.vocab import AutonomyLevel
 from jarvis.engine.proactive.schemas import ExecutionMode, Initiative, InitiativeType, Priority
+from jarvis.engine.vocab import AutonomyLevel
 
 
 def _title_key(title: str) -> str:

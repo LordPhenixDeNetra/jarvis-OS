@@ -33,7 +33,7 @@ def _versioned_html(html_path: Path, assets: list[tuple[str, str]]) -> str:
 
 @router.get("/command", include_in_schema=False)
 async def command_center_ui() -> FileResponse:
-    return FileResponse("ui/static/command.html")
+    return FileResponse("src/jarvis/interfaces/ui/static/command.html")
 
 
 @router.get("/dashboard", include_in_schema=False)
@@ -41,12 +41,12 @@ async def dashboard_ui() -> Response:
     from fastapi.responses import Response as FastResponse
 
     content = _versioned_html(
-        Path("ui/static/dashboard.html"),
+        Path("src/jarvis/interfaces/ui/static/dashboard.html"),
         [
-            ("/_shared.css", "ui/static/_shared.css"),
-            ("/dashboard.css", "ui/static/dashboard.css"),
-            ("/_shared.js", "ui/static/_shared.js"),
-            ("/dashboard.js", "ui/static/dashboard.js"),
+            ("/_shared.css", "src/jarvis/interfaces/ui/static/_shared.css"),
+            ("/dashboard.css", "src/jarvis/interfaces/ui/static/dashboard.css"),
+            ("/_shared.js", "src/jarvis/interfaces/ui/static/_shared.js"),
+            ("/dashboard.js", "src/jarvis/interfaces/ui/static/dashboard.js"),
         ],
     )
     return FastResponse(
@@ -59,13 +59,13 @@ async def settings_ui() -> Response:
     from fastapi.responses import Response as FastResponse
 
     content = _versioned_html(
-        Path("ui/static/settings.html"),
+        Path("src/jarvis/interfaces/ui/static/settings.html"),
         [
-            ("/_shared.css", "ui/static/_shared.css"),
-            ("/settings.css", "ui/static/settings.css"),
-            ("/_shared.js", "ui/static/_shared.js"),
-            ("/settings-charts.js", "ui/static/settings-charts.js"),
-            ("/settings.js", "ui/static/settings.js"),
+            ("/_shared.css", "src/jarvis/interfaces/ui/static/_shared.css"),
+            ("/settings.css", "src/jarvis/interfaces/ui/static/settings.css"),
+            ("/_shared.js", "src/jarvis/interfaces/ui/static/_shared.js"),
+            ("/settings-charts.js", "src/jarvis/interfaces/ui/static/settings-charts.js"),
+            ("/settings.js", "src/jarvis/interfaces/ui/static/settings.js"),
         ],
     )
     return FastResponse(
@@ -78,14 +78,14 @@ async def home_ui() -> Response:
     from fastapi.responses import Response as FastResponse
 
     content = _versioned_html(
-        Path("ui/static/home.html"),
+        Path("src/jarvis/interfaces/ui/static/home.html"),
         [
-            ("/_shared.css", "ui/static/_shared.css"),
-            ("/home.css", "ui/static/home.css"),
-            ("/_shared.js", "ui/static/_shared.js"),
-            ("/three.min.js", "ui/static/three.min.js"),
-            ("/orb.js", "ui/static/orb.js"),
-            ("/home.js", "ui/static/home.js"),
+            ("/_shared.css", "src/jarvis/interfaces/ui/static/_shared.css"),
+            ("/home.css", "src/jarvis/interfaces/ui/static/home.css"),
+            ("/_shared.js", "src/jarvis/interfaces/ui/static/_shared.js"),
+            ("/three.min.js", "src/jarvis/interfaces/ui/static/three.min.js"),
+            ("/orb.js", "src/jarvis/interfaces/ui/static/orb.js"),
+            ("/home.js", "src/jarvis/interfaces/ui/static/home.js"),
         ],
     )
     return FastResponse(
@@ -98,12 +98,12 @@ async def capabilities_ui() -> Response:
     from fastapi.responses import Response as FastResponse
 
     content = _versioned_html(
-        Path("ui/static/capabilities.html"),
+        Path("src/jarvis/interfaces/ui/static/capabilities.html"),
         [
-            ("/_shared.css", "ui/static/_shared.css"),
-            ("/capabilities.css", "ui/static/capabilities.css"),
-            ("/_shared.js", "ui/static/_shared.js"),
-            ("/capabilities.js", "ui/static/capabilities.js"),
+            ("/_shared.css", "src/jarvis/interfaces/ui/static/_shared.css"),
+            ("/capabilities.css", "src/jarvis/interfaces/ui/static/capabilities.css"),
+            ("/_shared.js", "src/jarvis/interfaces/ui/static/_shared.js"),
+            ("/capabilities.js", "src/jarvis/interfaces/ui/static/capabilities.js"),
         ],
     )
     return FastResponse(

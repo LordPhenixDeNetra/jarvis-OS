@@ -48,8 +48,6 @@ PROMPTS_DIR: Path = PROJECT_ROOT / "prompts"
 CONFIG_DIR: Path = PROJECT_ROOT / "config"
 NOTICES_DIR: Path = PROJECT_ROOT / "notices"
 
-# ── UI statique (sera dans src/jarvis/interfaces/ui/static/ après migration ui) ─
-# Pour l'instant pointe vers ui/ à la racine (B.1 ui pas encore fait).
-# Sera mis à jour lors de la migration ui en src/jarvis/interfaces/ui/.
-UI_DIR: Path = PROJECT_ROOT / "ui"
+# ── UI statique (déplacée vers src/jarvis/interfaces/ui/ en B) ──────────────
+UI_DIR: Path = PROJECT_ROOT / "src" / "jarvis" / "interfaces" / "ui"
 UI_STATIC_DIR: Path = UI_DIR / "static"

@@ -28,9 +28,9 @@ class ExecutePresetTool(Tool):
     }
 
     async def execute(self, preset_name: str, **_: object) -> ToolResult:
-        from jarvis.engine.background.notifications import broadcast_event
         from jarvis.capabilities.skills.executor import PresetExecutor
         from jarvis.capabilities.skills.registry import skill_registry
+        from jarvis.engine.background.notifications import broadcast_event
         from jarvis.engine.gateway import get_tool_registry
         from jarvis.providers.audio.tts import tts_engine
 

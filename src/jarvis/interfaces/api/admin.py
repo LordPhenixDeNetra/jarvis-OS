@@ -16,7 +16,7 @@ _ui_router = APIRouter()
 
 @_ui_router.get("/admin", include_in_schema=False)
 async def admin_ui() -> FileResponse:
-    return FileResponse("ui/static/admin.html")
+    return FileResponse("src/jarvis/interfaces/ui/static/admin.html")
 
 
 # ── Models ────────────────────────────────────────────────────

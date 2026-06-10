@@ -8,9 +8,9 @@ from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
+from jarvis.engine.agent import Agent
 from jarvis.engine.background.notifications import NotificationQueue
 from jarvis.engine.background.worker import BackgroundWorker
-from jarvis.engine.agent import Agent
 from jarvis.engine.gateway import Gateway
 from jarvis.engine.session import SessionManager
 from jarvis.providers.llm.api import AnthropicProvider
