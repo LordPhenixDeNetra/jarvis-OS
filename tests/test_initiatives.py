@@ -235,10 +235,17 @@ class TestEngineRestore:
             from jarvis.engine.background.notifications import NotificationQueue
             nq = NotificationQueue()
 
+            from jarvis.engine.proactive.context_builder import ContextBuilder
             from jarvis.engine.proactive.engine import ProactiveEngine
+            from jarvis.engine.proactive.initiative_generator import InitiativeGenerator
+            from jarvis.engine.proactive.store import InitiativeStore
+
             engine = ProactiveEngine(
                 notification_queue=nq,
                 broadcast_event=events.append,
+                builder=ContextBuilder(),
+                generator=InitiativeGenerator(),
+                store=InitiativeStore(),
                 interval_minutes=30,
             )
 
@@ -262,11 +269,17 @@ class TestEngineRestore:
         try:
             events: list[dict] = []
             from jarvis.engine.background.notifications import NotificationQueue
+            from jarvis.engine.proactive.context_builder import ContextBuilder
             from jarvis.engine.proactive.engine import ProactiveEngine
+            from jarvis.engine.proactive.initiative_generator import InitiativeGenerator
+            from jarvis.engine.proactive.store import InitiativeStore
 
             engine = ProactiveEngine(
                 notification_queue=NotificationQueue(),
                 broadcast_event=events.append,
+                builder=ContextBuilder(),
+                generator=InitiativeGenerator(),
+                store=InitiativeStore(),
             )
             await engine._restore_pending()
             assert events == []

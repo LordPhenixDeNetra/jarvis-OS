@@ -508,9 +508,16 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     )
     scheduler.start()
 
+    from jarvis.engine.proactive.context_builder import ContextBuilder
+    from jarvis.engine.proactive.initiative_generator import InitiativeGenerator
+    from jarvis.engine.proactive.store import InitiativeStore
+
     proactive_engine = ProactiveEngine(
         notification_queue=notifications,
         broadcast_event=proactive_queue.broadcast_event,
+        builder=ContextBuilder(),
+        generator=InitiativeGenerator(),
+        store=InitiativeStore(),
         interval_minutes=30,
     )
     asyncio.create_task(proactive_engine.start(), name="proactive-engine")

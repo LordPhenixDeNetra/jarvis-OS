@@ -55,18 +55,28 @@ def _extract_sources(initiative: Initiative) -> list[str]:
 
 
 class ProactiveEngine:
+    """Phase C : `builder`, `generator`, `store` injectés (auparavant
+    `ContextBuilder()`, `InitiativeGenerator()`, `InitiativeStore()`
+    instanciés en interne). Les 3 helpers sont des objets simples
+    sans déps, mais l'injection rend le ProactiveEngine testable
+    (fakes pour builder/generator) sans patch global.
+    """
+
     def __init__(
         self,
         notification_queue: NotificationQueue,
         broadcast_event: Callable,  # ProactiveQueue.broadcast_event(dict) sync
+        builder: ContextBuilder,
+        generator: InitiativeGenerator,
+        store: InitiativeStore,
         interval_minutes: int = 30,
     ) -> None:
         self._notifications = notification_queue
         self._broadcast_event = broadcast_event
         self._interval = interval_minutes * 60
-        self._builder = ContextBuilder()
-        self._generator = InitiativeGenerator()
-        self._store = InitiativeStore()
+        self._builder = builder
+        self._generator = generator
+        self._store = store
         self._running = False
         self._last_run: datetime | None = None
         self._last_user_activity: datetime | None = None
