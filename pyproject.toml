@@ -84,11 +84,13 @@ ignore = [
 ]
 
 [tool.ruff.lint.per-file-ignores]
-# voice_agent.py contient 13 __import__("jarvis.capabilities.tools.X") en lambdas
-# (CDC §B.2 anticipation des migrations tools). Le namespace allongé fait dépasser
-# E501. Reformatage propre prévu lors de la migration voice_agent.py →
-# src/jarvis/interfaces/voice/agent.py.
-"voice_agent.py" = ["E501"]
+# src/jarvis/interfaces/voice/agent.py (ex-voice_agent.py) contient 13
+# __import__("jarvis.capabilities.tools.X") en lambdas (CDC §B.2 anticipation
+# des migrations tools). Le namespace allongé fait dépasser E501. Reformatage
+# propre prévu en F.1.3 (ruff TID + I).
+# E402 : `from jarvis.kernel.paths import PROJECT_ROOT` doit venir après
+# `load_dotenv` qui s'exécute au top — résolu en C avec une vraie composition root.
+"src/jarvis/interfaces/voice/agent.py" = ["E501", "E402"]
 
 [tool.ruff.format]
 quote-style = "double"
