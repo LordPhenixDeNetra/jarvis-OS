@@ -15,6 +15,7 @@ from jarvis.providers.llm.base import LLMProvider
 if TYPE_CHECKING:
     from jarvis.capabilities.skills.registry import SkillRegistry
     from jarvis.capabilities.tools.registry import ToolRegistry
+    from jarvis.kernel.settings import Settings
     from jarvis.providers.memory.index import MemoryIndex
     from jarvis.providers.memory.topics import TopicStore
 
@@ -24,10 +25,24 @@ _STATIC_PROMPT_PATH = PROMPTS_DIR / "system_static.md"
 
 
 class Agent:
-    """Construit le prompt (static + dynamic), appelle le LLM, retourne le stream."""
+    """Construit le prompt (static + dynamic), appelle le LLM, retourne le stream.
+
+    Phase C : `settings` injecté au constructeur (auparavant
+    `from config.settings import settings as _s` en local dans
+    `_build_system()`). Les autres dépendances (llm, memory_index,
+    topic_store, tool_registry, skill_registry, user_prefs_path,
+    user_model_path) étaient déjà injectées en Phase pré-C.
+
+    Note CYCLE 1 (CDC §C.1.3) : `from jarvis.providers.llm.api import
+    ToolCapture` au top-level franchit la couche engine → providers.
+    Cette dépendance sera résolue dans un commit dédié post-gateway
+    en faisant remonter `ToolCapture` (et `UsageEntry`, `calculate_cost`)
+    dans `kernel/`. Hors-périmètre du commit présent.
+    """
 
     def __init__(
         self,
+        settings: Settings,
         llm: LLMProvider,
         memory_index: MemoryIndex | None = None,
         topic_store: TopicStore | None = None,
@@ -36,6 +51,7 @@ class Agent:
         skill_registry: SkillRegistry | None = None,
         user_model_path: Path | None = None,
     ) -> None:
+        self._settings = settings
         self._llm = llm
         self._memory_index = memory_index
         self._topic_store = topic_store
@@ -50,7 +66,7 @@ class Agent:
         recall_summary: str | None = None,
     ) -> str:
         """Assemble le prompt système : partie statique + contexte dynamique."""
-        from config.settings import settings as _s
+        _s = self._settings
 
         static_system = _STATIC_PROMPT_PATH.read_text(encoding="utf-8")
         if _s.quebec_mode:

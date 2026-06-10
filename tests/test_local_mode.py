@@ -118,8 +118,10 @@ def test_hot_swap_updates_gateway_and_voice_gateway(local_mode: None) -> None:
     """Après hot-swap en mode local, gateway ET voice_gateway utilisent OllamaProvider."""
     anthropic_llm = _MockLLM()
 
-    agent_main = Agent(llm=anthropic_llm)
-    agent_voice = Agent(llm=anthropic_llm)
+    from jarvis.kernel.settings import settings as _settings
+
+    agent_main = Agent(settings=_settings, llm=anthropic_llm)
+    agent_voice = Agent(settings=_settings, llm=anthropic_llm)
     notifications = NotificationQueue()
     worker = BackgroundWorker(llm=anthropic_llm, notifications=notifications)
     mgr = SessionManager()

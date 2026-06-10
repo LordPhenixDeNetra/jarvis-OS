@@ -180,7 +180,11 @@ def test_agent_build_system_lists_topics_only(tmp_path: Path) -> None:
     class _DummyLLM:
         supports_tools = False
 
-    agent = Agent(llm=_DummyLLM(), memory_index=memory_index, topic_store=store)
+    from jarvis.kernel.settings import settings as _settings
+
+    agent = Agent(
+        settings=_settings, llm=_DummyLLM(), memory_index=memory_index, topic_store=store
+    )
     system = agent._build_system()
 
     assert "user_prefs.md" in system

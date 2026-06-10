@@ -179,6 +179,7 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     user_model_path = memory_dir / "user_model.md"
 
     agent = Agent(
+        settings=settings,
         llm=llm,
         memory_index=memory_index,
         topic_store=topic_store,
@@ -188,6 +189,7 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
         user_model_path=user_model_path,
     )
     voice_agent = Agent(
+        settings=settings,
         llm=voice_llm,
         memory_index=memory_index,
         topic_store=topic_store,
