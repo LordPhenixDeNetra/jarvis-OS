@@ -13,23 +13,37 @@ from __future__ import annotations
 import asyncio
 from collections.abc import Callable
 from datetime import date, timedelta
-from typing import Literal
+from typing import TYPE_CHECKING, Literal
 
 from loguru import logger
+
+if TYPE_CHECKING:
+    from jarvis.engine.tracking import UsageTracker
+    from jarvis.kernel.settings import Settings
 
 BudgetStatus = Literal["ok", "warning", "hard_stop"]
 
 
 class BudgetGuard:
-    """Garde-fou budgétaire injecté dans le worker agentique."""
+    """Garde-fou budgétaire injecté dans le worker agentique.
 
-    def __init__(self, notify_callback: Callable[[dict], None] | None = None) -> None:
-        from config.settings import settings
+    Phase C : `settings` et `tracker` sont injectés par le constructeur
+    (auparavant `from config.settings import settings` en local et
+    instanciation interne de `UsageTracker()` à chaque appel). Plus
+    aucune instanciation interne, plus aucun import différé inter-couches.
+    """
 
+    def __init__(
+        self,
+        settings: Settings,
+        tracker: UsageTracker,
+        notify_callback: Callable[[dict], None] | None = None,
+    ) -> None:
         self._enabled = settings.budget_enabled
         self._monthly_usd = settings.budget_monthly_usd
         self._per_project = settings.budget_per_project_usd
         self._warn_ratio = settings.budget_warn_pct / 100.0
+        self._tracker = tracker
         self._notify = notify_callback or (lambda _: None)
         self._lock = asyncio.Lock()
 
@@ -48,13 +62,10 @@ class BudgetGuard:
     def _seed_from_history(self) -> None:
         """Recharge les dépenses mission du mois courant depuis les fichiers JSONL."""
         try:
-            from jarvis.engine.tracking import UsageTracker
-
-            tracker = UsageTracker()
             today = date.today()
             d = today.replace(day=1)
             while d <= today:
-                for e in tracker._read_day(d):
+                for e in self._tracker._read_day(d):
                     ctx = e.get("context") or ""
                     if ctx.startswith("mission:"):
                         pid = ctx.split(":", 1)[1]
@@ -70,9 +81,7 @@ class BudgetGuard:
     def _global_spent(self) -> float:
         """Coût mensuel global lu depuis les fichiers JSONL (source de vérité)."""
         try:
-            from jarvis.engine.tracking import UsageTracker
-
-            return UsageTracker().get_monthly_totals()["cost_usd"]
+            return self._tracker.get_monthly_totals()["cost_usd"]
         except Exception:
             return 0.0
 

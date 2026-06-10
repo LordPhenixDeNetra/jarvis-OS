@@ -27,7 +27,8 @@ from typing import TYPE_CHECKING
 
 from jarvis.kernel.events import EventBus
 from jarvis.kernel.paths import MEMORY_DATA_DIR
-from jarvis.kernel.settings import Settings, settings as _default_settings
+from jarvis.kernel.settings import Settings
+from jarvis.kernel.settings import settings as _default_settings
 
 if TYPE_CHECKING:
     # Imports différés autorisés (TYPE_CHECKING) — pas de cycle, pas de coût runtime.

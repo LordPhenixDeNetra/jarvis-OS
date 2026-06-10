@@ -12,7 +12,7 @@ from __future__ import annotations
 
 import tempfile
 from pathlib import Path
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock
 
 import pytest
 
@@ -33,6 +33,14 @@ def _make_settings(
     return s
 
 
+def _make_fake_tracker() -> MagicMock:
+    """Fake UsageTracker — historique JSONL vide, pas de lecture disque."""
+    tracker = MagicMock()
+    tracker._read_day = MagicMock(return_value=[])
+    tracker.get_monthly_totals = MagicMock(return_value={"cost_usd": 0.0})
+    return tracker
+
+
 def make_guard(
     monthly_usd: float = 10.0,
     per_project: float = 2.0,
@@ -40,17 +48,25 @@ def make_guard(
     enabled: bool = True,
     notify: list[dict] | None = None,
 ) -> tuple[object, list[dict]]:
-    """Fabrique un BudgetGuard isolé, sans lire les fichiers JSONL du disque."""
+    """Fabrique un BudgetGuard isolé.
+
+    Phase C : `settings` et `tracker` sont INJECTÉS au constructeur. Plus
+    besoin de patch global sur `config.settings.settings` ni de mock du
+    seeder : un fake tracker (`_read_day` → []) suffit à éviter la lecture
+    disque. C'est le payoff du motif d'injection — les tests deviennent
+    plus simples et n'ont plus besoin de connaître les détails internes
+    du module testé.
+    """
     notifications: list[dict] = [] if notify is None else notify
     settings_mock = _make_settings(enabled, monthly_usd, per_project, warn_pct)
 
-    with (
-        patch("jarvis.engine.budget.BudgetGuard._seed_from_history"),
-        patch("config.settings.settings", settings_mock),
-    ):
-        from jarvis.engine.budget import BudgetGuard
+    from jarvis.engine.budget import BudgetGuard
 
-        guard = BudgetGuard(notify_callback=notifications.append)
+    guard = BudgetGuard(
+        settings=settings_mock,
+        tracker=_make_fake_tracker(),
+        notify_callback=notifications.append,
+    )
 
     return guard, notifications
 

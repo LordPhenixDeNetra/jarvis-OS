@@ -273,10 +273,20 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     set_tool_registry(tool_registry)
     # ── [BUDGET] ─────────────────────────────────────────────────────────────
     from jarvis.engine.budget import BudgetGuard, set_budget_guard
+    from jarvis.engine.tracking import UsageTracker
 
     if settings.budget_enabled:
+        # Phase C : settings + tracker INJECTÉS au constructeur (auparavant
+        # `from config.settings import settings` en local + UsageTracker()
+        # instancié à chaque appel à l'intérieur de BudgetGuard).
+        # NB : pour cette itération du motif, on conserve le singleton _guard
+        # (set_budget_guard) pour ne pas casser tracking.py et http_budget.py
+        # qui font encore `get_budget_guard()`. Élimination du singleton
+        # programmée à l'itération suivante (commits Phase C ultérieurs).
         _budget_guard: BudgetGuard | None = BudgetGuard(
-            notify_callback=proactive_queue.broadcast_event
+            settings=settings,
+            tracker=UsageTracker(),
+            notify_callback=proactive_queue.broadcast_event,
         )
         set_budget_guard(_budget_guard)
         logger.info(
