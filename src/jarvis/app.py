@@ -273,22 +273,43 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     set_tool_registry(tool_registry)
     # ── [BUDGET] ─────────────────────────────────────────────────────────────
     from jarvis.engine.budget import BudgetGuard, set_budget_guard
-    from jarvis.engine.tracking import UsageTracker
+    from jarvis.engine.tracking import tracker as _shared_tracker
 
     if settings.budget_enabled:
         # Phase C : settings + tracker INJECTÉS au constructeur (auparavant
         # `from config.settings import settings` en local + UsageTracker()
         # instancié à chaque appel à l'intérieur de BudgetGuard).
-        # NB : pour cette itération du motif, on conserve le singleton _guard
-        # (set_budget_guard) pour ne pas casser tracking.py et http_budget.py
-        # qui font encore `get_budget_guard()`. Élimination du singleton
-        # programmée à l'itération suivante (commits Phase C ultérieurs).
+        # On réutilise le SINGLETON tracker du module (jarvis.engine.tracking
+        # .tracker) — c'est lui qui reçoit les .track() depuis tous les
+        # providers/llm, providers/audio, etc. Le partager avec BudgetGuard
+        # garantit la cohérence (un seul source de vérité) et permet le câblage
+        # tracking → budget ci-dessous.
+        # NB : le singleton _guard (set_budget_guard) et le singleton tracker
+        # de tracking.py sont CONSERVÉS cette itération pour ne pas casser
+        # tracking.py / http_budget.py / providers qui font encore
+        # `from jarvis.engine.tracking import tracker` ou `get_budget_guard()`.
+        # Élimination des deux singletons programmée à l'itération suivante
+        # (bootstrap.build() branché dans app.py).
         _budget_guard: BudgetGuard | None = BudgetGuard(
             settings=settings,
-            tracker=UsageTracker(),
+            tracker=_shared_tracker,
             notify_callback=proactive_queue.broadcast_event,
         )
         set_budget_guard(_budget_guard)
+
+        # Câblage tracking → budget pour les coûts mission. Auparavant fait
+        # dans tracking.track() via `get_budget_guard()` ; maintenant câblé
+        # explicitement ici (le seul endroit qui connaît à la fois tracker
+        # et budget). Quand bootstrap.build() sera branché, ce câblage
+        # vivra dans bootstrap._make_budget_callback().
+        def _budget_callback(entry: object) -> None:
+            ctx = getattr(entry, "context", "") or ""
+            cost = getattr(entry, "cost_usd", 0.0)
+            if cost > 0 and ctx.startswith("mission:"):
+                project_id = ctx.split(":", 1)[1]
+                _budget_guard.record(f"project:{project_id}", cost)  # type: ignore[union-attr]
+
+        _shared_tracker.set_on_usage_callback(_budget_callback)
         logger.info(
             "BudgetGuard activé",
             monthly_usd=settings.budget_monthly_usd,

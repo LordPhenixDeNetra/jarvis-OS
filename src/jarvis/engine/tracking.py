@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+from collections.abc import Callable
 from dataclasses import dataclass
 from datetime import date, timedelta
 
@@ -76,8 +77,29 @@ def calculate_cost(provider: str, model: str, **kwargs: float) -> float:
 class UsageTracker:
     CONSO_DIR = MEMORY_DATA_DIR / "conso"
 
-    def __init__(self) -> None:
+    def __init__(
+        self,
+        on_usage_callback: Callable[[UsageEntry], None] | None = None,
+    ) -> None:
+        """Phase C : `on_usage_callback` injecté pour casser le cycle
+        engine.budget ↔ engine.tracking.
+
+        Auparavant : `track()` faisait `from jarvis.engine.budget import
+        get_budget_guard` en local et appelait `guard.record(...)` —
+        cycle interne à engine masqué par un import différé.
+
+        Maintenant : tracking ne connaît plus budget. Le câblage
+        tracking → budget se fait à l'extérieur (bootstrap.build()).
+        """
         self.CONSO_DIR.mkdir(parents=True, exist_ok=True)
+        self._on_usage: Callable[[UsageEntry], None] = on_usage_callback or (lambda _: None)
+
+    def set_on_usage_callback(self, callback: Callable[[UsageEntry], None]) -> None:
+        """Permet le câblage two-phase utilisé par bootstrap pour casser
+        le cycle BudgetGuard ↔ UsageTracker (tracker créé sans callback,
+        puis budget créé avec tracker, puis callback ré-attaché ici).
+        """
+        self._on_usage = callback
 
     def track(self, entry: UsageEntry) -> None:
         """Enregistre une entrée de consommation dans le fichier JSONL du jour."""
@@ -86,17 +108,12 @@ class UsageTracker:
         with log_file.open("a") as f:
             f.write(json.dumps(entry.__dict__) + "\n")
 
-        # Branche les coûts mission vers BudgetGuard (import tardif pour éviter la circularité)
-        if entry.cost_usd > 0 and entry.context and entry.context.startswith("mission:"):
-            try:
-                from jarvis.engine.budget import get_budget_guard
-
-                guard = get_budget_guard()
-                if guard is not None:
-                    project_id = entry.context.split(":", 1)[1]
-                    guard.record(f"project:{project_id}", entry.cost_usd)
-            except Exception:
-                pass  # le tracking ne doit jamais lever d'exception
+        # Notifie l'abonné (typiquement BudgetGuard.record pour les coûts
+        # mission). Le câblage vit dans bootstrap.build(), pas ici.
+        try:
+            self._on_usage(entry)
+        except Exception:
+            pass  # le tracking ne doit jamais lever d'exception
 
     def _read_day(self, d: date) -> list[dict]:
         log_file = self.CONSO_DIR / f"{d.isoformat()}.jsonl"
