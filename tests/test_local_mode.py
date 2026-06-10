@@ -76,14 +76,14 @@ class _MockLLM(LLMProvider):
 
 def test_offline_mode_when_local(local_mode: None) -> None:
     """is_offline_mode() est True quand llm_provider == 'local'."""
-    from jarvis.engine.connectivity import is_offline_mode
+    from jarvis.kernel.connectivity import is_offline_mode
 
     assert is_offline_mode() is True
 
 
 def test_online_mode_when_api(api_mode: None) -> None:
     """is_offline_mode() est False quand llm_provider == 'api'."""
-    from jarvis.engine.connectivity import is_offline_mode
+    from jarvis.kernel.connectivity import is_offline_mode
 
     assert is_offline_mode() is False
 

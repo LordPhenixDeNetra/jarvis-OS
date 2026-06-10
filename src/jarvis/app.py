@@ -25,7 +25,6 @@ from jarvis.engine.approval_checker import set_approval_checker
 from jarvis.engine.auth import verify_api_token  # ── [AUTH] ──
 from jarvis.engine.background.notifications import set_proactive_queue
 from jarvis.engine.background.routines import ROUTINES_ENABLED, Routine, RoutineStore
-from jarvis.engine.connectivity import is_offline_mode
 from jarvis.interfaces.api.admin import _ui_router as admin_ui_router
 from jarvis.interfaces.api.admin import router as admin_router
 from jarvis.interfaces.api.channels import router as channels_router
@@ -48,6 +47,7 @@ from jarvis.interfaces.api.widgets import router as widgets_router
 from jarvis.interfaces.channels.discord_bot import DiscordChannel
 from jarvis.interfaces.channels.gateway import MessagingGateway
 from jarvis.interfaces.channels.telegram_bot import TelegramChannel, get_telegram_channel
+from jarvis.kernel.connectivity import is_offline_mode
 from jarvis.kernel.paths import UI_STATIC_DIR
 from jarvis.providers.audio.clap_detector import ClapDetector
 from jarvis.providers.memory.search import FTSIndex

@@ -12,7 +12,7 @@ from fastapi import APIRouter
 from loguru import logger
 
 from config.settings import settings
-from jarvis.engine.connectivity import is_offline_mode
+from jarvis.kernel.connectivity import is_offline_mode
 
 router = APIRouter(prefix="/api/globe", tags=["globe"])
 

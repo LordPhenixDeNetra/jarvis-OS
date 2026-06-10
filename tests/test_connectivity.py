@@ -31,14 +31,14 @@ def api_mode() -> Iterator[None]:
 
 def test_is_offline_mode_local(local_mode: None) -> None:
     """is_offline_mode() retourne True quand llm_provider == 'local'."""
-    from jarvis.engine.connectivity import is_offline_mode
+    from jarvis.kernel.connectivity import is_offline_mode
 
     assert is_offline_mode() is True
 
 
 def test_is_offline_mode_api(api_mode: None) -> None:
     """is_offline_mode() retourne False quand llm_provider == 'api'."""
-    from jarvis.engine.connectivity import is_offline_mode
+    from jarvis.kernel.connectivity import is_offline_mode
 
     assert is_offline_mode() is False
 

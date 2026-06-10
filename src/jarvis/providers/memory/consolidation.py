@@ -7,7 +7,7 @@ from pathlib import Path
 
 from loguru import logger
 
-from jarvis.engine.connectivity import is_offline_mode
+from jarvis.kernel.connectivity import is_offline_mode
 from jarvis.kernel.paths import PROMPTS_DIR  # noqa: E402
 from jarvis.providers.llm.base import LLMProvider
 from jarvis.providers.memory.index import MemoryIndex

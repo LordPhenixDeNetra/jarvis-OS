@@ -19,8 +19,8 @@ from pydantic import BaseModel
 from config.approvals import ApprovalMode, approval_config, save_approval_config
 from config.approvals import approval_config as _approval_cfg
 from config.settings import settings as _s
-from jarvis.engine.permissions import permissions as _perm_store
 from jarvis.hardware.macropad_2k.usb import usb_status
+from jarvis.kernel.permissions import permissions as _perm_store
 from jarvis.providers.llm.factory import create_background_llm, get_llm_provider
 
 router = APIRouter()

@@ -10,7 +10,7 @@ from pathlib import Path
 from loguru import logger
 
 from jarvis.capabilities.tools.base import Tool, ToolResult
-from jarvis.engine.permissions import permissions as _perms
+from jarvis.kernel.permissions import permissions as _perms
 
 _EXCLUDED_DIRS = {".git", ".venv", "venv", "node_modules", "__pycache__", ".cache", "Library"}
 _MAX_FILE_SIZE = 100_000  # 100 Ko

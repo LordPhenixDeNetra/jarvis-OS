@@ -11,9 +11,9 @@ from datetime import datetime
 import feedparser
 from loguru import logger
 
-from jarvis.engine.connectivity import is_offline_mode
 from jarvis.engine.proactive.collectors.base import CollectorBase
 from jarvis.engine.proactive.schemas import ContextItem, ItemType, Priority
+from jarvis.kernel.connectivity import is_offline_mode
 
 RSS_FEEDS = [
     {"url": "https://www.frandroid.com/feed", "category": "tech_fr"},

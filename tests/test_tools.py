@@ -18,7 +18,7 @@ def _enable_files_permission() -> Generator[None, None, None]:
     Les tests qui vérifient un REFUS de PATH doivent passer avec files=True
     pour obtenir le bon message d'erreur (chemin hors racine, pas permissions).
     """
-    from jarvis.engine.permissions import permissions
+    from jarvis.kernel.permissions import permissions
 
     permissions.set("files", True)
     yield

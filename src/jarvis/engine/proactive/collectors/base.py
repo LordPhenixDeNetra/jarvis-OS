@@ -4,8 +4,8 @@ from abc import ABC, abstractmethod
 
 from loguru import logger
 
-from jarvis.engine.connectivity import is_offline_mode
 from jarvis.engine.proactive.schemas import ContextItem
+from jarvis.kernel.connectivity import is_offline_mode
 
 
 class CollectorBase(ABC):

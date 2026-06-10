@@ -16,9 +16,9 @@ from google_auth_oauthlib.flow import InstalledAppFlow
 from loguru import logger
 
 from config.settings import settings
-from jarvis.engine.connectivity import is_offline_mode
 from jarvis.engine.proactive.collectors.base import CollectorBase
 from jarvis.engine.proactive.schemas import ContextItem, ItemType, Priority
+from jarvis.kernel.connectivity import is_offline_mode
 
 _SCOPES = ["https://www.googleapis.com/auth/gmail.readonly"]
 _GMAIL_BASE = "https://gmail.googleapis.com/gmail/v1/users/me"

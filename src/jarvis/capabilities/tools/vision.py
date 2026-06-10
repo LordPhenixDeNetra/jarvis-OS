@@ -12,7 +12,7 @@ from PIL import Image, ImageGrab
 
 from config.settings import settings
 from jarvis.capabilities.tools.base import Tool, ToolResult
-from jarvis.engine.permissions import permissions as _perms
+from jarvis.kernel.permissions import permissions as _perms
 from jarvis.providers.memory import visual_memory
 
 
