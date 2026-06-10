@@ -28,6 +28,7 @@ _(à venir)_
 
 - **GATE B9 (install à froid) BLOQUANT pour le merge final** — décalé de fin de B sur décision Barth, doit passer sur la lane CI complète avant le merge `refonte/architecture-couches` → `main`. Libellé verrouillé dans [gates_B8_B9.md](gates_B8_B9.md) : install Ubuntu propre + deps lourdes réelles + boot effectif via smoke_runtime --fake-llm.
 - **ci.yml déclenche la lane lourde (dlib/portaudio/opencv) sur toutes branches** → split en F.1.2 : lane rapide partout, lane complète sur main + scheduled. Coût ~5-10 min par push branche jusque-là, accepté.
+- **app.py doit logger au démarrage la SOURCE EFFECTIVE de `llm_provider`** (env var héritée du shell vs `.env` lu par pydantic) — diagnostic Phase C validation : un run a démarré en mode "local" parce qu'une env var `LLM_PROVIDER` héritée masquait le `.env` (pydantic priorise env > file). Le log actuel `Jarvis démarré` ne mentionne que la valeur résolue, pas sa provenance, donc l'incident n'a été identifiable qu'en relisant tout le trace. À résoudre en F (ou hors-refonte) : au boot, comparer `os.environ.get("LLM_PROVIDER")` et `dotenv_values(".env")["LLM_PROVIDER"]` et logger « llm_provider=X (source=env-var|.env|default) » avec un WARNING si l'un masque l'autre.
 
 ## Post-refonte (hors §9 « Hors périmètre »)
 
