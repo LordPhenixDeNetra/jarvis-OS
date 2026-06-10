@@ -9,6 +9,8 @@ from fastapi.testclient import TestClient
 
 from main import app
 
+pytestmark = pytest.mark.integration  # CDC §A.1.5 — exercice HTTP middleware réel
+
 
 @pytest.fixture
 def client() -> TestClient:

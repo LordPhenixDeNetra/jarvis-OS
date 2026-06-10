@@ -13,6 +13,8 @@ from agent.backends.base import ExecutionBackend
 from agent.backends.docker import DockerBackend
 from agent.backends.local import LocalBackend
 from agent.backends.remote import RemoteBackend
+
+pytestmark = pytest.mark.integration  # CDC §A.1.5 — exercice Docker backend
 from agent.backends.rpc import ScriptRPCRunner, _build_stub
 from agent.backends.ssh import SSHBackend
 from config.backends import BackendsConfig, BackendType, SSHConfig, get_backend

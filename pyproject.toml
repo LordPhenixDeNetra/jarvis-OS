@@ -91,6 +91,9 @@ line-ending = "lf"
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
 testpaths = ["tests"]
+markers = [
+    "integration: tests qui exercent des composants lourds (HTTP middleware réel, Docker backend, vraies connexions réseau). Exclus par 'pytest -m \"not integration\"' — le gate par-commit des Phases B et C (CDC §A.1.5).",
+]
 
 [tool.hatch.build.targets.wheel]
 packages = ["."]
