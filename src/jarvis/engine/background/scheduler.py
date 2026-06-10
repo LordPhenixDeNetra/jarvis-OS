@@ -4,10 +4,10 @@ import asyncio
 import re
 from collections.abc import Callable
 from datetime import UTC, datetime, timedelta
+from typing import TYPE_CHECKING
 
 from loguru import logger
 
-from config.settings import settings
 from jarvis.capabilities.tools.calendar import CalendarListTool
 from jarvis.engine.background.notifications import ProactiveQueue
 from jarvis.engine.background.routines import (
@@ -21,6 +21,9 @@ from jarvis.engine.background.routines import (
     next_cron_datetime,
 )
 from jarvis.providers.memory.auto_dream import AutoDream
+
+if TYPE_CHECKING:
+    from jarvis.kernel.settings import Settings
 
 
 def _next_datetime(hour: int) -> datetime:
@@ -36,19 +39,27 @@ def _seconds_until(hour: int) -> float:
 
 
 class Scheduler:
-    """Planifie les boucles asyncio : briefing 9h, rappels calendrier, autoDream, routines."""
+    """Planifie les boucles asyncio : briefing 9h, rappels calendrier, autoDream, routines.
+
+    Phase C : `settings` injecté au constructeur (auparavant
+    `from config.settings import settings` en module-level). Les autres
+    deps (proactive, auto_dream, calendar_tool, skill_lab, curator)
+    étaient DÉJÀ injectées en pré-C.
+    """
 
     def __init__(
         self,
         proactive: ProactiveQueue,
         auto_dream: AutoDream,
         calendar_tool: CalendarListTool,
+        settings: Settings,
         skill_lab: object | None = None,
         curator: object | None = None,
     ) -> None:
         self._proactive = proactive
         self._auto_dream = auto_dream
         self._calendar_tool = calendar_tool
+        self._settings = settings
         self._skill_lab = skill_lab  # PHASE 4 — SkillLab pour polling nocturne
         self._curator = curator  # PHASE 6 — Curator nocturne
         self._tasks: list[asyncio.Task] = []
@@ -119,14 +130,14 @@ class Scheduler:
         return [
             {
                 "name": "Briefing matinal",
-                "description": f"Agenda + tâches Notion à {settings.briefing_hour}h00",
-                "next_run": _next_datetime(settings.briefing_hour).isoformat(),
+                "description": f"Agenda + tâches Notion à {self._settings.briefing_hour}h00",
+                "next_run": _next_datetime(self._settings.briefing_hour).isoformat(),
                 "interval": "quotidien",
             },
             {
                 "name": "Rappels calendrier",
                 "description": (
-                    f"Rappel {settings.calendar_reminder_minutes} min avant chaque event"
+                    f"Rappel {self._settings.calendar_reminder_minutes} min avant chaque event"
                 ),
                 "next_run": None,
                 "interval": "toutes les 60s",
@@ -187,7 +198,7 @@ class Scheduler:
 
     async def _briefing_loop(self) -> None:
         while True:
-            delay = _seconds_until(settings.briefing_hour)
+            delay = _seconds_until(self._settings.briefing_hour)
             logger.debug("Briefing planifié", seconds=int(delay))
             await asyncio.sleep(delay)
             await self._send_briefing()
@@ -233,7 +244,7 @@ class Scheduler:
                 logger.debug("Calendar reminder: tool error", content=result.content[:80])
                 return
             now = datetime.now(UTC)
-            cutoff = settings.calendar_reminder_minutes
+            cutoff = self._settings.calendar_reminder_minutes
             lines = [ln.strip() for ln in result.content.splitlines() if ln.strip()]
             logger.debug("Calendar reminder check", events=len(lines), cutoff_min=cutoff)
             for line in lines:

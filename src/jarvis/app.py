@@ -503,6 +503,7 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
         proactive=proactive_queue,
         auto_dream=auto_dream,
         calendar_tool=calendar_list_tool,
+        settings=settings,
         skill_lab=_skill_lab,
         curator=_curator,
     )
