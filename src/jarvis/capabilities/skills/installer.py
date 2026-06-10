@@ -10,13 +10,14 @@ import httpx
 from loguru import logger
 
 from jarvis.capabilities.skills.registry import SKILLS_INSTALLED_DIR, skill_registry
+from jarvis.kernel.paths import UI_STATIC_DIR
 
 ENV_FILE = Path(".env")
 
 SKILLS_REPO_RAW = "https://raw.githubusercontent.com/Grominet95/jarvis-skills/main"
 SKILLS_INDEX_URL = f"{SKILLS_REPO_RAW}/index.json"
 
-LOCAL_CATALOG = Path("skills/catalog.json")
+LOCAL_CATALOG = Path(__file__).parent / "catalog.json"
 
 
 class SkillInstaller:
@@ -138,7 +139,7 @@ class SkillInstaller:
 
             static_files = meta.get("static_files", [])
             if static_files:
-                static_dst = Path("src/jarvis/interfaces/ui/static/skills") / skill_name
+                static_dst = UI_STATIC_DIR / "skills" / skill_name
                 static_dst.mkdir(parents=True, exist_ok=True)
                 async with httpx.AsyncClient(timeout=15) as client:
                     for fname in static_files:
@@ -162,7 +163,7 @@ class SkillInstaller:
         - skill.yaml : pareil
         ShowViewTool est un tool core (main.py), pas besoin de le fournir ici.
         """
-        static_dst = Path("src/jarvis/interfaces/ui/static/skills") / skill_name
+        static_dst = UI_STATIC_DIR / "skills" / skill_name
         static_dst.mkdir(parents=True, exist_ok=True)
         catalog_files = skill_meta.get("static_files") or []
         targets = catalog_files if catalog_files else ["view.js", "view.css"]
@@ -243,7 +244,7 @@ class SkillInstaller:
         try:
             shutil.rmtree(skill_dir)
             # Supprimer les fichiers statiques s'il y en a
-            static_dst = Path("src/jarvis/interfaces/ui/static/skills") / skill_name
+            static_dst = UI_STATIC_DIR / "skills" / skill_name
             if static_dst.exists():
                 shutil.rmtree(static_dst)
                 logger.debug(f"Fichiers statiques supprimés pour {skill_name}")

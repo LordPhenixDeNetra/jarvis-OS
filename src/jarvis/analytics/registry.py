@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import json
-from pathlib import Path
 
 from loguru import logger
 
@@ -13,6 +12,7 @@ from jarvis.analytics.widgets.discord import DiscordWidget
 from jarvis.analytics.widgets.github import GitHubWidget
 from jarvis.analytics.widgets.jarvis_stats import JarvisStatsWidget
 from jarvis.analytics.widgets.youtube import YouTubeWidget
+from jarvis.kernel.paths import MEMORY_DATA_DIR
 
 # Catalogue de tous les widgets disponibles
 ALL_WIDGETS: dict[str, type[WidgetBase]] = {
@@ -26,7 +26,7 @@ ALL_WIDGETS: dict[str, type[WidgetBase]] = {
 # Widgets actifs par défaut (natifs, sans config requise)
 DEFAULT_WIDGETS = ["jarvis_stats", "conso"]
 
-CONFIG_FILE = Path("memory_data/analytics_config.json")
+CONFIG_FILE = MEMORY_DATA_DIR / "analytics_config.json"
 
 
 class AnalyticsRegistry:

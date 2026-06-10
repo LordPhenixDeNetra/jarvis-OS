@@ -13,8 +13,7 @@ from loguru import logger
 if TYPE_CHECKING:
     from jarvis.providers.llm.base import LLMProvider
 
-SKILLS_INSTALLED_DIR = Path("skills_data/installed")
-SKILLS_CANDIDATES_DIR = Path("skills/candidates")
+from jarvis.kernel.paths import SKILLS_CANDIDATES_DIR, SKILLS_INSTALLED_DIR  # noqa: F401, E402
 
 # ── Prompts ───────────────────────────────────────────────────────────────────
 

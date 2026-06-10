@@ -14,7 +14,7 @@ from pathlib import Path
 import yaml
 from loguru import logger
 
-SKILLS_INSTALLED_DIR = Path("skills_data/installed")
+from jarvis.kernel.paths import SKILLS_INSTALLED_DIR  # noqa: F401, E402
 
 # ── YAML Dumper avec block scalars ────────────────────────────────────────────
 

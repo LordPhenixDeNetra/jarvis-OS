@@ -10,8 +10,9 @@ from pathlib import Path
 
 from jarvis.engine.mission.schemas import LogEntry, Project, ProjectStatus, Step, StepStatus
 from jarvis.engine.vocab import AccessLevel
+from jarvis.kernel.paths import WORKSPACE_DIR as _WORKSPACE
 
-WORKSPACE_DIR = Path("workspace/projects")
+WORKSPACE_DIR = _WORKSPACE / "projects"
 
 
 class ProjectStore:

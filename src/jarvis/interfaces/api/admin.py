@@ -8,7 +8,9 @@ from fastapi import APIRouter, HTTPException, Request
 from fastapi.responses import FileResponse
 from pydantic import BaseModel
 
-_PROJECT_ROOT = Path(__file__).parent.parent
+from jarvis.kernel.paths import PROJECT_ROOT, UI_STATIC_DIR
+
+_PROJECT_ROOT = PROJECT_ROOT
 
 router = APIRouter(prefix="/admin/api")
 _ui_router = APIRouter()
@@ -16,7 +18,7 @@ _ui_router = APIRouter()
 
 @_ui_router.get("/admin", include_in_schema=False)
 async def admin_ui() -> FileResponse:
-    return FileResponse("src/jarvis/interfaces/ui/static/admin.html")
+    return FileResponse(str(UI_STATIC_DIR / "admin.html"))
 
 
 # ── Models ────────────────────────────────────────────────────

@@ -5,7 +5,6 @@ from __future__ import annotations
 import json
 import os
 from datetime import UTC, datetime, timedelta
-from pathlib import Path
 
 # ── Jarvis stats ──────────────────────────────────────────────────────────────
 
@@ -14,8 +13,10 @@ async def get_jarvis_stats(days: int = 30) -> dict:
     """Stats d'usage Jarvis depuis les fichiers locaux."""
     cutoff = datetime.now(UTC) - timedelta(days=days)
 
+    from jarvis.kernel.paths import MEMORY_DATA_DIR
+
     # Sessions
-    sessions_dir = Path("memory_data/sessions")
+    sessions_dir = MEMORY_DATA_DIR / "sessions"
     session_count = 0
     if sessions_dir.exists():
         for f in sessions_dir.iterdir():
@@ -48,7 +49,7 @@ async def get_jarvis_stats(days: int = 30) -> dict:
         pass
 
     # Tokens + coût depuis les fichiers JSONL conso
-    conso_dir = Path("memory_data/conso")
+    conso_dir = MEMORY_DATA_DIR / "conso"
     total_tokens = 0
     total_cost = 0.0
     tool_calls: dict[str, int] = {}

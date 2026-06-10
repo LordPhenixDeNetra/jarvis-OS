@@ -3,7 +3,8 @@ from __future__ import annotations
 import json
 from dataclasses import dataclass
 from datetime import date, timedelta
-from pathlib import Path
+
+from jarvis.kernel.paths import MEMORY_DATA_DIR
 
 
 @dataclass
@@ -73,7 +74,7 @@ def calculate_cost(provider: str, model: str, **kwargs: float) -> float:
 
 
 class UsageTracker:
-    CONSO_DIR = Path("memory_data/conso")
+    CONSO_DIR = MEMORY_DATA_DIR / "conso"
 
     def __init__(self) -> None:
         self.CONSO_DIR.mkdir(parents=True, exist_ok=True)

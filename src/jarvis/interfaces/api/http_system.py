@@ -87,7 +87,9 @@ async def jarvis_doctor() -> dict:
     except Exception:
         checks["docker"] = {"status": "error", "detail": "Non installé"}
 
-    mem_topics = Path("memory_data/topics")
+    from jarvis.kernel.paths import MEMORY_DATA_DIR
+
+    mem_topics = MEMORY_DATA_DIR / "topics"
     topics = list(mem_topics.glob("*.md")) if mem_topics.exists() else []
     checks["memory"] = {"status": "ok", "detail": f"{len(topics)} topics"}
 

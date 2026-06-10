@@ -12,6 +12,7 @@ from pathlib import Path
 
 from jarvis.engine.proactive.schemas import ExecutionMode, Initiative, InitiativeType, Priority
 from jarvis.engine.vocab import AutonomyLevel
+from jarvis.kernel.paths import MEMORY_DATA_DIR
 
 
 def _title_key(title: str) -> str:
@@ -51,7 +52,7 @@ def _dedup_initiatives(initiatives: list) -> list:
     return kept
 
 
-INITIATIVES_DIR = Path("memory_data/initiatives")
+INITIATIVES_DIR = MEMORY_DATA_DIR / "initiatives"
 
 
 class InitiativeStore:

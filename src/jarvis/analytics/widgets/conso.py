@@ -2,9 +2,9 @@
 
 import json
 from datetime import date, timedelta
-from pathlib import Path
 
 from jarvis.analytics.widgets.base import WidgetBase, WidgetData
+from jarvis.kernel.paths import MEMORY_DATA_DIR
 
 
 class ConsoWidget(WidgetBase):
@@ -17,7 +17,7 @@ class ConsoWidget(WidgetBase):
 
     async def fetch(self) -> WidgetData:
         try:
-            conso_dir = Path("memory_data/conso")
+            conso_dir = MEMORY_DATA_DIR / "conso"
             daily_costs = {}
 
             for i in range(30):

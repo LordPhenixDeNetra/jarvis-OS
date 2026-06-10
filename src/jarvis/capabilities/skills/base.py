@@ -129,7 +129,9 @@ class PresetSkill(SkillBase):
         # skills/installed/<name> si le preset a été instancié sans passer par
         # le registry (ex. ancien chemin de code, tests anciens).
         base_dir = self.metadata.get("__dir")
-        skill_dir = Path(base_dir) if base_dir else Path("skills_data/installed") / self.name
+        from jarvis.kernel.paths import SKILLS_INSTALLED_DIR
+
+        skill_dir = Path(base_dir) if base_dir else SKILLS_INSTALLED_DIR / self.name
         yaml_file = skill_dir / "skill.yaml"
 
         if not yaml_file.exists():

@@ -2,9 +2,9 @@
 
 import json
 from datetime import date, timedelta
-from pathlib import Path
 
 from jarvis.analytics.widgets.base import WidgetBase, WidgetData
+from jarvis.kernel.paths import MEMORY_DATA_DIR
 
 
 class JarvisStatsWidget(WidgetBase):
@@ -18,18 +18,18 @@ class JarvisStatsWidget(WidgetBase):
     async def fetch(self) -> WidgetData:
         try:
             # Compter les sessions depuis memory_data/sessions/
-            sessions_dir = Path("memory_data/sessions")
+            sessions_dir = MEMORY_DATA_DIR / "sessions"
             session_files = list(sessions_dir.glob("*.jsonl")) if sessions_dir.exists() else []
 
             # Compter les missions
-            projects_file = Path("memory_data/projects.json")
+            projects_file = MEMORY_DATA_DIR / "projects.json"
             projects = []
             if projects_file.exists():
                 projects = json.loads(projects_file.read_text())
 
             # Lire la conso du jour depuis memory_data/conso/
             today = date.today().isoformat()
-            conso_file = Path(f"memory_data/conso/{today}.jsonl")
+            conso_file = MEMORY_DATA_DIR / "conso" / f"{today}.jsonl"
             total_cost = 0.0
             total_tokens = 0
             if conso_file.exists():

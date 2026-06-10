@@ -9,8 +9,7 @@ from loguru import logger
 
 from jarvis.capabilities.skills.base import PresetSkill, SkillBase
 from jarvis.capabilities.skills.dev_extensions import iter_dev_skills_and_presets
-
-SKILLS_INSTALLED_DIR = Path("skills_data/installed")
+from jarvis.kernel.paths import SKILLS_INSTALLED_DIR  # noqa: F401, E402
 
 
 class SkillRegistry:

@@ -31,6 +31,7 @@ from typing import TYPE_CHECKING
 from loguru import logger
 
 from jarvis.capabilities.skills.lifecycle import SkillStatus
+from jarvis.kernel.paths import MEMORY_DATA_DIR
 from jarvis.providers.memory.schemas import DecayPolicy, FactStatus
 
 if TYPE_CHECKING:
@@ -76,8 +77,10 @@ _PROTECTED_PATHS: list[str] = [
     "src/jarvis/engine/audit.py",  # audit log gate
     "src/jarvis/engine/mission/governance.py",  # gate composite
     "src/jarvis/engine/mission/schemas.py",  # contrat de données
-    "memory/schemas.py",
-    "main.py",  # bootstrap
+    "src/jarvis/providers/memory/schemas.py",
+    "src/jarvis/kernel/schemas.py",  # foyer canonique (Phase A)
+    "src/jarvis/app.py",  # ex-main.py (Phase B)
+    "main.py",  # shim racine encore protégé
     "CDC_jarvis_evolution.md",  # cahier des charges
 ]
 
@@ -173,7 +176,7 @@ class Curator:
         self._initiatives = initiative_store
         self._budget = budget_guard
         self._reports_dir = (
-            Path(reports_dir) if reports_dir else Path("memory_data/curator_reports")
+            Path(reports_dir) if reports_dir else MEMORY_DATA_DIR / "curator_reports"
         )
         self._reports_dir.mkdir(parents=True, exist_ok=True)
 

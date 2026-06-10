@@ -392,8 +392,10 @@ fi
 step "Génération de l'environnement"
 
 mkdir -p memory_data/sessions memory_data/topics memory_data/conso memory_data/initiatives
+mkdir -p memory_data/curator_reports
 mkdir -p workspace/projects
 mkdir -p vision_data/faces
+mkdir -p skills_data/installed skills_data/candidates
 badge_ok "Dossiers runtime créés"
 
 # Écriture du .env

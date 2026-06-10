@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-from pathlib import Path
-
 from fastapi import APIRouter, HTTPException, Request
 
 router = APIRouter()
@@ -214,8 +212,10 @@ async def get_view_scripts() -> dict:
 
     import yaml
 
-    base = Path("src/jarvis/interfaces/ui/static/skills")
-    installed = Path("skills_data/installed")
+    from jarvis.kernel.paths import SKILLS_INSTALLED_DIR, UI_STATIC_DIR
+
+    base = UI_STATIC_DIR / "skills"
+    installed = SKILLS_INSTALLED_DIR
     scripts, styles = [], []
     if not base.exists():
         return {"scripts": scripts, "styles": styles}

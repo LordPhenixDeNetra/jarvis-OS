@@ -8,11 +8,12 @@ Compatible avec le système mémoire existant (topics/).
 from __future__ import annotations
 
 from datetime import datetime
-from pathlib import Path
 
 from loguru import logger
 
-_VISUAL_MEMORY_FILE = Path("memory_data/topics/visual_memory.md")
+from jarvis.kernel.paths import MEMORY_DATA_DIR
+
+_VISUAL_MEMORY_FILE = MEMORY_DATA_DIR / "topics" / "visual_memory.md"
 _MAX_ENTRIES = 100
 _HEADER = (
     "# Mémoire Visuelle\n\n"
@@ -111,7 +112,7 @@ async def search(query: str) -> list[str]:
 
 async def _update_index() -> None:
     """S'assure que visual_memory.md est référencé dans MEMORY.md."""
-    index = Path("memory_data/MEMORY.md")
+    index = MEMORY_DATA_DIR / "MEMORY.md"
     if not index.exists():
         return
     content = index.read_text(encoding="utf-8")

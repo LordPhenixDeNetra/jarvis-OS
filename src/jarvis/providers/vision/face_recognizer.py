@@ -7,12 +7,11 @@ from __future__ import annotations
 
 import shutil
 from dataclasses import dataclass, field
-from pathlib import Path
 
 import numpy as np
 from loguru import logger
 
-FACES_DIR = Path("vision_data/faces")
+from jarvis.kernel.paths import FACES_DIR  # noqa: F401
 
 
 @dataclass

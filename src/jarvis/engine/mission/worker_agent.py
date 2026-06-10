@@ -47,7 +47,9 @@ _TOOL_CATEGORY: dict[str, str] = {
     "fusion_360": "agent_mission",
 }
 
-_QUALITY_RULES_PATH = Path(__file__).parent.parent / "prompts" / "worker_system.md"
+from jarvis.kernel.paths import PROMPTS_DIR  # noqa: E402
+
+_QUALITY_RULES_PATH = PROMPTS_DIR / "worker_system.md"
 try:
     _QUALITY_RULES = _QUALITY_RULES_PATH.read_text(encoding="utf-8")
 except FileNotFoundError:
@@ -243,7 +245,6 @@ class WorkerAgent:
         """Construit une Governance par défaut si non injectée (singletons globaux)."""
         if self._governance is not None:
             return
-        from pathlib import Path
 
         from config.approvals import approval_config
         from jarvis.engine.audit import AuditLog
