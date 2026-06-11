@@ -1,50 +1,49 @@
 # BACKLOG — Refonte architecturale jarvis-OS
 
-Réceptacle des problèmes hors-périmètre identifiés pendant la refonte (CDC `CDC_refonte_architecture.md` §0 règle 1 et règle 5). On note, on ne corrige PAS dans la phase courante.
+Registre des dettes reportées identifiées pendant la refonte (CDC `CDC_refonte_architecture.md` §0 règle 1 et règle 5) et pendant le polish post-merge. On note, on ne corrige PAS dans la phase courante.
 
 Format d'entrée : `- [PHASE X] <description> — <fichier/zone> — <pourquoi pas maintenant>`.
 
-## Phase A
-
-_(en cours)_
-
-## Phase B
-
-_(à venir)_
+Statut v0.2.0 : tag `v0.2.0-architecture` posé sur `main`. Les entrées Phase F qui pointaient sur la lane B9 ou sur les parsers BT (déménagés vers `src/jarvis/hardware/bluetooth/`) ont été retirées car fermées. Tout le reste glisse en Phase G.
 
 ## Phase C
 
-- **Bug PRÉ-EXISTANT dans `src/jarvis/app.py` lifespan shutdown** : `await telegram.stop()` (l.611) est appelé même quand l'updater Telegram n'a jamais démarré (cas typique : TELEGRAM_BOT_TOKEN défini mais polling non lancé en TestClient). Lève `RuntimeError("This Updater is not running!")`. À résoudre en C.1 (refactor du lifespan vers bootstrap.build()) : vérifier `_app.updater.running` avant de stop(), ou capturer proprement l'exception. Découvert par B7b qui est le 1er test à fermer proprement le lifespan via TestClient.
+- **Bug PRÉ-EXISTANT dans `src/jarvis/app.py` lifespan shutdown** (l.262) : `await telegram.stop()` est appelé même quand l'updater Telegram n'a jamais démarré (cas typique : `TELEGRAM_BOT_TOKEN` défini mais polling non lancé en TestClient). Lève `RuntimeError("This Updater is not running!")`. Workaround actuel en place (commentaire l.264). Fix propre : vérifier `_app.updater.running` avant `stop()`, ou capturer l'exception au niveau du lifespan. Découvert par B7b (1er test à fermer proprement le lifespan via TestClient).
 
-## Phase D
-
-_(à venir)_
-
-## Phase E
-
-_(à venir)_
-
-## Phase F
+## Phase F (encore ouvertes, à reprendre en G)
 
 - **Fermer conformité Protocols stricte — variance Tool/Skill résiduelle (CDC §F.1.3bis, suite)** — 2 couples restants, PURE variance cosmétique (les 2 divergences sémantiques de `MemoryStore` ont été corrigées AVANT le merge F — cf. test de conformance qui inclut MemoryStore) :
   - `kernel.contracts.ToolRegistry` ↔ `capabilities.tools.registry.ToolRegistry` : variance `kernel.contracts.Tool` (Protocol) vs `capabilities.tools.base.Tool` (ABC). Structurellement IDENTIQUES (mêmes `name/description/input_schema`, mêmes `to_claude_schema/execute`). L'impl utilise le type local, le Protocol pointe sur lui-même → mismatch nominal mypy.
   - `kernel.contracts.SkillRegistry` ↔ `capabilities.skills.registry.SkillRegistry` : même motif (`Skill` Protocol vs `SkillBase` ABC).
   Test de conformité actuel scopé sur **12 couples passants** : LLM × 5 + Memory × 6 (MemoryStore inclus) + UsageTracker × 1. À reprendre en Phase G en alignant les annotations `*tools: Tool` → `kernel.contracts.Tool` côté impl — l'ABC l'implémente déjà structurellement, le changement est uniquement annotatif.
-- **Fermer RÈGLE 2 strict — 5 résidus capabilities/engine et engine/capabilities annotés `ignore_imports`** dans `pyproject.toml::tool.importlinter` :
-  - `capabilities.tools.subagent → engine.agent` (Agent type pour SpawnSubagentTool — passer en Protocol kernel.contracts.Agent)
-  - `capabilities.tools.subagent → engine.mission.backends.rpc` (ScriptRPCRunner instanciation — injecter via constructeur ou descendre l'infrastructure RPC en kernel/providers)
-  - `capabilities.tools.subagent → engine.mission.backend_factory` (appel `get_backend()` — auparavant chaîne transitive via shim racine `config.backends` ; rendue explicite par F.7. Le bon fix Phase G : injecter le backend dans le constructeur de `SpawnSubagentTool` plutôt que de l'instancier à l'appel)
-  - `capabilities.skills.lab → engine.mission.docker_executor` (DockerExecutor instanciation pour sandbox testing — soit injecter, soit descendre l'executor générique en providers/docker)
-  - `engine.mission.worker_agent → capabilities.tools.fusion` (plugin Fusion 360 importé lazy quand un step nomme `fusion_360` — pattern plugin-friendly, à formaliser via tool_registry quand on aura un dispatcher dynamique)
-  Le contrat import-linter passe via 5 lignes `ignore_imports`, chacune notée ici. Cibles à reprendre en Phase G "hygiene profonde".
-- **Extraire les parsers Bluetooth de `interfaces/api/config/devices.py`** vers un service. Les fonctions `_parse_bt_macos` (~65 l.) et `_parse_bt_windows` (~55 l.) sont du pur data-transformer (sortie `system_profiler` / `Get-PnpDevice` → `list[dict]` UI-shaped), sans dépendance FastAPI. Elles vivent dans le router uniquement parce qu'elles sont nées là, mais tout autre call-site (initiative proactive "AirPods déconnectés", health-check, etc.) recopierait ou créerait un import remontant depuis interfaces/. Cible probable : `providers/hardware/bluetooth.py` (sibling de `providers/audio/`) ou `hardware/bluetooth_parsers.py` (sibling de `macropad_2k/`). À traiter en F dans la passe "hygiène / réorganisation", pas urgent.
-- **GATE B9 (install à froid) BLOQUANT pour le merge final** — décalé de fin de B sur décision Barth, doit passer sur la lane CI complète avant le merge `refonte/architecture-couches` → `main`. Libellé verrouillé dans [gates_B8_B9.md](gates_B8_B9.md) : install Ubuntu propre + deps lourdes réelles + boot effectif via smoke_runtime --fake-llm.
-- **ci.yml déclenche la lane lourde (dlib/portaudio/opencv) sur toutes branches** → split en F.1.2 : lane rapide partout, lane complète sur main + scheduled. Coût ~5-10 min par push branche jusque-là, accepté.
-- **app.py doit logger au démarrage la SOURCE EFFECTIVE de `llm_provider`** (env var héritée du shell vs `.env` lu par pydantic) — diagnostic Phase C validation : un run a démarré en mode "local" parce qu'une env var `LLM_PROVIDER` héritée masquait le `.env` (pydantic priorise env > file). Le log actuel `Jarvis démarré` ne mentionne que la valeur résolue, pas sa provenance, donc l'incident n'a été identifiable qu'en relisant tout le trace. À résoudre en F (ou hors-refonte) : au boot, comparer `os.environ.get("LLM_PROVIDER")` et `dotenv_values(".env")["LLM_PROVIDER"]` et logger « llm_provider=X (source=env-var|.env|default) » avec un WARNING si l'un masque l'autre.
+
+- **ci.yml déclenche la lane lourde (dlib/portaudio/opencv) sur toutes branches** → split en F.1.2 : lane rapide partout, lane complète sur `main` + scheduled. Coût ~5-10 min par push branche jusque-là, accepté.
 
 ## Phase G (post-merge — dettes connues, ne BLOQUE PAS v0.2.0)
 
+### Polish post-v0.2.0 (consigné 2026-06-11)
+
+- **`os.environ[env_key] = body.value` dans `src/jarvis/interfaces/api/config/settings.py:140`** — la route `POST /api/settings/update` mute `os.environ` du process courant en plus d'écrire `.env` et de mettre à jour le singleton `Settings`. Trois sources de vérité au lieu d'une → couplage caché, comportement divergent entre process (l'API mute son propre env, le voice loop ne voit pas la mutation) et confusion env-héritée-du-shell vs `.env`. **Lien méthode** : cette mutation est la cause structurelle de l'incident de débogage "terminal pollué par des clés API héritées" qui a coûté plusieurs heures pendant la refonte ; chaque `POST /api/settings/update` laissait une trace dans l'environnement du process FastAPI, invisible depuis un autre shell. **Fix Phase G** : ne plus muter `os.environ` côté route — n'écrire que `.env` + singleton ; au boot, recharger `.env` proprement via `pydantic-settings`. Voir aussi l'entrée WARN env/.env ci-dessous (même périmètre, fix unifié).
+
+- **WARN env/.env au boot (env_audit)** — design discuté puis écarté pendant la refonte. Au démarrage de `app.py`, comparer `os.environ.get("KEY")` et `dotenv_values(".env")["KEY"]` pour chaque clé connue de `Settings`, et logger un WARNING quand l'un masque l'autre (`pydantic` priorise env > file). Cible : un `kernel/env_audit.py` appelé depuis `bootstrap.build()`. Utile pour diagnostiquer les conflits de source — un run de la Phase C avait démarré en mode "local" parce qu'une env var `LLM_PROVIDER` héritée masquait le `.env`, incident attrapé uniquement en relisant tout le trace. À unifier avec le fix `os.environ` ci-dessus (même problématique sources multiples).
+
+- **`astronomy/skill.yaml` référence `view.js`** — le manifest `skills_data/installed/astronomy/skill.yaml` déclare `static_files: [view.js]`, fichier servi depuis `src/jarvis/interfaces/ui/static/skills/astronomy/view.js` (pas dans le même répertoire que le yaml). Distribution actuelle : `skills_data/installed/*` n'est plus tracké (commit `d910321`, distribution via shop), mais le static front l'est. À trier : soit (a) ranger les statics dans le bundle distribué par le shop, soit (b) documenter explicitement que `static_files` réfère à des chemins relatifs au `static/skills/<name>/` côté UI. Liée à la distribution skills via shop.
+
+- **Node.js 20 deprecation CI** — `actions/checkout@v4` (3 occurrences `.github/workflows/ci.yml:28,86,132`) et `astral-sh/setup-uv@v5` (3 occurrences l.43,104,147) tournent sur Node 20, déprécié par GitHub. À monter sur la prochaine major (`v5`/`v6` selon dispo) avant septembre 2026. Migration triviale, à grouper en une PR CI.
+
+- **Skills tests structurellement confinés à `tmp_path`** (conftest) — l'absence de confinement avait causé un résidu `web-research` en Phase B (un test installait un skill dans le répertoire réel utilisateur). Le `conftest.py` actuel doit GARANTIR que toute installation/écriture de skill durant les tests pointe sur `tmp_path` — à vérifier exhaustivement (audit des fixtures + grep `skills_data/`) et à durcir si un chemin échappe encore. Pour mémoire, pas urgent.
+
+### Entrées antérieures
+
 - **`smoke_runtime.py --process=voice` est SKIP en F-merge** — le boot du SECOND process (voix) n'est PAS couvert par B9. Le scénario `--process=voice` court-circuite proprement avec `SKIP : --process=voice non implémenté en F MVP ; le voice loop dépend de LiveKit en runtime — à reprendre en G`. Dette connue, **pas un oubli** : le process voix construit son propre Container via `bootstrap.build()` (CDC §C.1 tâche 8), mais l'entrée runtime est `livekit-agents.cli_app.run_app(...)` qui exige une session WebRTC réelle — incompatible avec une smoke gate automatique. À reprendre en G : extraire un sous-test du voice loop qui passe `bootstrap.build()` ET au moins un cycle STT-stub → Gateway → TTS-stub sans LiveKit côté serveur. Cible : un 4e hot path "D. Voice graph" dans smoke_runtime, déclenché par `--process=voice`.
+
+- **Fermer RÈGLE 2 strict — 4 résidus RÈGLE 2 + 1 résidu RÈGLE 3** annotés `ignore_imports` dans `pyproject.toml::tool.importlinter` (état v0.2.0 : 4 dans la RÈGLE 2 contract l.188-193, 1 dans la RÈGLE 3 contract l.210-212) :
+  - `capabilities.tools.subagent → engine.agent` (Agent type pour SpawnSubagentTool — passer en Protocol `kernel.contracts.Agent`)
+  - `capabilities.tools.subagent → engine.mission.backends.rpc` (`ScriptRPCRunner` instanciation — injecter via constructeur ou descendre l'infrastructure RPC en kernel/providers)
+  - `capabilities.tools.subagent → engine.mission.backend_factory` (appel `get_backend()` — auparavant chaîne transitive via shim racine `config.backends` ; rendue explicite par F.7. Le bon fix Phase G : injecter le backend dans le constructeur de `SpawnSubagentTool` plutôt que de l'instancier à l'appel)
+  - `capabilities.skills.lab → engine.mission.docker_executor` (`DockerExecutor` instanciation pour sandbox testing — soit injecter, soit descendre l'executor générique en `providers/docker`)
+  - `engine.mission.worker_agent → capabilities.tools.fusion` (plugin Fusion 360 importé lazy quand un step nomme `fusion_360` — pattern plugin-friendly, à formaliser via tool_registry quand on aura un dispatcher dynamique ; vit en RÈGLE 3 puisque c'est un import descendant engine → capabilities)
+  Cibles à reprendre en Phase G "hygiène profonde" pour passer le contrat de "forbidden avec exceptions" à strict.
 
 ## Post-mortems de méthode (à intégrer dans le CDC v1.4)
 
