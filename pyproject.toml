@@ -97,6 +97,11 @@ ban-relative-imports = "all"
 # E402 : `from jarvis.kernel.paths import PROJECT_ROOT` doit venir après
 # `load_dotenv` qui s'exécute au top — résolu en C avec une vraie composition root.
 "src/jarvis/interfaces/voice/agent.py" = ["E501", "E402"]
+# tests/test_settings_consumers.py utilise `Any` dans des Spy classes qui
+# capturent des kwargs arbitraires des constructeurs patchés (AsyncOpenAI,
+# AsyncAnthropic, httpx.AsyncClient). Typer ces kwargs précisément demanderait
+# de répliquer leur signature exacte — inutile pour un test gardien.
+"tests/test_settings_consumers.py" = ["ANN401"]
 
 [tool.ruff.format]
 quote-style = "double"
