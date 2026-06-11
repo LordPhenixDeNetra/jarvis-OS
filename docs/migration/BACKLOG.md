@@ -31,6 +31,8 @@ Statut v0.2.0 : tag `v0.2.0-architecture` posé sur `main`. Les entrées Phase F
 
 - **Node.js 20 deprecation CI** — `actions/checkout@v4` (3 occurrences `.github/workflows/ci.yml:28,86,132`) et `astral-sh/setup-uv@v5` (3 occurrences l.43,104,147) tournent sur Node 20, déprécié par GitHub. À monter sur la prochaine major (`v5`/`v6` selon dispo) avant septembre 2026. Migration triviale, à grouper en une PR CI.
 
+- **`nowplaying-cli` n'est plus installé automatiquement** — `install.sh` (Q4) fusionné dans `setup.sh` au polish post-v0.2.0 ; le bloc `brew install nowplaying-cli` macOS (install.sh l.77-89 d'origine) a été dropper de l'install auto. Instruction manuelle ajoutée au README (section Prérequis). Pour mémoire — si l'auto-install redevient utile (re-distribution macOS, intégration plus poussée du now-playing), réintégrer dans `setup.sh` derrière une détection `[[ "$(uname)" == "Darwin" ]] && command -v brew`.
+
 - **Skills tests structurellement confinés à `tmp_path`** (conftest) — l'absence de confinement avait causé un résidu `web-research` en Phase B (un test installait un skill dans le répertoire réel utilisateur). Le `conftest.py` actuel doit GARANTIR que toute installation/écriture de skill durant les tests pointe sur `tmp_path` — à vérifier exhaustivement (audit des fixtures + grep `skills_data/`) et à durcir si un chemin échappe encore. Pour mémoire, pas urgent.
 
 ### Entrées antérieures

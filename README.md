@@ -110,6 +110,7 @@ suite complète, incl. les ~28 tests `@pytest.mark.integration`.
 | [uv](https://docs.astral.sh/uv/) | latest | Gestionnaire de paquets |
 | [LiveKit](https://livekit.io/) | cloud ou self-hosted | Pipeline vocal uniquement |
 | Docker | optionnel | Requis par la fonctionnalité code-agent |
+| `nowplaying-cli` | optionnel (macOS) | Lecture locale « now playing » — `brew install nowplaying-cli` |
 
 ---
 

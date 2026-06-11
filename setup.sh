@@ -515,6 +515,23 @@ EOF
 
 badge_ok ".env généré"
 
+# Enrichissement avec les clés optionnelles de .env.example
+# (couverture Discord, Notion, Mapbox, Vision, Spotify, Printer, etc. —
+# préserve l'onboarding complet auparavant assuré par install.sh).
+if [[ -f .env.example ]]; then
+  added=0
+  while IFS= read -r line; do
+    [[ "$line" =~ ^#.*$ ]] && continue
+    [[ -z "$line" ]] && continue
+    key="${line%%=*}"
+    if ! grep -q "^${key}=" "$ENV_FILE"; then
+      echo "$line" >> "$ENV_FILE"
+      added=$((added + 1))
+    fi
+  done < .env.example
+  badge_ok ".env enrichi avec $added clés optionnelles de .env.example"
+fi
+
 # ── Installation commande globale ────────────────────────────────
 JARVIS_BIN="/usr/local/bin/jarvis"
 JARVIS_SRC="$(cd "$(dirname "$0")" && pwd)/jarvis"
