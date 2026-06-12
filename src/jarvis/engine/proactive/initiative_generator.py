@@ -156,6 +156,24 @@ Si 3+ emails du même expéditeur sans réponse :
 → "NextPCB t'a contacté 3 fois sans réponse — risque de frein sur la production."
 → type: alert, priority: high
 
+## RÈGLE 0 — RAPPELS TEMPORELS IMMINENTS (priorité absolue)
+
+Si la section AGENDA du contexte contient un événement qui commence dans moins
+de 30 minutes, génère IMPÉRATIVEMENT une initiative pour ce rappel — c'est
+exactement ce que l'utilisateur attend d'un assistant proactif.
+
+Format obligatoire pour ce type de rappel :
+  type           : "reminder"
+  priority       : "high"
+  execution_mode : "notify"   (PAS "validate" — l'utilisateur doit recevoir
+                                le rappel intégré dans sa prochaine réponse,
+                                pas dans un panneau de décision séparé)
+  title          : "Rappel : <nom événement> dans <X> min"
+  action         : "Préparer / rejoindre <nom événement> à <heure>"
+
+Cette règle prime sur la règle 3 ci-dessous ("doit déclencher une action concrète") :
+un rappel temporel imminent EST une action concrète (préparer / rejoindre).
+
 ## RÈGLES DE QUALITÉ
 
 1. Maximum 5 initiatives par cycle, maximum 2 HIGH
