@@ -177,6 +177,7 @@ POST    /api/tasks
 POST    /api/tools/execute
 POST    /api/vision/faces/add
 POST    /api/vision/verify-face
+POST    /api/vision/verify-face-frame
 POST    /api/voice/generate
 POST    /api/voice/speak
 POST    /api/webhooks/face_recognition
