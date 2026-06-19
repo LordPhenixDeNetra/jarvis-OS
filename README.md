@@ -105,7 +105,7 @@ Python système et LiveKit **ne sont pas requis** : le script de build les intè
 |---|---|
 | [LiveKit Cloud](https://livekit.io/) | Alternative au serveur local (déjà dans le bundle) |
 | Docker | Code-agent, Skill Lab sandbox |
-| `uv sync --extra vision` | Reconnaissance faciale (`dlib`) — peut exiger des outils C++ selon l'OS |
+| `uv sync --extra vision` | Reconnaissance faciale (`dlib`) — sur Windows, peut exiger [Visual Studio Build Tools](https://visualstudio.microsoft.com/visual-cpp-build-tools/) (workload C++) |
 | `nowplaying-cli` | macOS uniquement — lecture locale « now playing » |
 
 ---

@@ -23,12 +23,20 @@ function Get-JarvisPython {
     return $null
 }
 
+function Add-PathIfNeeded {
+    param([string]$PathToAdd)
+    if ([string]::IsNullOrWhiteSpace($PathToAdd)) { return }
+    if ($env:PATH -notlike "*$PathToAdd*") {
+        $env:PATH = "$PathToAdd;$env:PATH"
+    }
+}
+
 function Ensure-Uv {
     if (Ensure-Command "uv") { return }
     Write-Host "uv introuvable, installation..." -ForegroundColor Yellow
     powershell -ExecutionPolicy ByPass -NoProfile -Command "irm https://astral.sh/uv/install.ps1 | iex"
-    $uvBin = Join-Path $env:USERPROFILE ".local\bin"
-    if ($env:PATH -notlike "*$uvBin*") { $env:PATH = "$uvBin;$env:PATH" }
+    Add-PathIfNeeded -PathToAdd (Join-Path $env:USERPROFILE ".local\bin")
+    Add-PathIfNeeded -PathToAdd (Join-Path $env:USERPROFILE ".cargo\bin")
     if (-not (Ensure-Command "uv")) {
         throw "uv introuvable apres installation."
     }
