@@ -311,7 +311,7 @@ documentés en [`docs/migration/BACKLOG.md`](docs/migration/BACKLOG.md).
 
 ## Star History
 
-[![Star History Chart](https://api.star-history.com/svg?repos=Grominet95/jarvis-OS&type=Date)](https://star-history.com/#Grominet95/jarvis-OS&Date)
+[![Star History Chart](https://api.star-history.com/svg?repos=Grominet95/jarvis-OS&type=Date)](https://www.star-history.com/?repos=Grominet95%2Fjarvis-OS&type=date&legend=top-left)
 
 ---
 
