@@ -1,4 +1,9 @@
+param(
+    [switch]$Ci
+)
+
 $ErrorActionPreference = "Stop"
+Set-Location $PSScriptRoot
 
 function Write-Step {
     param(
@@ -28,10 +33,7 @@ function Require-Value {
                 [Runtime.InteropServices.Marshal]::ZeroFreeBSTR($bstr)
             }
         } else {
-            $suffix = ""
-            if ($Default -ne "") {
-                $suffix = " [$Default]"
-            }
+            $suffix = if ($Default -ne "") { " [$Default]" } else { "" }
             $inputValue = Read-Host -Prompt "$Prompt$suffix"
             if ([string]::IsNullOrWhiteSpace($inputValue) -and $Default -ne "") {
                 $value = $Default
@@ -66,9 +68,7 @@ function Ensure-Command {
 
 function Add-PathIfNeeded {
     param([string]$PathToAdd)
-    if ([string]::IsNullOrWhiteSpace($PathToAdd)) {
-        return
-    }
+    if ([string]::IsNullOrWhiteSpace($PathToAdd)) { return }
     if ($env:PATH -notlike "*$PathToAdd*") {
         $env:PATH = "$PathToAdd;$env:PATH"
     }
@@ -85,12 +85,92 @@ function Get-AvailablePort {
         } catch {
             continue
         } finally {
-            if ($null -ne $listener) {
-                $listener.Stop()
-            }
+            if ($null -ne $listener) { $listener.Stop() }
         }
     }
     return $StartPort
+}
+
+function Ensure-JarvisLayout {
+    $dirs = @(
+        "memory_data/sessions",
+        "memory_data/topics",
+        "memory_data/conso",
+        "memory_data/initiatives",
+        "memory_data/curator_reports",
+        "vision_data/faces",
+        "skills_data/installed",
+        "skills_data/candidates",
+        "workspace/projects"
+    )
+    foreach ($dir in $dirs) {
+        New-Item -ItemType Directory -Path $dir -Force | Out-Null
+    }
+}
+
+function Ensure-Uv {
+    if (Ensure-Command "uv") { return }
+    Write-Host "uv introuvable, installation..." -ForegroundColor Yellow
+    powershell -ExecutionPolicy ByPass -NoProfile -Command "irm https://astral.sh/uv/install.ps1 | iex"
+    Add-PathIfNeeded -PathToAdd (Join-Path $env:USERPROFILE ".local\bin")
+    Add-PathIfNeeded -PathToAdd (Join-Path $env:USERPROFILE ".cargo\bin")
+    if (-not (Ensure-Command "uv")) {
+        throw "uv introuvable apres installation."
+    }
+}
+
+function Get-PythonVersion {
+    if (Ensure-Command "python") {
+        $raw = & python --version 2>&1 | Select-Object -First 1
+        return $raw.ToString()
+    }
+    if (Ensure-Command "py") {
+        $raw = & py -3 --version 2>&1 | Select-Object -First 1
+        return $raw.ToString()
+    }
+    throw "Python 3.11+ introuvable. Installe Python et active l'option Add to PATH."
+}
+
+function Invoke-UvSync {
+    param([switch]$WithVision)
+    $args = @("sync")
+    if ($WithVision) { $args += "--extra"; $args += "vision" }
+    & uv @args
+    if ($LASTEXITCODE -ne 0) {
+        if ($WithVision) {
+            Write-Host ""
+            Write-Host "Echec install vision (dlib). Sur Windows, installe Visual Studio Build Tools" -ForegroundColor Yellow
+            Write-Host "avec le workload C++, puis relance: uv sync --extra vision" -ForegroundColor Yellow
+            Write-Host "https://visualstudio.microsoft.com/visual-cpp-build-tools/" -ForegroundColor Yellow
+        }
+        throw "uv sync a echoue (code $LASTEXITCODE)."
+    }
+}
+
+if ($Ci) {
+    Write-Host "JARVIS V3 - setup --Ci (mode non-interactif)" -ForegroundColor Cyan
+    Ensure-JarvisLayout
+    Write-Host "  Disposition creee (memory_data/, vision_data/, skills_data/)" -ForegroundColor Green
+    if (-not (Test-Path ".env")) {
+        @"
+LLM_PROVIDER=api
+API_BACKEND=anthropic
+ANTHROPIC_API_KEY=unused-in-fake-llm-mode
+ANTHROPIC_MODEL=claude-sonnet-4-6
+VOICE_ANTHROPIC_MODEL=claude-haiku-4-5-20251001
+USER_FIRSTNAME=B9
+HOME_CITY=Paris
+MEMORY_DIR=memory_data
+PORT=8000
+"@ | Set-Content -Path ".env" -Encoding UTF8
+        Write-Host "  .env minimal genere" -ForegroundColor Green
+    } else {
+        Write-Host "  .env pre-existant conserve" -ForegroundColor Green
+    }
+    Ensure-Uv
+    Invoke-UvSync
+    Write-Host "setup --Ci OK" -ForegroundColor Green
+    exit 0
 }
 
 $stepTotal = 8
@@ -101,19 +181,7 @@ Write-Host ""
 
 Write-Step -Current 1 -Total $stepTotal -Title "Verification des prerequis"
 
-$pythonCmd = $null
-if (Ensure-Command "python") { $pythonCmd = "python" }
-elseif (Ensure-Command "py") { $pythonCmd = "py -3" }
-
-if (-not $pythonCmd) {
-    throw "Python 3.11+ introuvable. Installe Python et active l'option Add to PATH."
-}
-
-$pyVersionRaw = & $pythonCmd --version 2>&1
-if ($LASTEXITCODE -ne 0) {
-    throw "Impossible de lire la version Python."
-}
-$versionText = ($pyVersionRaw | Select-Object -First 1).ToString()
+$versionText = Get-PythonVersion
 $versionMatch = [regex]::Match($versionText, "(\d+)\.(\d+)")
 if (-not $versionMatch.Success) {
     throw "Version Python invalide: $versionText"
@@ -125,23 +193,16 @@ if ($major -lt 3 -or ($major -eq 3 -and $minor -lt 11)) {
 }
 Write-Host "Python $major.$minor detecte." -ForegroundColor Green
 
-if (-not (Ensure-Command "uv")) {
-    Write-Host "uv introuvable, installation..." -ForegroundColor Yellow
-    powershell -ExecutionPolicy ByPass -NoProfile -Command "irm https://astral.sh/uv/install.ps1 | iex"
-    $uvBin = Join-Path $env:USERPROFILE ".local\bin"
-    Add-PathIfNeeded -PathToAdd $uvBin
-}
-if (-not (Ensure-Command "uv")) {
-    $cargoBin = Join-Path $env:USERPROFILE ".cargo\bin"
-    Add-PathIfNeeded -PathToAdd $cargoBin
-}
-if (-not (Ensure-Command "uv")) {
-    throw "uv introuvable apres installation."
-}
+Ensure-Uv
 Write-Host "uv detecte." -ForegroundColor Green
 
 Write-Step -Current 2 -Total $stepTotal -Title "Installation des dependances Python"
-uv sync
+$installVision = $false
+if (Ask-YesNo -Prompt "Installer la reconnaissance faciale (face-recognition / dlib) ?" -DefaultNo $true) {
+    Write-Host "Necessite Visual Studio Build Tools (C++) sur Windows." -ForegroundColor DarkGray
+    $installVision = $true
+}
+Invoke-UvSync -WithVision:$installVision
 Write-Host "Dependances installees." -ForegroundColor Green
 
 Write-Step -Current 3 -Total $stepTotal -Title "Configuration LLM principal"
@@ -182,10 +243,23 @@ $livekitApiKey = ""
 $livekitApiSecret = ""
 $deepgramApiKey = ""
 if (Ask-YesNo -Prompt "Activer le pipeline vocal LiveKit ?" -DefaultNo $true) {
-    $livekitUrl = Require-Value -Prompt "LiveKit URL (wss://...)"
-    $livekitApiKey = Require-Value -Prompt "LiveKit API Key" -Secret $true
-    $livekitApiSecret = Require-Value -Prompt "LiveKit API Secret" -Secret $true
-    $deepgramApiKey = Require-Value -Prompt "Deepgram API Key" -Secret $true
+    if (-not (Ensure-Command "livekit-server")) {
+        Write-Host "livekit-server absent." -ForegroundColor Yellow
+        Write-Host "Telecharge livekit-server.exe depuis:" -ForegroundColor Yellow
+        Write-Host "https://github.com/livekit/livekit/releases" -ForegroundColor Yellow
+        Write-Host "Place-le dans un dossier du PATH." -ForegroundColor Yellow
+    }
+    if (Ask-YesNo -Prompt "Utiliser LiveKit Cloud plutot que le serveur local ?" -DefaultNo $true) {
+        $livekitUrl = Require-Value -Prompt "LiveKit URL (wss://...)"
+        $livekitApiKey = Require-Value -Prompt "LiveKit API Key" -Secret $true
+        $livekitApiSecret = Require-Value -Prompt "LiveKit API Secret" -Secret $true
+    } else {
+        $livekitUrl = "ws://localhost:7880"
+        $livekitApiKey = "devkey"
+        $livekitApiSecret = "devsecretdevsecretdevsecretdevsecret"
+        Write-Host "LiveKit local (ws://localhost:7880)" -ForegroundColor Green
+    }
+    $deepgramApiKey = Require-Value -Prompt "Deepgram API Key (STT)" -Secret $true
 }
 
 $aisstreamKey = ""
@@ -196,6 +270,7 @@ if (Ask-YesNo -Prompt "Configurer AISstream ?" -DefaultNo $true) {
 Write-Step -Current 7 -Total $stepTotal -Title "Telechargement des modeles ML"
 if (-not (Test-Path "yolov8n.pt")) {
     uv run python -c "from ultralytics import YOLO; YOLO('yolov8n.pt')"
+    if ($LASTEXITCODE -ne 0) { throw "Telechargement YOLOv8 echoue." }
 }
 
 $piperDir = "models/piper"
@@ -209,12 +284,7 @@ if (-not (Test-Path $piperModel)) {
 }
 
 Write-Step -Current 8 -Total $stepTotal -Title "Generation de l'environnement"
-New-Item -ItemType Directory -Path "memory_data/sessions" -Force | Out-Null
-New-Item -ItemType Directory -Path "memory_data/topics" -Force | Out-Null
-New-Item -ItemType Directory -Path "memory_data/conso" -Force | Out-Null
-New-Item -ItemType Directory -Path "memory_data/initiatives" -Force | Out-Null
-New-Item -ItemType Directory -Path "workspace/projects" -Force | Out-Null
-New-Item -ItemType Directory -Path "vision/faces" -Force | Out-Null
+Ensure-JarvisLayout
 
 if (Test-Path ".env") {
     $stamp = Get-Date -Format "yyyyMMdd_HHmmss"
@@ -226,15 +296,18 @@ if ($serverPort -ne 8000) {
     Write-Host "Port 8000 indisponible, utilisation du port $serverPort." -ForegroundColor Yellow
 }
 
+$faceRecognitionEnabled = if ($installVision) { "true" } else { "false" }
+
 $envContent = @"
 USER_FIRSTNAME=$userFirstname
 LLM_PROVIDER=api
 API_BACKEND=$apiBackend
 ANTHROPIC_API_KEY=$anthropicApiKey
 ANTHROPIC_MODEL=$anthropicModel
+VOICE_ANTHROPIC_MODEL=claude-haiku-4-5-20251001
 OPENAI_API_KEY=$openaiApiKey
 OPENAI_MODEL=$openaiModel
-HOST=0.0.0.0
+HOST=127.0.0.1
 PORT=$serverPort
 ENVIRONMENT=development
 LOG_LEVEL=INFO
@@ -251,6 +324,7 @@ LIVEKIT_API_KEY=$livekitApiKey
 LIVEKIT_API_SECRET=$livekitApiSecret
 DEEPGRAM_API_KEY=$deepgramApiKey
 AISSTREAM_KEY=$aisstreamKey
+FACE_RECOGNITION_ENABLED=$faceRecognitionEnabled
 MISTRAL_API_KEY=
 MISTRAL_MODEL=mistral-large-latest
 OLLAMA_BASE_URL=http://localhost:11434
@@ -263,9 +337,13 @@ Set-Content -Path ".env" -Value $envContent -Encoding UTF8
 Write-Host ""
 Write-Host ("=" * 60) -ForegroundColor Cyan
 Write-Host "Systeme pret." -ForegroundColor Green
-Write-Host "Lancer le serveur: uv run python main.py" -ForegroundColor White
+Write-Host "Installation : .\setup.ps1" -ForegroundColor DarkGray
+Write-Host "Demarrer tout : .\jarvis.ps1 run" -ForegroundColor White
+Write-Host "API seule     : .\jarvis.ps1 api  -> http://localhost:$serverPort/admin" -ForegroundColor White
 if (-not [string]::IsNullOrWhiteSpace($livekitUrl)) {
-    Write-Host "Lancer la voix: uv run python voice_agent.py dev" -ForegroundColor White
+    Write-Host "Voix          : .\jarvis.ps1 voice" -ForegroundColor White
 }
+Write-Host ""
+Write-Host "Reconnaissance faciale : place une photo JPG dans vision_data/faces/" -ForegroundColor DarkGray
 Write-Host ("=" * 60) -ForegroundColor Cyan
 Write-Host ""

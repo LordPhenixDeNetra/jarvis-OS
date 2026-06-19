@@ -1,6 +1,6 @@
 """
 Face recognition avec face_recognition (ageitgey/dlib).
-Compare chaque frame webcam avec les photos de référence dans vision/faces/.
+Compare les frames webcam avec les visages de référence dans vision_data/faces/.
 """
 
 from __future__ import annotations

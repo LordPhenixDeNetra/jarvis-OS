@@ -48,7 +48,7 @@ EOF
 
   # uv sync — toutes deps (les deps système doivent déjà être installées)
   if command -v uv > /dev/null 2>&1; then
-    uv sync --frozen --group dev
+    uv sync --frozen --group dev --extra vision
     echo "  ✓ uv sync terminé"
   else
     echo "  ! uv absent du PATH — installer uv avant 'setup.sh --ci'"
@@ -251,7 +251,7 @@ badge_ok "curl"
 # ── STEP 2 — Dépendances Python ──────────────────────────────────
 step "Installation des dépendances Python"
 
-run_task "uv sync (pyproject.toml)" uv sync
+run_task "uv sync (pyproject.toml + vision)" uv sync --extra vision
 badge_info ".venv/ prêt"
 
 # ── STEP 3 — LLM principal ───────────────────────────────────────

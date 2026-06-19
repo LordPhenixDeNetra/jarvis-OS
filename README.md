@@ -81,9 +81,18 @@ suite complète, incl. les ~28 tests `@pytest.mark.integration`.
 | Docker | optionnel | Requis par la fonctionnalité code-agent |
 | `nowplaying-cli` | optionnel (macOS) | Lecture locale « now playing » — `brew install nowplaying-cli` |
 
+**Windows (supplémentaire) :**
+
+| Outil | Notes |
+|---|---|
+| [Visual Studio Build Tools](https://visualstudio.microsoft.com/visual-cpp-build-tools/) | Uniquement si tu installes la reconnaissance faciale (`uv sync --extra vision`) — compile `dlib` |
+| [livekit-server](https://github.com/livekit/livekit/releases) | Binaire `livekit-server.exe` dans le PATH pour le mode vocal local |
+
 ---
 
 ## Installation
+
+### Linux / macOS
 
 ```bash
 git clone https://github.com/Grominet95/jarvis-OS.git
@@ -91,26 +100,48 @@ cd jarvis-OS
 ./jarvis eclosion
 ```
 
-Le wizard interactif :
+### Windows
+
+```powershell
+git clone https://github.com/Grominet95/jarvis-OS.git
+cd jarvis-OS
+.\jarvis.ps1 eclosion
+```
+
+Le wizard interactif (`setup.sh` ou `setup.ps1`) :
 1. Vérifie Python 3.11+ et installe `uv` si absent
-2. Installe toutes les dépendances Python (`pyproject.toml`)
-3. Demande ta clé API Anthropic (seule clé obligatoire)
+2. Installe les dépendances Python (`pyproject.toml`) — la reconnaissance faciale est **optionnelle** sur Windows
+3. Demande ta clé API Anthropic ou OpenAI
 4. Demande ton prénom (affiché lors du scan biométrique)
 5. Configure ta localisation pour le moteur proactif
-6. Propose les modules optionnels (ElevenLabs, LiveKit, AISstream)
+6. Propose les modules optionnels (ElevenLabs, LiveKit local ou cloud, AISstream)
 7. Télécharge les modèles ML (YOLOv8n, Piper TTS)
-8. Génère le `.env` et installe la commande `jarvis` globalement
+8. Génère le `.env` et crée la disposition de données (`memory_data/`, `vision_data/faces/`, …)
 
-> La première fois, utilise `./jarvis eclosion`. Le wizard installe ensuite la commande globalement, tu peux utiliser `jarvis` depuis n'importe où.
+> **Linux / macOS :** `./jarvis eclosion` puis `jarvis run` depuis n'importe où (symlink global).
+>
+> **Windows :** `.\jarvis.ps1 eclosion` puis `.\jarvis.ps1 run` depuis le dossier du projet.
 
 ---
 
 ## Démarrage
 
+### Linux / macOS
+
 ```bash
 jarvis run      # serveur principal  →  localhost:8000/admin
 jarvis voice    # pipeline vocal LiveKit (optionnel)
 ```
+
+### Windows
+
+```powershell
+.\jarvis.ps1 run     # LiveKit + API + Voice
+.\jarvis.ps1 api     # serveur FastAPI uniquement
+.\jarvis.ps1 voice   # pipeline vocal LiveKit (optionnel)
+```
+
+Le port par défaut est `8000` ; si occupé, `setup.ps1` en choisit un autre (vérifie `PORT` dans `.env`).
 
 Les deux peuvent tourner simultanément : le voice agent délègue au gateway du serveur principal, donc ils partagent la même session, la même mémoire et les mêmes outils.
 
@@ -125,10 +156,17 @@ Tout est configuré pendant l'éclosion. Pour modifier une clé après coup, éd
 **Reconnaissance faciale (séquence Wake Up) :** pour que le scan biométrique te reconnaisse, place une photo de toi (format JPG, visage bien visible, bonne luminosité) dans :
 
 ```
-vision/faces/référence.jpg
+vision_data/faces/référence.jpg
 ```
 
-Sans cette photo, la séquence de scan s'exécute mais retourne toujours "identité non reconnue". Le dossier `vision/faces/` est gitignorés, ta photo ne sera jamais commitée.
+Sans cette photo, la séquence de scan s'exécute mais retourne toujours "identité non reconnue". Le dossier `vision_data/faces/` est gitignoré, ta photo ne sera jamais commitée.
+
+Pour activer la reconnaissance faciale, installe le extra Python puis active-la dans `.env` :
+
+```bash
+uv sync --extra vision        # Linux/macOS, ou Windows avec Visual Studio C++
+# FACE_RECOGNITION_ENABLED=true
+```
 
 ---
 

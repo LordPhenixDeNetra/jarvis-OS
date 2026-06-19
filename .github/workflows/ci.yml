@@ -108,7 +108,7 @@ jobs:
           cache-dependency-glob: "uv.lock"
 
       - name: Install dependencies (full)
-        run: uv sync --frozen --group dev
+        run: uv sync --frozen --group dev --extra vision
 
       - name: Pytest (suite complète, incl. integration)
         run: uv run pytest -q
