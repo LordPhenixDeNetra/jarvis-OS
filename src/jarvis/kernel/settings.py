@@ -428,6 +428,18 @@ class Settings(BaseSettings):
         default="",
         description="Prénom de l'utilisateur (USER_FIRSTNAME dans .env).",
     )
+    user_profile: str = Field(
+        default="",
+        description=(
+            "Bio courte de l'utilisateur (USER_PROFILE dans .env), injectée dans le "
+            "moteur proactif. Ex. 'entrepreneur tech, YouTuber hardware, Lyon'. Vide = omis."
+        ),
+    )
+
+    @property
+    def display_name(self) -> str:
+        """Prénom à utiliser dans les prompts. Repli sur 'Barth' si non configuré."""
+        return (self.user_firstname or "").strip() or "Barth"
 
     # ── Wake Up sequence ─────────────────────────────────────
     wakeup_enabled: bool = Field(
