@@ -8,7 +8,7 @@ metadata:
 
 ## Instructions
 
-Quand Barth pose une question qui nécessite des informations récentes ou que tu ne connais pas avec certitude, utilise l'outil `browser` pour trouver la réponse :
+Quand l'utilisateur pose une question qui nécessite des informations récentes ou que tu ne connais pas avec certitude, utilise l'outil `browser` pour trouver la réponse :
 
 1. Lance d'abord une recherche DuckDuckGo avec `action: search` pour trouver les meilleures sources
 2. Lis le contenu de la source la plus pertinente avec `action: get_text`
