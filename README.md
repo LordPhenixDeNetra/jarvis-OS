@@ -26,7 +26,7 @@ Jarvis est un assistant personnel IA qui tourne en local. Il expose un serveur F
 **Fonctionnalités principales :**
 
 - Pipeline vocal temps réel : STT (Whisper/Deepgram) + LLM + TTS (Piper/ElevenLabs), bridgé via LiveKit
-- Mémoire vivante (Memory Kernel) : faits atomiques datés, sourcés, renforçables, oubliables, corrigeables — SQLite source de vérité, miroir Markdown lisible
+- Mémoire vivante (Memory Kernel) : faits atomiques datés, sourcés, renforçables, oubliables, corrigeables ; SQLite source de vérité, miroir Markdown lisible
 - Mission Engine : transforme une demande en mission planifiée, vérifiée à chaque étape (structurelle, déterministe, sémantique), reprise après crash
 - Gouvernance transversale : tout ce qui touche au filesystem ou au réseau passe par un gate composite (risque × catégorie × budget) avec audit immuable
 - Apprentissage : leçon post-mission, Skill Lab (skills nées de l'usage, testées en sandbox Docker, validées par l'humain avant install), Capability Engine pour combler les manques de capacité
@@ -37,7 +37,7 @@ Jarvis est un assistant personnel IA qui tourne en local. Il expose un serveur F
 
 ---
 
-## Architecture — couches strictes (CDC §2)
+## Architecture : couches strictes (CDC §2)
 
 Depuis la migration `refonte/architecture-couches` (v0.2), le code est
 organisé en **4 couches strictes** validées par
@@ -84,11 +84,11 @@ Tu télécharges une archive **avec le dossier `bundle/` déjà inclus**. Tu n'a
 | Windows 10/11 | |
 | PowerShell | Pour lancer `jarvis.ps1` |
 | Navigateur web | Configuration sur `http://127.0.0.1:8765/setup` |
-| Clés API (LLM, etc.) | OpenAI ou Anthropic au minimum — saisies dans l'assistant web |
+| Clés API (LLM, etc.) | OpenAI ou Anthropic au minimum, saisies dans l'assistant web |
 
 Le bundle embarque déjà : un Python 3.11 **autonome et relocalisable** (`bundle/python`), un environnement virtuel (`bundle/.venv`), les dépendances Python, les modèles ML (YOLO, Piper), `livekit-server` et `uv.exe`. Au premier `setup`, l'environnement est automatiquement ré-ancré sur la machine cible (aucun chemin absolu de la machine de build n'est requis).
 
-### Développeur — construire le bundle
+### Développeur : construire le bundle
 
 Une seule fois, **avec réseau**, pour produire `bundle/` (release ou usage local sans clone vide).
 
@@ -105,16 +105,16 @@ Python système et LiveKit **ne sont pas requis** : le script de build les intè
 |---|---|
 | [LiveKit Cloud](https://livekit.io/) | Alternative au serveur local (déjà dans le bundle) |
 | Docker | Code-agent, Skill Lab sandbox |
-| `uv sync --extra vision` | Reconnaissance faciale (`dlib`) — sur Windows, peut exiger [Visual Studio Build Tools](https://visualstudio.microsoft.com/visual-cpp-build-tools/) (workload C++) |
-| `nowplaying-cli` | macOS uniquement — lecture locale « now playing » |
+| `uv sync --extra vision` | Reconnaissance faciale (`dlib`), sur Windows, peut exiger [Visual Studio Build Tools](https://visualstudio.microsoft.com/visual-cpp-build-tools/) (workload C++) |
+| `nowplaying-cli` | macOS uniquement, lecture locale « now playing » |
 
 ---
 
 ## Installation
 
-### Parcours A — Utilisateur final (Windows)
+### Parcours A : Utilisateur final (Windows)
 
-**Tu as reçu une release ou une archive avec `bundle/`** — aucun téléchargement à l'installation.
+**Tu as reçu une release ou une archive avec `bundle/`** : aucun téléchargement à l'installation.
 
 ```powershell
 # 1. Décompresser l'archive, puis ouvrir le dossier du projet
@@ -138,7 +138,7 @@ L'assistant web configure l'identité, les clés API, les modules optionnels et 
 
 > **Sans `bundle/`** : ce parcours ne fonctionne pas. Passe au parcours B ou télécharge une release offline.
 
-### Parcours B — Construire le bundle (développeur)
+### Parcours B : Construire le bundle (développeur)
 
 À faire **une fois**, avec réseau, avant de distribuer ou d'utiliser le parcours A.
 
@@ -162,7 +162,7 @@ bash scripts/release/build_bundle.sh
 
 Le script crée `bundle/` : `.venv`, modèles, `livekit-server`, `manifest.json`. Ensuite, la configuration et le démarrage suivent le même flux que le parcours A (sans nouveau téléchargement).
 
-### Parcours C — Développement sans bundle (Linux / macOS / Windows)
+### Parcours C : Développement sans bundle (Linux / macOS / Windows)
 
 Installation classique avec uv sur la machine (téléchargements à chaque `uv sync`) :
 
@@ -211,11 +211,11 @@ Tout est configuré via l'assistant web (`.\jarvis.ps1 setup` ou `./jarvis eclos
 | `mistral` | `MISTRAL_API_KEY` | Function calling supporté. |
 | `local` (`LLM_PROVIDER=local`) | aucune | Ollama local. |
 
-Le backend choisi pilote le chat texte, le vocal in-house (`/ws/voice`) et les tâches background (mémoire, consolidation, auto-dream) — aucune dépendance Anthropic n'est forcée si `API_BACKEND` n'est pas `anthropic`.
+Le backend choisi pilote le chat texte, le vocal in-house (`/ws/voice`) et les tâches background (mémoire, consolidation, auto-dream) ; aucune dépendance Anthropic n'est forcée si `API_BACKEND` n'est pas `anthropic`.
 
 **Pipeline vocal LiveKit temps réel :** c'est un process séparé (`jarvis.interfaces.voice.agent`) qui utilise les plugins LLM de LiveKit. Il suit `API_BACKEND` (OpenAI / Anthropic / Mistral). Si le backend n'est pas géré côté LiveKit, il bascule sur Gemini (`GOOGLE_API_KEY` requis). Surcharge possible via `VOICE_LLM_MODEL`.
 
-**Intégrations Google (Gmail / Calendar) :** place ton `credentials.json` issu de Google Cloud Console dans `config/google_credentials.json`, puis démarre Jarvis — il ouvrira le flux d'authentification OAuth et sauvegardera les tokens en local (ils sont gitignorés).
+**Intégrations Google (Gmail / Calendar) :** place ton `credentials.json` issu de Google Cloud Console dans `config/google_credentials.json`, puis démarre Jarvis, il ouvrira le flux d'authentification OAuth et sauvegardera les tokens en local (ils sont gitignorés).
 
 **Reconnaissance faciale (séquence Wake Up) :** pour que le scan biométrique te reconnaisse, place une photo de toi (format JPG, visage bien visible, bonne luminosité) dans :
 
@@ -253,7 +253,7 @@ uv sync --extra vision
 
 ## Système de mémoire
 
-Jarvis ne mémorise pas en vrac : il **extrait des faits atomiques** (« Barth vise un marathon sub-3h »), les **date**, les **source** (quel échange l'a produit), les **renforce** quand il les ré-entend, les **archive** quand ils sont contredits — sans jamais les supprimer. Une base SQLite unique est la source de vérité ; un miroir Markdown lisible (compatible Obsidian) en donne une vue inerte.
+Jarvis ne mémorise pas en vrac : il **extrait des faits atomiques** (« Barth vise un marathon sub-3h »), les **date**, les **source** (quel échange l'a produit), les **renforce** quand il les ré-entend, les **archive** quand ils sont contredits, sans jamais les supprimer. Une base SQLite unique est la source de vérité ; un miroir Markdown lisible (compatible Obsidian) en donne une vue inerte.
 
 | Table | Ce qu'elle contient |
 |---|---|
@@ -262,11 +262,11 @@ Jarvis ne mémorise pas en vrac : il **extrait des faits atomiques** (« Barth v
 | `fact_observations` | Renforcement sans duplication : chaque ré-observation crée une trace au lieu d'ajouter un doublon |
 | `fact_relations` | Liens entre facts (`supersedes`, `contradicts`, `supports`, `related_to`) |
 
-Le miroir Markdown est **unidirectionnel** : la DB génère `user/preferences.md`, `user/projects.md`, `user/goals.md`, `jarvis/persona.md`, etc., pour inspection. Éditer un `.md` ne modifie pas la mémoire — pour corriger un souvenir, Jarvis crée un événement `human_correction` qui met la DB à jour.
+Le miroir Markdown est **unidirectionnel** : la DB génère `user/preferences.md`, `user/projects.md`, `user/goals.md`, `jarvis/persona.md`, etc., pour inspection. Éditer un `.md` ne modifie pas la mémoire ; pour corriger un souvenir, Jarvis crée un événement `human_correction` qui met la DB à jour.
 
 Chaque nuit, **AutoDream** + **ConsolidationAgent** repassent sur les sessions récentes pour en extraire les facts manqués en temps réel.
 
-Tout vit dans `memory_data/` (DB `jarvis_memory.db`, vault `topics/` lisible, sessions, conso, initiatives). Le dossier est gitignored — la mémoire reste sur ta machine.
+Tout vit dans `memory_data/` (DB `jarvis_memory.db`, vault `topics/` lisible, sessions, conso, initiatives). Le dossier est gitignored ; la mémoire reste sur ta machine.
 
 ---
 
@@ -293,16 +293,16 @@ Une fois lancé sur `http://localhost:3000`, l'onglet Intel Monde de Jarvis l'af
 
 Jarvis ne « pousse pas juste des notifs » : il **entreprend des initiatives gouvernées**. Chaque initiative porte un déclencheur, un objectif, un coût max (tokens/temps/argent), un niveau d'autonomie (0 = répondre seulement → 5 = publier/payer/contacter, validation humaine obligatoire), et un état suivi en continu.
 
-- **Collectors** (`proactive/collectors/`) — captent les signaux : météo (briefing + alertes sévères), actualités (digest RSS), trackers personnalisables. Étends-les en ajoutant un fichier dans le dossier.
-- **Command Center** (`proactive/command_center.py`) — la vue unifiée de toutes les initiatives et missions en cours : objectifs, budgets, permissions, heartbeat, coûts. Jarvis ne « fait pas des trucs », il gère des workstreams.
-- **Curator nocturne** (`proactive/curator.py`) — job de maintenance qui produit chaque nuit un rapport et propose des patches : facts ajoutés/contradictoires, skills inutilisées à archiver, prompts qui ont dérivé, coûts du jour, erreurs récurrentes. Il **propose**, l'humain valide pour tout ce qui dépasse le gate (cf. gouvernance).
-- **Gouvernance** — toute initiative niveau ≥ 3 (exécution sandboxée), 4 (modification de fichiers projet) ou 5 (publication/paiement/contact) passe par le gate composite avant agir, comme n'importe quel step de mission.
+- **Collectors** (`proactive/collectors/`) : captent les signaux : météo (briefing + alertes sévères), actualités (digest RSS), trackers personnalisables. Étends-les en ajoutant un fichier dans le dossier.
+- **Command Center** (`proactive/command_center.py`) : la vue unifiée de toutes les initiatives et missions en cours : objectifs, budgets, permissions, heartbeat, coûts. Jarvis ne « fait pas des trucs », il gère des workstreams.
+- **Curator nocturne** (`proactive/curator.py`) : job de maintenance qui produit chaque nuit un rapport et propose des patches : facts ajoutés/contradictoires, skills inutilisées à archiver, prompts qui ont dérivé, coûts du jour, erreurs récurrentes. Il **propose**, l'humain valide pour tout ce qui dépasse le gate (cf. gouvernance).
+- **Gouvernance** : toute initiative niveau ≥ 3 (exécution sandboxée), 4 (modification de fichiers projet) ou 5 (publication/paiement/contact) passe par le gate composite avant agir, comme n'importe quel step de mission.
 
 ---
 
-## Telegram — accès mobile
+## Telegram : accès mobile
 
-Jarvis est accessible depuis n'importe où via un bot Telegram. Même LLM, même mémoire, mêmes outils — juste depuis ton téléphone.
+Jarvis est accessible depuis n'importe où via un bot Telegram. Même LLM, même mémoire, mêmes outils, juste depuis ton téléphone.
 
 **1. Créer le bot**
 
@@ -320,7 +320,7 @@ TELEGRAM_OWNER_ID=123456789
 TELEGRAM_ENABLED=true
 ```
 
-**4. Lancer Jarvis** — les logs affichent `Telegram bot démarré`. Ouvre le chat avec ton bot et envoie `/start`.
+**4. Lancer Jarvis** : les logs affichent `Telegram bot démarré`. Ouvre le chat avec ton bot et envoie `/start`.
 
 **Commandes disponibles**
 
@@ -389,4 +389,4 @@ documentés en [`docs/migration/BACKLOG.md`](docs/migration/BACKLOG.md).
 
 ## Licence
 
-[Proprietary Source License](LICENSE) — © 2026 Barthélemy Houot. All rights reserved.
+[Proprietary Source License](LICENSE) · © 2026 Barthélemy Houot. All rights reserved.
