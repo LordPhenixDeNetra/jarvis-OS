@@ -32,10 +32,12 @@ class ConsolidationAgent:
         memory_index: MemoryIndex,
         topic_store: TopicStore,
         memory_ingest: MemoryIngest | None = None,
+        user_firstname: str = "Barth",
     ) -> None:
         self._llm = llm
         self._memory_index = memory_index
         self._topic_store = topic_store
+        self._name = user_firstname
         self._prompt_template = _PROMPT_PATH.read_text(encoding="utf-8")
         # PHASE 3 — Q3=a : ingestion en parallèle dans le Kernel SQLite.
         # Doublon temporaire ; topics/*.md restent écrits comme avant.
@@ -77,7 +79,7 @@ class ConsolidationAgent:
         if self._ingest is not None:
             try:
                 await self._ingest.ingest(
-                    content=f"Barth : {user_message}\nJarvis : {assistant_message}",
+                    content=f"{self._name} : {user_message}\nJarvis : {assistant_message}",
                     source="consolidation_agent",
                     event_type="exchange",
                 )

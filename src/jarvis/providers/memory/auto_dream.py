@@ -17,22 +17,27 @@ _MAX_SESSIONS_PER_DEEP = 5
 # plus récent et le plus actionnable).
 _MAX_CHARS_PER_SESSION = 8000
 
-_DEFAULT_PREFS = "# Préférences Barth\n\nAucune préférence enregistrée.\n"
+def _default_prefs(name: str) -> str:
+    return f"# Préférences {name}\n\nAucune préférence enregistrée.\n"
 
-_MICRO_SYSTEM = (
-    "Tu es un agent de mémorisation pour Jarvis. "
-    "Analyse l'échange et mets à jour les préférences de Barth uniquement si tu détectes "
-    "une nouvelle préférence explicite (note que, retiens que, j'aime, je préfère…) ou "
-    "un signal implicite fort. Retourne uniquement le markdown mis à jour, sans explication. "
-    "Si rien à changer, retourne le fichier identique."
-)
 
-_DEEP_SYSTEM = (
-    "Tu es un agent de mémorisation pour Jarvis. "
-    "Analyse les sessions fournies et synthétise les apprentissages durables sur Barth "
-    "(préférences, habitudes, contexte). "
-    "Retourne uniquement le markdown mis à jour des préférences."
-)
+def _micro_system(name: str) -> str:
+    return (
+        "Tu es un agent de mémorisation pour Jarvis. "
+        f"Analyse l'échange et mets à jour les préférences de {name} uniquement si tu détectes "
+        "une nouvelle préférence explicite (note que, retiens que, j'aime, je préfère…) ou "
+        "un signal implicite fort. Retourne uniquement le markdown mis à jour, sans explication. "
+        "Si rien à changer, retourne le fichier identique."
+    )
+
+
+def _deep_system(name: str) -> str:
+    return (
+        "Tu es un agent de mémorisation pour Jarvis. "
+        f"Analyse les sessions fournies et synthétise les apprentissages durables sur {name} "
+        "(préférences, habitudes, contexte). "
+        "Retourne uniquement le markdown mis à jour des préférences."
+    )
 
 
 class AutoDream:
@@ -45,10 +50,14 @@ class AutoDream:
         sessions_dir: Path,
         memory_ingest: MemoryIngest | None = None,
         mirror: MemoryMirror | None = None,
+        user_firstname: str = "Barth",
     ) -> None:
         self._llm = llm
         self._prefs_path = prefs_path
         self._sessions_dir = sessions_dir
+        self._name = user_firstname
+        self._micro_system = _micro_system(user_firstname)
+        self._deep_system = _deep_system(user_firstname)
         self._ensure_prefs()
         self._mirror = mirror
         # MOUVEMENT 2 (option D, Generative Agents) : l'ingestion Kernel est
@@ -65,7 +74,7 @@ class AutoDream:
     def _ensure_prefs(self) -> None:
         if not self._prefs_path.exists():
             self._prefs_path.parent.mkdir(parents=True, exist_ok=True)
-            self._prefs_path.write_text(_DEFAULT_PREFS, encoding="utf-8")
+            self._prefs_path.write_text(_default_prefs(self._name), encoding="utf-8")
 
     def _read_prefs(self) -> str:
         return self._prefs_path.read_text(encoding="utf-8")
@@ -91,11 +100,11 @@ class AutoDream:
         prefs = self._read_prefs()
         prompt = (
             f"Préférences actuelles :\n{prefs}\n\n"
-            f"Échange :\nBarth : {user_message}\nJarvis : {assistant_message}"
+            f"Échange :\n{self._name} : {user_message}\nJarvis : {assistant_message}"
         )
         result = await self._llm.complete(
             messages=[{"role": "user", "content": prompt}],
-            system=_MICRO_SYSTEM,
+            system=self._micro_system,
             stream=False,
         )
         updated = str(result).strip()
@@ -107,7 +116,7 @@ class AutoDream:
         if self._ingest is not None:
             try:
                 await self._ingest.ingest(
-                    content=f"Barth : {user_message}\nJarvis : {assistant_message}",
+                    content=f"{self._name} : {user_message}\nJarvis : {assistant_message}",
                     source="auto_dream_micro",
                     event_type="exchange",
                 )
@@ -133,7 +142,7 @@ class AutoDream:
         prompt = f"Préférences actuelles :\n{prefs}\n\nSessions récentes :\n{sessions_text}"
         result = await self._llm.complete(
             messages=[{"role": "user", "content": prompt}],
-            system=_DEEP_SYSTEM,
+            system=self._deep_system,
             stream=False,
         )
         updated = str(result).strip()
@@ -175,11 +184,10 @@ class AutoDream:
         files = sorted(self._sessions_dir.glob("*.jsonl"), key=lambda p: p.stat().st_mtime)
         return files[-_MAX_SESSIONS_PER_DEEP:]
 
-    @staticmethod
-    def _session_to_text(path: Path) -> str:
+    def _session_to_text(self, path: Path) -> str:
         """Concatène les messages d'une session JSONL en un texte unique.
 
-        Format : alternance 'Barth : ...' / 'Jarvis : ...'.
+        Format : alternance '<prénom> : ...' / 'Jarvis : ...'.
         Le texte complet est passé à l'extracteur en UN SEUL APPEL — l'extracteur
         raisonne sur la session ENTIÈRE, pas message par message.
         """
@@ -200,7 +208,7 @@ class AutoDream:
             content = obj.get("content", "")
             if not isinstance(content, str) or not content.strip():
                 continue
-            speaker = "Barth" if role == "user" else "Jarvis"
+            speaker = self._name if role == "user" else "Jarvis"
             parts.append(f"{speaker} : {content.strip()}")
         text = "\n".join(parts)
         # Tronque au tail si la session est très longue : on garde le contexte

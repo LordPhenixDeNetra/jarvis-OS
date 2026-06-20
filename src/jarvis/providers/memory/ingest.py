@@ -86,7 +86,7 @@ _EXTRACT_SYSTEM = (
 )
 
 
-def _build_prompt(content: str, source: str) -> str:
+def _build_prompt(content: str, source: str, name: str = "Barth") -> str:
     pred_list = ", ".join(sorted(PREDICATES))
     cat_list = ", ".join(sorted(CATEGORIES))
     return (
@@ -102,14 +102,14 @@ def _build_prompt(content: str, source: str) -> str:
         f"category (obligatoire, choisir EXACTEMENT un dans la liste) : {cat_list}\n\n"
         "## Règles d'extraction\n"
         "- 0 à 5 faits maximum. Si rien d'intéressant, renvoie une liste vide.\n"
-        "- Chaque fait est atomique (une seule idée). 'Barth court depuis un an et "
+        "- Chaque fait est atomique (une seule idée). '" + name + " court depuis un an et "
         "vise sub-3h' = DEUX faits.\n"
-        "- subject est l'entité concernée (souvent 'Barth' ou 'jarvis').\n"
+        f"- subject est l'entité concernée (souvent '{name}' ou 'jarvis').\n"
         "- object est la valeur/cible du fait, court et concret.\n"
         "- 'confidence_source' = 'inference' (déduit), 'explicit' (énoncé direct), "
         "ou 'correction' (l'utilisateur corrige).\n"
         "- 'importance' ∈ [0, 1] : à quel point ce fait éclaire la compréhension "
-        "long terme de Barth. 0.3 = anecdotique, 0.7 = significatif, 0.9 = pivot.\n"
+        f"long terme de {name}. 0.3 = anecdotique, 0.7 = significatif, 0.9 = pivot.\n"
         "- Si tu utilises un prédicat ou une catégorie HORS de la liste, le fait sera "
         "rejeté en `needs_review`. Préfère renvoyer moins.\n\n"
         "## Forme canonique (CRITIQUE — évite les doublons sémantiques en aval)\n"
@@ -138,7 +138,7 @@ def _build_prompt(content: str, source: str) -> str:
         "factuelle. Ex. 'course à pied' plutôt que 'la course à pied régulière'.\n\n"
         "## Format de sortie\n"
         '{\n  "facts": [\n'
-        '    {\n      "subject": "Barth",\n      "predicate": "prefers",\n'
+        '    {\n      "subject": "' + name + '",\n      "predicate": "prefers",\n'
         '      "object": "café noir",\n      "category": "preference",\n'
         '      "confidence_source": "explicit",\n      "importance": 0.4\n    }\n'
         "  ]\n}\n"
@@ -224,10 +224,12 @@ class MemoryIngest:
         kernel: MemoryKernel,
         llm: LLMProvider,
         bus: EventBus | None = None,
+        user_firstname: str = "Barth",
     ) -> None:
         self._kernel = kernel
         self._llm = llm
         self._bus = bus
+        self._name = user_firstname
         # Compteur d'appels au LLM arbitre (étape 2 du matcher v2).
         self.arbiter_calls = 0
 
@@ -283,7 +285,7 @@ class MemoryIngest:
     # ── Étape 2 : extraction LLM ──────────────────────────────────────────────
 
     async def _extract_facts(self, content: str, source: str) -> list[_Candidate]:
-        prompt = _build_prompt(content, source)
+        prompt = _build_prompt(content, source, self._name)
         try:
             raw = await self._llm.complete(
                 messages=[{"role": "user", "content": prompt}],
