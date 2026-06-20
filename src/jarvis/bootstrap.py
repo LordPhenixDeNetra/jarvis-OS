@@ -246,7 +246,9 @@ def build(
 
     tts_engine.set_tracker(tracker)
 
-    memory_ingest = MemoryIngest(kernel=memory_kernel, llm=background_llm, bus=bus)
+    memory_ingest = MemoryIngest(
+        kernel=memory_kernel, llm=background_llm, bus=bus, user_firstname=settings.display_name
+    )
     user_model = UserModel(llm=background_llm, model_path=user_model_path)
     cross_recall = CrossSessionRecall(
         llm=background_llm, fts_index=fts_index, vector_index=vector_index
@@ -256,6 +258,7 @@ def build(
         memory_index=memory_index,
         topic_store=topic_store,
         memory_ingest=None,  # JAMAIS branché — choix d'archi (CDC §3 AutoDream micro).
+        user_firstname=settings.display_name,
     )
     _deep_ingest = memory_ingest if settings.ingest_deep_enabled else None
 
@@ -265,6 +268,7 @@ def build(
         sessions_dir=memory_dir / "sessions",
         memory_ingest=_deep_ingest,
         mirror=memory_mirror,
+        user_firstname=settings.display_name,
     )
 
     # ── 5. Capabilities L1 — Skill registry + Tools ─────────────────────────
@@ -456,7 +460,11 @@ def build(
             calendar_tool=calendar_list_tool,
             notion_tool=notion_tasks_tool,
         ),
-        generator=InitiativeGenerator(llm=background_llm),
+        generator=InitiativeGenerator(
+            llm=background_llm,
+            user_firstname=settings.display_name,
+            user_profile=settings.user_profile,
+        ),
         store=initiative_store,
         interval_minutes=30,
     )
