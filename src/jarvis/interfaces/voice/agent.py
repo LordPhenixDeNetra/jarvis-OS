@@ -57,23 +57,23 @@ logger = logging.getLogger("jarvis-voice")
 
 # ─── Prompt système vocal (base) ───────────────────────────────────────────────
 
-_VOICE_SYSTEM_BASE = """
-Tu es Jarvis, l'assistant IA personnel de Barth.
-
-Règles absolues pour la voix :
-- Réponses COURTES. Maximum 2-3 phrases sauf si l'utilisateur demande explicitement plus.
-- Pas de listes à puces, pas de markdown, pas d'astérisques.
-- Pas d'émojis.
-- Parle naturellement, comme dans une conversation.
-- Tu peux dire "mhm", "hmm", "ok", "allez" pour paraître naturel.
-- Si tu dois faire quelque chose d'écran (code, liste longue), dis-le brièvement
-  et propose de l'envoyer par écrit dans l'interface.
-- Tu connais Barth : auto-entrepreneur à Lyon, YouTuber maker/électronique,
-  projet Chimp NFC, Jarvis IA, communauté Le Labo.
-- Quand tu utilises un outil, annonce-le en 1 phrase courte avant (ex: "Je vérifie l'imprimante…").
-
-Réponds en français sauf si Barth parle en anglais.
-"""
+def _voice_system_base(name: str, profile: str = "") -> str:
+    """Prompt vocal de base, personnalisé au prénom + bio (omise si vide)."""
+    bio_line = f"- Tu connais {name} : {profile.strip()}.\n" if profile.strip() else ""
+    return (
+        f"\nTu es Jarvis, l'assistant IA personnel de {name}.\n\n"
+        "Règles absolues pour la voix :\n"
+        "- Réponses COURTES. Maximum 2-3 phrases sauf si l'utilisateur demande explicitement plus.\n"
+        "- Pas de listes à puces, pas de markdown, pas d'astérisques.\n"
+        "- Pas d'émojis.\n"
+        "- Parle naturellement, comme dans une conversation.\n"
+        '- Tu peux dire "mhm", "hmm", "ok", "allez" pour paraître naturel.\n'
+        "- Si tu dois faire quelque chose d'écran (code, liste longue), dis-le brièvement\n"
+        "  et propose de l'envoyer par écrit dans l'interface.\n"
+        f"{bio_line}"
+        '- Quand tu utilises un outil, annonce-le en 1 phrase courte avant (ex: "Je vérifie l\'imprimante…").\n\n'
+        f"Réponds en français sauf si {name} parle en anglais.\n"
+    )
 
 
 # ─── Chargement des skills ─────────────────────────────────────────────────────
@@ -81,14 +81,15 @@ Réponds en français sauf si Barth parle en anglais.
 
 def _build_voice_instructions() -> str:
     """Prompt système = base + SYSTEM_PROMPT de chaque skill actif."""
+    base = _voice_system_base(settings.display_name, settings.user_profile)
     try:
         reg = SkillRegistry.get_instance()
         skill_prompt = reg.get_combined_system_prompt()
         if skill_prompt:
-            return _VOICE_SYSTEM_BASE + "\n\n# SKILLS ACTIFS\n\n" + skill_prompt
+            return base + "\n\n# SKILLS ACTIFS\n\n" + skill_prompt
     except Exception as e:
         logger.warning("Skills non chargés pour les instructions vocales: %s", e)
-    return _VOICE_SYSTEM_BASE
+    return base
 
 
 def _make_livekit_tool(jarvis_tool: object) -> lk_llm.RawFunctionTool:
@@ -172,8 +173,13 @@ class JarvisVoiceAgent(Agent):
         super().__init__(instructions=instructions, tools=tools)
 
     async def on_enter(self) -> None:
+        _name = settings.display_name
+        _greeting = (
+            f"Systèmes en ligne. Bonjour {_name}." if settings.user_firstname.strip()
+            else "Systèmes en ligne."
+        )
         await self.session.say(
-            "Systèmes en ligne. Bonjour Barth.",
+            _greeting,
             allow_interruptions=True,
         )
 
