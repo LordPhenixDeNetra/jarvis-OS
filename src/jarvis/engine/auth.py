@@ -13,7 +13,17 @@ from jarvis.kernel.settings import settings
 
 # Chemins exemptés de l'authentification Bearer.
 # Un préfixe couvre toutes ses sous-routes.
-_EXEMPT_EXACT: frozenset[str] = frozenset({"/health", "/api/health"})
+_EXEMPT_EXACT: frozenset[str] = frozenset({
+    "/health",
+    "/api/health",
+    "/",
+    "/command",
+    "/dashboard",
+    "/settings",
+    "/capabilities",
+    "/admin",
+    "/macropad",
+})
 _EXEMPT_PREFIXES: Sequence[str] = (
     "/api/channels/",  # webhooks — vérification de signature propre
     "/api/google/",  # OAuth Google — redirect navigateur, header impossible
@@ -29,7 +39,10 @@ async def verify_api_token(request: HTTPConnection) -> None:
     connexions WebSocket (l'API browser ne supporte pas les headers d'upgrade).
 
     Périmètre non protégé intentionnellement :
-    - Fichiers statiques UI (``/``, assets) — montés comme ASGI, hors injection
+    - Pages HTML de l'UI (``/``, ``/dashboard``, …) — routes FastAPI explicites,
+      exemptées ici ; le token API est injecté dans le HTML pour les appels
+      ``/api/*`` depuis le navigateur (voir ``interfaces/api/ui.py``)
+    - Assets statiques (``StaticFiles`` mount) — sous-app ASGI, hors dépendance
     - Connexions WebSocket (``/ws/*``) — navigateur sans header Authorization
     - Callbacks OAuth (``/api/google/``) — redirect tiers, token impossible
     - Webhooks canaux (``/api/channels/``) — signature propre (HMAC/Token)

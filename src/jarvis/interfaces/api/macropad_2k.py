@@ -5,7 +5,7 @@ from pathlib import Path
 from typing import Any
 
 from fastapi import APIRouter, HTTPException
-from fastapi.responses import FileResponse
+from fastapi.responses import Response
 from loguru import logger
 from pydantic import BaseModel
 
@@ -35,14 +35,20 @@ from jarvis.hardware.macropad_2k.profile_store import (
     save_default_workspace,
 )
 from jarvis.hardware.macropad_2k.usb import usb_status
+from jarvis.interfaces.api.ui import inject_client_config
 
 router = APIRouter(prefix="/api/macropad", tags=["macropad"])
 _ui_router = APIRouter()
 
 
 @_ui_router.get("/macropad", include_in_schema=False)
-async def keypad_ui() -> FileResponse:
-    return FileResponse("src/jarvis/interfaces/ui/static/macropad_2k.html")
+async def keypad_ui() -> Response:
+    content = Path("src/jarvis/interfaces/ui/static/macropad_2k.html").read_text(encoding="utf-8")
+    return Response(
+        content=inject_client_config(content),
+        media_type="text/html",
+        headers={"Cache-Control": "no-store"},
+    )
 
 
 class WorkspaceBody(BaseModel):

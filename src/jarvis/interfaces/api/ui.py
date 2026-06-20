@@ -1,11 +1,14 @@
 from __future__ import annotations
 
+import json
 import re
 from pathlib import Path
 
 from fastapi import APIRouter
-from fastapi.responses import FileResponse, Response
+from fastapi.responses import Response
 from pydantic import BaseModel
+
+from jarvis.kernel.settings import settings
 
 router = APIRouter()
 
@@ -13,6 +16,33 @@ router = APIRouter()
 class HealthResponse(BaseModel):
     status: str
     version: str
+
+
+def inject_client_config(html: str) -> str:
+    token = settings.api_token.get_secret_value() if settings.api_auth_enabled else ""
+    api_base = ""
+    snippet = (
+        "<script>"
+        f"window.JARVIS_API_TOKEN={json.dumps(token)};"
+        f"window.JARVIS_API_BASE={json.dumps(api_base)};"
+        "</script>"
+    )
+    marker = "</head>"
+    if marker in html:
+        return html.replace(marker, snippet + marker, 1)
+    return snippet + html
+
+
+def _ui_html_response(html_path: Path, assets: list[tuple[str, str]] | None = None) -> Response:
+    if assets:
+        content = _versioned_html(html_path, assets)
+    else:
+        content = html_path.read_text(encoding="utf-8")
+    return Response(
+        content=inject_client_config(content),
+        media_type="text/html",
+        headers={"Cache-Control": "no-store"},
+    )
 
 
 def _versioned_html(html_path: Path, assets: list[tuple[str, str]]) -> str:
@@ -32,15 +62,13 @@ def _versioned_html(html_path: Path, assets: list[tuple[str, str]]) -> str:
 
 
 @router.get("/command", include_in_schema=False)
-async def command_center_ui() -> FileResponse:
-    return FileResponse("src/jarvis/interfaces/ui/static/command.html")
+async def command_center_ui() -> Response:
+    return _ui_html_response(Path("src/jarvis/interfaces/ui/static/command.html"))
 
 
 @router.get("/dashboard", include_in_schema=False)
 async def dashboard_ui() -> Response:
-    from fastapi.responses import Response as FastResponse
-
-    content = _versioned_html(
+    return _ui_html_response(
         Path("src/jarvis/interfaces/ui/static/dashboard.html"),
         [
             ("/_shared.css", "src/jarvis/interfaces/ui/static/_shared.css"),
@@ -49,16 +77,11 @@ async def dashboard_ui() -> Response:
             ("/dashboard.js", "src/jarvis/interfaces/ui/static/dashboard.js"),
         ],
     )
-    return FastResponse(
-        content=content, media_type="text/html", headers={"Cache-Control": "no-store"}
-    )
 
 
 @router.get("/settings", include_in_schema=False)
 async def settings_ui() -> Response:
-    from fastapi.responses import Response as FastResponse
-
-    content = _versioned_html(
+    return _ui_html_response(
         Path("src/jarvis/interfaces/ui/static/settings.html"),
         [
             ("/_shared.css", "src/jarvis/interfaces/ui/static/_shared.css"),
@@ -68,16 +91,11 @@ async def settings_ui() -> Response:
             ("/settings.js", "src/jarvis/interfaces/ui/static/settings.js"),
         ],
     )
-    return FastResponse(
-        content=content, media_type="text/html", headers={"Cache-Control": "no-store"}
-    )
 
 
 @router.get("/", include_in_schema=False)
 async def home_ui() -> Response:
-    from fastapi.responses import Response as FastResponse
-
-    content = _versioned_html(
+    return _ui_html_response(
         Path("src/jarvis/interfaces/ui/static/home.html"),
         [
             ("/_shared.css", "src/jarvis/interfaces/ui/static/_shared.css"),
@@ -88,16 +106,11 @@ async def home_ui() -> Response:
             ("/home.js", "src/jarvis/interfaces/ui/static/home.js"),
         ],
     )
-    return FastResponse(
-        content=content, media_type="text/html", headers={"Cache-Control": "no-store"}
-    )
 
 
 @router.get("/capabilities", include_in_schema=False)
 async def capabilities_ui() -> Response:
-    from fastapi.responses import Response as FastResponse
-
-    content = _versioned_html(
+    return _ui_html_response(
         Path("src/jarvis/interfaces/ui/static/capabilities.html"),
         [
             ("/_shared.css", "src/jarvis/interfaces/ui/static/_shared.css"),
@@ -105,9 +118,6 @@ async def capabilities_ui() -> Response:
             ("/_shared.js", "src/jarvis/interfaces/ui/static/_shared.js"),
             ("/capabilities.js", "src/jarvis/interfaces/ui/static/capabilities.js"),
         ],
-    )
-    return FastResponse(
-        content=content, media_type="text/html", headers={"Cache-Control": "no-store"}
     )
 
 

@@ -83,6 +83,53 @@ def test_health_exempt_even_with_auth_enabled(client: TestClient) -> None:
     assert r.status_code == 200
 
 
+@pytest.mark.parametrize(
+    "path",
+    ["/", "/dashboard", "/settings", "/command", "/capabilities", "/admin"],
+)
+def test_ui_html_exempt_with_auth_enabled(client: TestClient, path: str) -> None:
+    """Les pages HTML de l'UI restent servies sans token Bearer."""
+    with patch("jarvis.engine.auth.settings") as mock_auth, patch(
+        "jarvis.interfaces.api.ui.settings"
+    ) as mock_ui:
+        mock_auth.api_auth_enabled = True
+        mock_auth.api_token = SecretStr("test-secret-token")
+        mock_ui.api_auth_enabled = True
+        mock_ui.api_token = SecretStr("test-secret-token")
+        r = client.get(path)
+    assert r.status_code == 200
+    assert "text/html" in r.headers.get("content-type", "")
+
+
+def test_ui_html_injects_api_token(client: TestClient) -> None:
+    """Le token API est injecté dans le HTML rendu quand auth activée."""
+    with patch("jarvis.engine.auth.settings") as mock_auth, patch(
+        "jarvis.interfaces.api.ui.settings"
+    ) as mock_ui:
+        mock_auth.api_auth_enabled = True
+        mock_auth.api_token = SecretStr("test-secret-token")
+        mock_ui.api_auth_enabled = True
+        mock_ui.api_token = SecretStr("test-secret-token")
+        r = client.get("/")
+    assert r.status_code == 200
+    assert "window.JARVIS_API_TOKEN" in r.text
+    assert "test-secret-token" in r.text
+
+
+def test_ui_html_no_token_when_auth_disabled(client: TestClient) -> None:
+    """Sans auth, le HTML n'embarque pas de token."""
+    with patch("jarvis.engine.auth.settings") as mock_auth, patch(
+        "jarvis.interfaces.api.ui.settings"
+    ) as mock_ui:
+        mock_auth.api_auth_enabled = False
+        mock_auth.api_token = SecretStr("")
+        mock_ui.api_auth_enabled = False
+        mock_ui.api_token = SecretStr("")
+        r = client.get("/")
+    assert r.status_code == 200
+    assert 'window.JARVIS_API_TOKEN=""' in r.text
+
+
 # ── Route sensible (exécution) ────────────────────────────────
 
 

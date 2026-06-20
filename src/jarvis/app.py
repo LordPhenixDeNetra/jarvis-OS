@@ -252,8 +252,8 @@ app.add_middleware(
     allow_headers=["*"],
 )
 # Dépendance globale appliquée à toutes les routes FastAPI.
-# Les fichiers statiques (StaticFiles ASGI mount) et les WebSockets sont
-# gérés séparément dans verify_api_token ; voir core/auth.py pour le périmètre.
+# Les pages HTML UI, le mount StaticFiles et les WebSockets sont gérés
+# dans verify_api_token ; voir engine/auth.py pour le périmètre.
 app.router.dependencies.append(Depends(verify_api_token))
 # ── [/AUTH] ──────────────────────────────────────────────────
 
